@@ -32,6 +32,7 @@ export default function WidgetSmall({
   onStatus,
   onClose,
   onOpenLarge,
+  hideChevron = false,
 }) {
   const cardRef = useRef(null);
   const [pos, setPos] = useState(null);
@@ -150,9 +151,11 @@ export default function WidgetSmall({
       {mode === "meaning" ? (
         <>
           <p className="widget-meaning">{meaning}</p>
-          <button type="button" className="widget-chevron" aria-label="More details" onClick={onOpenLarge}>
-            <ChevronRight size={18} strokeWidth={1.17} absoluteStrokeWidth />
-          </button>
+          {hideChevron ? null : (
+            <button type="button" className="widget-chevron" aria-label="More details" onClick={onOpenLarge}>
+              <ChevronRight size={18} strokeWidth={1.17} absoluteStrokeWidth />
+            </button>
+          )}
         </>
       ) : null}
     </div>

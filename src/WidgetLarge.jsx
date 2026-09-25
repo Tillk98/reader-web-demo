@@ -43,11 +43,15 @@ export default function WidgetLarge({
   onStatus,
   onChooseMeaning,
   onClose,
+  docked = false,
+  compact = false,
+  onTogglePanel,
 }) {
   const cardRef = useRef(null);
 
   useEffect(() => {
     function onPointerDown(event) {
+      if (docked) return;
       if (cardRef.current?.contains(event.target)) return;
       if (event.target.closest?.(".status-snackbar")) return;
       onClose();
@@ -63,14 +67,14 @@ export default function WidgetLarge({
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [onClose]);
+  }, [onClose, docked]);
 
   const shownMeanings = isNew ? suggestions.slice(0, 3) : meanings;
 
   return (
     <div
       ref={cardRef}
-      className="widget-large"
+      className={`widget-large${docked ? " is-docked" : ""}${compact ? " is-compact" : ""}`}
       role="dialog"
       aria-label={term}
       onPointerDown={(event) => event.stopPropagation()}
@@ -82,9 +86,11 @@ export default function WidgetLarge({
             <button type="button" className="widget-large-icon-button" aria-label="Play audio">
               <Volume2 size={18} strokeWidth={1.5} absoluteStrokeWidth />
             </button>
-            <button type="button" className="widget-large-icon-button" aria-label="Open side panel">
-              <PanelRight size={18} strokeWidth={1.5} absoluteStrokeWidth />
-            </button>
+            {docked ? (
+              <button type="button" className="widget-large-icon-button" aria-label="Close side panel" aria-pressed="true" onClick={onTogglePanel}>
+                <PanelRight size={18} strokeWidth={1.5} absoluteStrokeWidth />
+              </button>
+            ) : null}
           </div>
         </div>
         <div className="widget-large-tags">

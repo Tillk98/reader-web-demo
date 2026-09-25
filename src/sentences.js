@@ -1,6 +1,6 @@
 const TRANSLATIONS = [
   "So the first thing, I would say, is the time.",
-  "Yes, of course, if you plan to really learn a language well, you naturally have to spend a whole lot of time, and depending on how full your weekly schedule is, the time to learn several languages at once might not be there.",
+  "Yes, of course, when you plan to really learn a language well, you have to invest a lot of time – and depending on how your schedule looks, you might find that the time isn’t there to invest in learning multiple languages at once.",
   "So of course you have to keep that in mind.",
   "If you only have a maximum of 15 minutes available each day anyway, then you probably won't get very far with several languages, right.",
   "So, and we're assuming that you want to reach good levels, yes.",

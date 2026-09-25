@@ -65,7 +65,7 @@ Centered in the lesson column, 400×600 (shrinks if the column is shorter). Not 
 - Saving a meaning creates a LingQ 1 and **keeps the widget open**, switching it to the saved form.
 - Footer status bar updates the word or saved phrase and leaves the widget open.
 - Click outside or Escape closes it.
-- Play, copy, generate, section chevrons, tags, dictionaries, and the panel button are visual only.
+- The panel button docks this widget into the side panel. Play, copy, generate, notes, tag editing, dictionary links, and section chevrons are visual only.
 
 ## Select phrase
 
@@ -93,6 +93,54 @@ It shows that status’s chip and name. One snackbar at a time; a newer change r
 - Click undoes **only the latest** change. Undo does not show another snackbar.
 - Dismissing an unsaved phrase does not show one.
 
+## Reading modes
+
+Page, sentence, and scroll. The mode control sits in the center of the bottom bar. With the expanded player open, the same menu sits in the player.
+
+- **Page:** the lesson text is 550px tall. Overflow is hidden. Paragraphs that do not fit move to the next page. Left and right controls change page.
+- **Sentence:** one sentence, with its translation when Show Translations is on. Left and right controls change sentence. Entering sentence mode starts at the first sentence.
+- **Scroll:** the full lesson scrolls. Page controls are hidden.
+
+Switching to page mode from scroll or sentence while the expanded player is open and playing asks “Video will be stopped.” Cancel stays put. Continue stops playback, closes the player, and switches to page.
+
+Sentence mode lists the sentence’s LingQs as term cards under the text. A card’s status button opens the same vertical status menu as the medium widget. Tapping the card opens the large widget, or updates the side panel when that panel is already open.
+
+## Lesson chrome
+
+- The lesson progress bar floats in the lesson header, centered with the text, more, and panel buttons. It shrinks before it meets those buttons. The track is `#F1F3F4`. It hides while video is showing so the video can sit in that space.
+- Page and sentence controls are the full tall hit target, inset 12px from the screen edges. Hover is `#f4f6f7`, pressed is `#e8ecee`.
+- The **Aa** menu changes theme and font. Visual only.
+- The **ellipsis** menu (page, sentence, and scroll) includes Show Translations. The first item sits against the lesson header.
+- Scroll mode fades the lesson text at the top and bottom. Words under the fade stay clickable. At the top of the scroll, the first line is not faded. The last line can scroll clear of the bottom fade.
+- With video open in sentence mode, the same top fade sits above the sentence.
+
+## Bottom bar
+
+Default bar: play on the left, mode and vocabulary in the center, Ask Lynx on the right. Items sit 16px above the bottom of the screen. The center group is vertically centered with play and Lynx.
+
+- **Play** morphs into the collapsed player. Pause on the collapsed player stops playback and returns to the play button.
+- **Expand** opens the full player and, if the lesson is in page mode, switches to scroll. Video shows in scroll and sentence, not in page mode.
+- Pause in the expanded player keeps it open and shows the paused video frame. Collapse returns to the collapsed player if audio is still playing, otherwise to the play button.
+- The expanded player’s ellipsis opens a menu above the button (lesson, Auto-Advance, Playback Speed, Timer, Loop Audio, Theme, Settings, and Chat with Lynx). Toggles are local and visual. Outside click or Escape closes it. The same menu works on the collapsed player.
+
+## Side panel
+
+The panel button docks the large widget on the right and shifts the lesson text left. Opening it with no word selected uses the first visible word and creates a LingQ if that word is still blue.
+
+- Clicking another word does not close the panel. The panel updates to that word, and the small widget still opens. The small widget’s forward chevron is hidden while the panel is open.
+- Clicking the same word toggles only the small widget.
+- A status change or clicking outside the small widget hides the small widget only.
+- Closing the panel returns to the centered lesson column.
+
+## Lynx
+
+The whole Ask Lynx pill opens the chat, including the icon and padding. The click highlight is blue.
+
+- In the default bottom bar, the field morphs into a panel in the same right-hand column as the word panel, sharing the field’s bottom edge. The footer field hides while the chat is open.
+- With the expanded player open, Lynx opens from the player’s Lynx button and sits above the player.
+- If the word panel is already open, it contracts to its header and status footer and Lynx fills the rest. Closing Lynx expands the word panel again.
+- Suggestions and the composer are local. Sending or tapping a suggestion appends the message. There is no AI backend. The mic button is visual. The downward chevron closes the chat.
+
 ## Still inert
 
-Reader chrome (nav, header, paging, coins, streak), audio, copy, generate, notes, tag editing, dictionary links inside the widgets, and section chevrons.
+Header pills (coins, streak, language count), vocabulary button, copy, generate, notes, tag editing, dictionary links inside the widgets, section chevrons, and the audio menu’s speed, timer, theme, settings, and help rows. Auto-Advance and Loop Audio remember their toggles for the session only.

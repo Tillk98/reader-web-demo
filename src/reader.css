@@ -244,6 +244,12 @@ img {
   right: 12px;
 }
 
+.reader-stage-main.has-video .chrome-exit {
+  position: absolute;
+  top: 0;
+  left: 12px;
+}
+
 .side-panel {
   display: flex;
   flex: 0 0 400px;
@@ -325,6 +331,17 @@ img {
 .progress-fill {
   width: 7.431%;
   background: var(--progress);
+}
+
+.chrome-exit {
+  grid-area: 1 / 1;
+  justify-self: start;
+  position: relative;
+  z-index: 1;
+}
+
+.chrome-exit-icon {
+  transform: scaleX(-1);
 }
 
 .chrome-actions {
@@ -695,6 +712,41 @@ img {
   background: #e8ecee;
 }
 
+.page-button.is-finish,
+.page-button.is-finish:hover,
+.page-button.is-finish:active {
+  background: #f4fcef;
+  color: #42a564;
+  border: 1px solid #42a564;
+}
+
+.finish-lesson {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 52px;
+  margin: 16px 0 48px;
+  padding: 10px;
+  border: 1px solid #42a564;
+  border-radius: 12px;
+  background: #f4fcef;
+  color: #42a564;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity 200ms ease;
+}
+
+.finish-lesson.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .page-column {
   position: relative;
   flex: 1;
@@ -766,7 +818,7 @@ img {
 }
 
 .lesson-area.is-scroll .page-text {
-  padding-bottom: 32px;
+  padding-bottom: 0;
 }
 
 .lesson-area.is-scroll.has-video .page-text {
@@ -1938,6 +1990,116 @@ img {
   border: 0;
   background: var(--fg-secondary);
   color: #ffffff;
+}
+
+.finish-dialog {
+  width: min(520px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-page);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
+}
+
+.finish-dialog-copy {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.finish-dialog-copy p {
+  margin: 0;
+}
+
+.finish-dialog-copy p:first-child {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.finish-dialog-copy p:last-child {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 20px;
+  color: var(--fg-muted);
+}
+
+.finish-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.finish-dialog-cancel,
+.finish-dialog-confirm {
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.finish-dialog-cancel {
+  border: 1px solid var(--border);
+  background: var(--bg-page);
+  color: var(--fg-default);
+}
+
+.finish-dialog-confirm {
+  border: 0;
+  background: #42a564;
+  color: #ffffff;
+}
+
+.finish-dialog-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+  color: var(--fg-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.finish-dialog-dismiss input {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1.143px solid #d1d6d9;
+  border-radius: 2.286px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.finish-dialog-dismiss input:checked {
+  border-color: #42a564;
+  background: #42a564 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.2 6.4 11l6.1-6.2' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+}
+
+@media (max-width: 768px) {
+  .finish-dialog-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .finish-dialog-cancel,
+  .finish-dialog-confirm {
+    width: 100%;
+  }
 }
 
 .play-button {

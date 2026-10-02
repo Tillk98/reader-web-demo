@@ -6,12 +6,14 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  CircleCheck,
   ChevronsUpDown,
   Contrast,
   Ellipsis,
   Gauge,
   Languages,
   ListPlus,
+  LogOut,
   MousePointerClick,
   PanelRight,
   Pause,
@@ -426,12 +428,16 @@ export default function Reader() {
   const [theme, setTheme] = useState("light");
   const [fontStyle, setFontStyle] = useState("Rubik Original");
   const [pageModePrompt, setPageModePrompt] = useState(false);
+  const [finishPrompt, setFinishPrompt] = useState(false);
+  const [finishDismiss, setFinishDismiss] = useState(false);
+  const [hideFinishPrompt, setHideFinishPrompt] = useState(false);
   const [sidePanel, setSidePanel] = useState(false);
   const [lynxOpen, setLynxOpen] = useState(false);
   const [showMini, setShowMini] = useState(false);
   const [termMenu, setTermMenu] = useState(null);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageStarts, setPageStarts] = useState(null);
+  const [atScrollEnd, setAtScrollEnd] = useState(false);
 
   const lessonRef = useRef(lesson);
   const modeRef = useRef(mode);
@@ -459,6 +465,26 @@ export default function Reader() {
     });
     setPageStarts(starts);
   }, [mode, lesson, pageStarts]);
+
+  useEffect(() => {
+    const node = textRef.current;
+    if (mode !== "scroll" || !node) {
+      setAtScrollEnd(false);
+      return undefined;
+    }
+    function update() {
+      const remaining = node.scrollHeight - node.scrollTop - node.clientHeight;
+      setAtScrollEnd(remaining <= 8);
+    }
+    update();
+    node.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => {
+      node.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [mode, lesson, playerOpen]);
 
   function openPlayer() {
     setPlayerOpen(true);
@@ -490,6 +516,17 @@ export default function Reader() {
     setPlayerOpen(false);
     setPlayback(false);
     setMode("page");
+  }
+
+  function openFinishPrompt() {
+    if (hideFinishPrompt) return;
+    setFinishDismiss(false);
+    setFinishPrompt(true);
+  }
+
+  function confirmFinish() {
+    if (finishDismiss) setHideFinishPrompt(true);
+    setFinishPrompt(false);
   }
 
   useEffect(() => {
@@ -551,6 +588,15 @@ export default function Reader() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [pageModePrompt]);
+
+  useEffect(() => {
+    if (!finishPrompt) return undefined;
+    function onKeyDown(event) {
+      if (event.key === "Escape") setFinishPrompt(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [finishPrompt]);
 
   function transition(update) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1080,6 +1126,9 @@ export default function Reader() {
     return nodes;
   }
 
+  const showFinish = (mode === "sentence" && sentenceIndex >= lesson.length - 1)
+    || (mode === "page" && pageStarts !== null && pageIndex >= pageStarts.length - 1);
+
   return (
     <div className="reader">
       <header className="reader-header">
@@ -1138,6 +1187,9 @@ export default function Reader() {
             <div className="progress-fill" />
           </div>
           )}
+          <button type="button" className="icon-button chrome-exit" aria-label="Exit lesson">
+            <LogOut className="chrome-exit-icon" size={24} strokeWidth={1.5} absoluteStrokeWidth />
+          </button>
           <div className="chrome-actions">
             <span className="chrome-menu-anchor">
               <button type="button" className="icon-button" aria-label="Text settings" aria-expanded={chromeMenu === "theme"} onClick={() => setChromeMenu((current) => (current === "theme" ? null : "theme"))}>
@@ -1347,6 +1399,12 @@ export default function Reader() {
               );
             });
             })()}
+            {mode === "scroll" ? (
+              <button type="button" className={`finish-lesson${atScrollEnd ? " is-visible" : ""}`} onClick={openFinishPrompt}>
+                <CircleCheck size={16} strokeWidth={1.36} absoluteStrokeWidth />
+                Finish Lesson
+              </button>
+            ) : null}
             {activeToken && active.size !== "medium" && active.size !== "large" && (!sidePanel || showMini) ? (
               <WidgetSmall
                 anchorId={`${active.paragraphIndex}-${active.tokenIndex}`}
@@ -1423,14 +1481,22 @@ export default function Reader() {
           <div className="page-control">
             <button
               type="button"
-              className="page-button"
-              aria-label={mode === "sentence" ? "Next sentence" : "Next page"}
+              className={`page-button${showFinish ? " is-finish" : ""}`}
+              aria-label={showFinish ? "Finish lesson" : mode === "sentence" ? "Next sentence" : "Next page"}
               onClick={() => {
+                if (showFinish) {
+                  openFinishPrompt();
+                  return;
+                }
                 if (mode === "sentence") setSentenceIndex((index) => Math.min(lesson.length - 1, index + 1));
                 if (mode === "page") setPageIndex((index) => Math.min((pageStarts?.length ?? 1) - 1, index + 1));
               }}
             >
-              <ChevronRight size={16} strokeWidth={1.36} absoluteStrokeWidth />
+              {showFinish ? (
+                <CircleCheck size={16} strokeWidth={1.36} absoluteStrokeWidth />
+              ) : (
+                <ChevronRight size={16} strokeWidth={1.36} absoluteStrokeWidth />
+              )}
             </button>
           </div>
         </div>
@@ -1590,6 +1656,35 @@ export default function Reader() {
         </>
         )}
       </footer>
+
+      {finishPrompt ? (
+        <div className="mode-dialog-backdrop" onClick={() => setFinishPrompt(false)}>
+          <div
+            className="finish-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="finish-lesson-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="finish-dialog-copy">
+              <p id="finish-lesson-title">Finish this Lesson?</p>
+              <p>Confirm to wrap up this lesson and view your learning stats.</p>
+            </div>
+            <div className="finish-dialog-actions">
+              <button type="button" className="finish-dialog-cancel" onClick={() => setFinishPrompt(false)}>Cancel</button>
+              <button type="button" className="finish-dialog-confirm" onClick={confirmFinish}>Finish Lesson</button>
+            </div>
+            <label className="finish-dialog-dismiss">
+              Don’t show this again
+              <input
+                type="checkbox"
+                checked={finishDismiss}
+                onChange={(event) => setFinishDismiss(event.target.checked)}
+              />
+            </label>
+          </div>
+        </div>
+      ) : null}
 
       {pageModePrompt ? (
         <div className="mode-dialog-backdrop" onClick={() => setPageModePrompt(false)}>

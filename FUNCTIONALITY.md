@@ -105,9 +105,22 @@ Switching to page mode from scroll or sentence while the expanded player is open
 
 Sentence mode lists the sentence’s LingQs as term cards under the text. A card’s status button opens the same vertical status menu as the medium widget. Tapping the card opens the large widget, or updates the side panel when that panel is already open.
 
+## Finish lesson
+
+On the last page, or the last sentence, the right chevron becomes a green circle-check in the same tall control. Clicking it opens “Finish this Lesson?”.
+
+In scroll mode the side chevrons stay hidden. A full-width “Finish Lesson” bar fades in at the bottom of the text, 16px below the last line, with space under it so it is not flush with the screen. Clicking it opens the same dialog.
+
+- Body: “Confirm to wrap up this lesson and view your learning stats.”
+- **Cancel**, the backdrop, or Escape closes it and stays in the lesson.
+- **Finish Lesson** closes it. There is no stats screen yet.
+- **Don’t show this again** applies only after Finish Lesson. Later finish clicks in that session do not open the dialog. Refresh clears it.
+- Below 768px the actions stack full width, Cancel above Finish Lesson.
+
 ## Lesson chrome
 
-- The lesson progress bar floats in the lesson header, centered with the text, more, and panel buttons. It shrinks before it meets those buttons. The track is `#F1F3F4`. It hides while video is showing so the video can sit in that space.
+- An exit button sits on the far left of the lesson header. It does not leave the lesson. The lesson header sits 12px below the site header. With video open, that gap closes so the exit button stays at the top of the video.
+- The lesson progress bar floats in the lesson header, centered with the exit, text, more, and panel buttons. It shrinks before it meets those buttons. The track is `#F1F3F4`. It hides while video is showing so the video can sit in that space. The exit button stays on the left in that state.
 - Page and sentence controls are the full tall hit target, inset 12px from the screen edges. Hover is `#f4f6f7`, pressed is `#e8ecee`.
 - The **Aa** menu changes theme and font. Visual only.
 - The **ellipsis** menu (page, sentence, and scroll) includes Show Translations. The first item sits against the lesson header.
@@ -122,15 +135,34 @@ Default bar: play on the left, mode and vocabulary in the center, Ask Lynx on th
 - **Expand** opens the full player and, if the lesson is in page mode, switches to scroll. Video shows in scroll and sentence, not in page mode.
 - Pause in the expanded player keeps it open and shows the paused video frame. Collapse returns to the collapsed player if audio is still playing, otherwise to the play button.
 - The expanded player’s ellipsis opens a menu above the button (lesson, Auto-Advance, Playback Speed, Timer, Loop Audio, Theme, Settings, and Chat with Lynx). Toggles are local and visual. Outside click or Escape closes it. The same menu works on the collapsed player.
+- **Vocabulary** is a split button, hidden while the player is open. The icon toggles the vocabulary list. The chevron opens Review actions above the button and points up while that menu is open. Opening one of these menus closes the other. Outside click or Escape closes it.
+- **Vocabulary List** opens the list and leaves it open. **Review Page**, **Review Due**, **Review Lesson**, and **Manage Vocabulary** only close the menu.
 
 ## Side panel
 
-The panel button docks the large widget on the right and shifts the lesson text left. Opening it with no word selected uses the first visible word and creates a LingQ if that word is still blue.
+The panel button docks the large widget on the right and shifts the lesson text left. Opening it with no word selected opens the vocabulary list. It does not select a word or create a LingQ. The header panel button hides while the list is open, same as while the large widget is docked.
 
 - Clicking another word does not close the panel. The panel updates to that word, and the small widget still opens. The small widget’s forward chevron is hidden while the panel is open.
 - Clicking the same word toggles only the small widget.
 - A status change or clicking outside the small widget hides the small widget only.
 - Closing the panel returns to the centered lesson column.
+- Closing the list from the vocabulary icon also closes the column when no word is selected. With a word selected, the icon closes the list and leaves the word panel open.
+
+## Vocabulary list
+
+Saved phrases, plus lesson words that are already a LingQ, Known, or Ignored. A still-blue word is not listed. Duplicates collapse by lowercase text.
+
+Default filter: All terms, SRS Due off, statuses New, Recognized, and Familiar. The filter button is pressed only when the applied filter differs from that. Choosing all six statuses is still an active filter.
+
+- The count is the filtered list before search. All reads “25 terms”, Words “25 words”, Phrases “0 phrases”. Singular at 1. Search does not change it.
+- **Cancel** drops the draft and returns to the list. **Apply** commits it. **Clear** restores the draft to the default. It is disabled when the draft already matches the default, including right after a clear. The refresh icon spins once first.
+- **Select all** turns every status on. When every status is already on, it turns them all off. Some selected shows the mixed checkbox. Chips toggle one status at a time.
+- Words and Phrases split the list by saved phrase. SRS Due on shows nothing. This demo has no due dates.
+- Search narrows the rows only. Contains matches the term or the meaning. Starts With and Ends With match the term. Source Text Containing matches the term. Meaning Containing matches the meaning. The match control hides once the field has text, and its chevron points up while the menu is open.
+- Sort: Importance and Creation Date keep list order. Status runs New, Recognized, Familiar, Learned, Known, Ignored. A–Z and Z–A use German sort.
+- A row’s status chip opens the vertical status menu and writes that status onto the phrase, or onto every lesson copy of the word. The usual snackbar appears. Choosing the current status does nothing. Row audio does nothing.
+- The blue button uses the same count as the header: “Review 25 Terms”, “Review 5 Words”, “Review 1 Phrase”. It does not start a review.
+- Course, Lesson, and Tags do not open. The search submit does nothing.
 
 ## Lynx
 
@@ -143,4 +175,4 @@ The whole Ask Lynx pill opens the chat, including the icon and padding. The clic
 
 ## Still inert
 
-Header pills (coins, streak, language count), vocabulary button, copy, generate, notes, tag editing, dictionary links inside the widgets, section chevrons, and the audio menu’s speed, timer, theme, settings, and help rows. Auto-Advance and Loop Audio remember their toggles for the session only.
+Header pills (coins, streak, language count), the lesson exit button, copy, generate, notes, tag editing, dictionary links inside the widgets, section chevrons, and the audio menu’s speed, timer, theme, settings, and help rows. Auto-Advance and Loop Audio remember their toggles for the session only. Finish Lesson does not open stats. Review Page, Review Due, Review Lesson, Manage Vocabulary, and the Review button do not start a review. Vocabulary search submit, row audio, and the Course, Lesson, and Tags rows do nothing.

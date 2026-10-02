@@ -2,8 +2,11 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
   ArrowDownNarrowWide,
+  ArrowUpRight,
+  BookOpenText,
   CaseSensitive,
   ChevronDown,
+  FileText,
   ChevronLeft,
   ChevronRight,
   CircleCheck,
@@ -12,6 +15,7 @@ import {
   Ellipsis,
   Gauge,
   Languages,
+  List,
   ListPlus,
   LogOut,
   MousePointerClick,
@@ -33,6 +37,7 @@ import WidgetSmall from "./WidgetSmall.jsx";
 import WidgetMedium from "./WidgetMedium.jsx";
 import WidgetLarge from "./WidgetLarge.jsx";
 import LynxChat from "./LynxChat.jsx";
+import ReviewPanel, { reviewTermsFrom } from "./ReviewPanel.jsx";
 import { formatMeanings, meaningsFor } from "./meanings.js";
 import { describePhrase, phraseCovers } from "./phrases.js";
 import { sentenceFor } from "./sentences.js";
@@ -50,6 +55,7 @@ import replayIcon from "../assets/replay_10.svg";
 import skipBackIcon from "../assets/skip_back_5.svg";
 import skipForwardIcon from "../assets/skip_forward_5.svg";
 import reviewIcon from "../assets/review_icon_light.png";
+import lingqIcon from "../assets/LingQ-Icon.png";
 import thumbnail from "../assets/lesson-thumbnail.jpg";
 
 const PARAGRAPHS = [
@@ -156,6 +162,39 @@ function modeIcon(id) {
   if (id === "sentence") return <img src={sentenceModeIcon} alt="" width={22} height={13} />;
   if (id === "scroll") return <WrapText size={24} strokeWidth={1.5} absoluteStrokeWidth />;
   return <img src={pageModeIcon} alt="" width={22} height={17} />;
+}
+
+const REVIEW_ACTIONS = [
+  { id: "page", label: "Review Page", icon: FileText },
+  { id: "due", label: "Review Due", icon: Timer },
+  { id: "lesson", label: "Review Lesson", icon: BookOpenText },
+  { id: "list", label: "Vocabulary List", icon: List },
+];
+
+function ReviewActionsMenu({ onChoose }) {
+  return (
+    <div className="review-menu vocab-menu" role="menu">
+      {REVIEW_ACTIONS.map((item) => {
+        const Icon = item.icon;
+        return (
+          <div className="review-menu-item" key={item.id}>
+            <button type="button" role="menuitem" onClick={() => onChoose(item.id)}>
+              <Icon size={16} strokeWidth={1.5} absoluteStrokeWidth />
+              {item.label}
+            </button>
+          </div>
+        );
+      })}
+      <div className="vocab-menu-divider" />
+      <div className="review-menu-item">
+        <button type="button" role="menuitem" onClick={() => onChoose("manage")}>
+          <img src={lingqIcon} alt="" width={16} height={16} />
+          <span>Manage Vocabulary</span>
+          <ArrowUpRight size={14} strokeWidth={1.5} absoluteStrokeWidth />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function ModeMenu({ mode, onChoose }) {
@@ -433,6 +472,8 @@ export default function Reader() {
   const [hideFinishPrompt, setHideFinishPrompt] = useState(false);
   const [sidePanel, setSidePanel] = useState(false);
   const [lynxOpen, setLynxOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewMenu, setReviewMenu] = useState(false);
   const [showMini, setShowMini] = useState(false);
   const [termMenu, setTermMenu] = useState(null);
   const [pageIndex, setPageIndex] = useState(0);
@@ -528,6 +569,23 @@ export default function Reader() {
     if (finishDismiss) setHideFinishPrompt(true);
     setFinishPrompt(false);
   }
+
+  useEffect(() => {
+    if (!reviewMenu) return undefined;
+    function onPointerDown(event) {
+      if (event.target.closest?.(".vocab-menu") || event.target.closest?.(".vocab-split-menu")) return;
+      setReviewMenu(false);
+    }
+    function onKeyDown(event) {
+      if (event.key === "Escape") setReviewMenu(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [reviewMenu]);
 
   useEffect(() => {
     if (!modeMenu) return undefined;
@@ -947,6 +1005,49 @@ export default function Reader() {
     setTermMenu(null);
   }
 
+  function changeReviewStatus(item, status) {
+    if (item.phraseId) {
+      const phrase = savedPhrases.find((entry) => entry.id === item.phraseId);
+      changeTermStatus(phrase?.start?.paragraphIndex ?? 0, phrase?.start?.tokenIndex ?? 0, status, item.phraseId);
+      return;
+    }
+    const appearance = STATUS_APPEARANCE[status];
+    const key = item.term.toLowerCase();
+    const previous = [];
+    lesson.forEach((paragraph, paragraphIndex) => {
+      paragraph.forEach((token, tokenIndex) => {
+        if (token.type !== "word" || token.value.toLowerCase() !== key) return;
+        previous.push({
+          paragraphIndex,
+          tokenIndex,
+          status: token.status,
+          kind: token.kind,
+          level: token.level ?? null,
+          meaning: token.meaning,
+        });
+      });
+    });
+    if (!previous.length) return;
+    const unchanged = previous.every((token) => (
+      token.status === status
+      && token.kind === appearance.kind
+      && (token.level ?? null) === (appearance.level ?? null)
+    ));
+    if (unchanged) return;
+    setLesson((current) => current.map((paragraph) => paragraph.map((token) => {
+      if (token.type !== "word" || token.value.toLowerCase() !== key) return token;
+      return { ...token, status, ...appearance };
+    })));
+    showSnackbar(status, () => {
+      setLesson((current) => current.map((paragraph, paragraphIndex) => paragraph.map((token, tokenIndex) => {
+        const match = previous.find((entry) => entry.paragraphIndex === paragraphIndex && entry.tokenIndex === tokenIndex);
+        return match
+          ? { ...token, status: match.status, kind: match.kind, level: match.level, meaning: match.meaning }
+          : token;
+      })));
+    });
+  }
+
   function openTerm(paragraphIndex, tokenIndex, phrase) {
     setTermMenu(null);
     if (phrase) openSaved(phrase, paragraphIndex, tokenIndex, "large");
@@ -958,38 +1059,39 @@ export default function Reader() {
     setActive((current) => (current ? { ...current, size: "large", statusMenu: false } : current));
   }
 
-  function firstVisibleWord() {
-    const paragraphs = mode === "sentence" ? [lesson[sentenceIndex]] : mode === "scroll" ? lesson : lesson.slice(0, PAGE_COUNT);
-    for (let listIndex = 0; listIndex < paragraphs.length; listIndex += 1) {
-      const paragraphIndex = mode === "sentence" ? sentenceIndex : listIndex;
-      const tokenIndex = paragraphs[listIndex].findIndex((token) => token.type === "word");
-      if (tokenIndex !== -1) return { paragraphIndex, tokenIndex };
+  function toggleReview() {
+    setReviewMenu(false);
+    if (reviewOpen && !active) setSidePanel(false);
+    setReviewOpen((open) => !open);
+  }
+
+  function chooseReviewAction(action) {
+    setReviewMenu(false);
+    if (action === "list") {
+      setReviewOpen(true);
+      setSidePanel(true);
     }
-    return null;
   }
 
   function toggleSidePanel() {
     if (!sidePanel && !active) {
-      const first = firstVisibleWord();
-      if (!first) return;
-      const saved = savedAt(first.paragraphIndex, first.tokenIndex);
-      if (saved) {
-        openSaved(saved, first.paragraphIndex, first.tokenIndex, "large");
-      } else {
-        createLingQ(first.paragraphIndex, first.tokenIndex);
-        setActive({
-          paragraphIndex: first.paragraphIndex,
-          tokenIndex: first.tokenIndex,
-          size: "large",
-          mode: "meaning",
-          statusMenu: false,
-        });
-      }
-    } else if (!sidePanel) {
+      setReviewOpen(true);
+      setSidePanel(true);
+      return;
+    }
+    if (!sidePanel) {
       setActive((current) => (current ? { ...current, size: "large", statusMenu: false } : current));
       if (active?.size === "small") setShowMini(true);
     }
     setSidePanel((open) => !open);
+  }
+
+  function collapseSidePanel() {
+    setReviewOpen(false);
+    if (!sidePanel) return;
+    setSidePanel(false);
+    setShowMini(false);
+    setActive(null);
   }
 
   function startPhraseSelect() {
@@ -1207,7 +1309,7 @@ export default function Reader() {
                 <ReaderOptionsMenu mode={mode} showTranslation={showTranslation} onToggleTranslation={() => setShowTranslation((open) => !open)} />
               ) : null}
             </span>
-            {sidePanel ? null : (
+            {sidePanel || reviewOpen ? null : (
             <button type="button" className="icon-button" aria-label="Open side panel" onClick={toggleSidePanel}>
               <PanelRight size={24} strokeWidth={1.5} absoluteStrokeWidth />
             </button>
@@ -1501,9 +1603,15 @@ export default function Reader() {
           </div>
         </div>
         </div>
-        {(sidePanel && activeToken) || lynxOpen ? (
-          <aside className={`side-panel${lynxOpen && !playerOpen ? " is-anchored" : ""}${lynxOpen && sidePanel && activeToken ? " is-split" : ""}`}>
-            {sidePanel && activeToken ? (
+        {(sidePanel && activeToken) || lynxOpen || reviewOpen ? (
+          <aside className={`side-panel${lynxOpen && !playerOpen ? " is-anchored" : ""}${lynxOpen && ((sidePanel && activeToken) || reviewOpen) ? " is-split" : ""}`}>
+            {reviewOpen ? (
+              <ReviewPanel
+                terms={reviewTermsFrom(lesson, savedPhrases)}
+                onStatus={changeReviewStatus}
+                onClose={collapseSidePanel}
+              />
+            ) : sidePanel && activeToken ? (
             <WidgetLarge
               term={largeTerm}
               meanings={largeMeanings}
@@ -1564,7 +1672,7 @@ export default function Reader() {
                 </span>
                 <span className="audio-bar-divider" aria-hidden="true" />
                 <span className="mode-anchor">
-                  <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => setModeMenu((open) => !open)}>
+                  <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
                     {modeIcon(mode)}
                     <ChevronsUpDown size={18} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
                   </button>
@@ -1632,7 +1740,7 @@ export default function Reader() {
         <>
         <div className="floating-nav">
           <span className="mode-anchor">
-            <button type="button" className="mode-selector" aria-expanded={modeMenu} onClick={() => setModeMenu((open) => !open)}>
+            <button type="button" className="mode-selector" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
               {modeIcon(mode)}
               <span>{MODES.find((item) => item.id === mode)?.label}</span>
               <ChevronsUpDown size={18} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
@@ -1640,9 +1748,16 @@ export default function Reader() {
             {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
           </span>
           <span className="nav-divider" aria-hidden="true" />
-          <button type="button" className="vocab-button" aria-label="Vocabulary">
-            <img src={reviewIcon} alt="" width={20} height={20} />
-          </button>
+          <span className="vocab-split">
+            <button type="button" className="vocab-button" aria-label="Vocabulary" aria-pressed={reviewOpen} onClick={toggleReview}>
+              <img src={reviewIcon} alt="" width={20} height={20} />
+            </button>
+            <span className="vocab-split-divider" aria-hidden="true" />
+            <button type="button" className="vocab-split-menu" aria-label="Review actions" aria-haspopup="menu" aria-expanded={reviewMenu} onClick={() => { setModeMenu(false); setReviewMenu((open) => !open); }}>
+              <ChevronDown size={16} strokeWidth={1.5} absoluteStrokeWidth />
+            </button>
+            {reviewMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
+          </span>
         </div>
 
         {lynxOpen ? null : (

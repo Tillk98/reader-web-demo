@@ -32,6 +32,7 @@ import {
   Timer,
   Undo2,
   WrapText,
+  X,
 } from "lucide-react";
 import WidgetSmall from "./WidgetSmall.jsx";
 import WidgetMedium from "./WidgetMedium.jsx";
@@ -163,6 +164,13 @@ function modeIcon(id) {
   if (id === "scroll") return <WrapText size={24} strokeWidth={1.5} absoluteStrokeWidth />;
   return <img src={pageModeIcon} alt="" width={22} height={17} />;
 }
+
+const REVIEW_CARDS = {
+  page: "Page Vocabulary Review",
+  sentence: "Sentence Vocabulary Review",
+  due: "Due Vocabulary Review",
+  lesson: "Lesson Vocabulary Review",
+};
 
 const REVIEW_ACTIONS = [
   { id: "page", label: "Review Page", icon: FileText },
@@ -474,6 +482,7 @@ export default function Reader() {
   const [lynxOpen, setLynxOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewMenu, setReviewMenu] = useState(false);
+  const [reviewCard, setReviewCard] = useState(null);
   const [showMini, setShowMini] = useState(false);
   const [termMenu, setTermMenu] = useState(null);
   const [pageIndex, setPageIndex] = useState(0);
@@ -1059,18 +1068,26 @@ export default function Reader() {
     setActive((current) => (current ? { ...current, size: "large", statusMenu: false } : current));
   }
 
-  function toggleReview() {
-    setReviewMenu(false);
-    if (reviewOpen && !active) setSidePanel(false);
-    setReviewOpen((open) => !open);
-  }
-
   function chooseReviewAction(action) {
     setReviewMenu(false);
     if (action === "list") {
+      setReviewCard(null);
       setReviewOpen(true);
       setSidePanel(true);
+      return;
     }
+    if (REVIEW_CARDS[action]) {
+      setReviewCard(action);
+      if (reviewOpen) collapseSidePanel();
+    }
+  }
+
+  function startDefaultReview() {
+    if (mode === "scroll") {
+      chooseReviewAction("list");
+      return;
+    }
+    chooseReviewAction(mode === "sentence" ? "sentence" : "page");
   }
 
   function toggleSidePanel() {
@@ -1601,6 +1618,16 @@ export default function Reader() {
               )}
             </button>
           </div>
+          {reviewCard ? (
+            <div className="review-card-layer">
+              <div className="review-card" role="dialog" aria-modal="true" aria-labelledby="review-card-title">
+                <button type="button" className="review-card-close" aria-label="Close review" onClick={() => setReviewCard(null)}>
+                  <X size={16} strokeWidth={1.5} absoluteStrokeWidth />
+                </button>
+                <p id="review-card-title">{REVIEW_CARDS[reviewCard]}</p>
+              </div>
+            </div>
+          ) : null}
         </div>
         </div>
         {(sidePanel && activeToken) || lynxOpen || reviewOpen ? (
@@ -1610,6 +1637,7 @@ export default function Reader() {
                 terms={reviewTermsFrom(lesson, savedPhrases)}
                 onStatus={changeReviewStatus}
                 onClose={collapseSidePanel}
+                onReview={startDefaultReview}
               />
             ) : sidePanel && activeToken ? (
             <WidgetLarge
@@ -1749,7 +1777,7 @@ export default function Reader() {
           </span>
           <span className="nav-divider" aria-hidden="true" />
           <span className="vocab-split">
-            <button type="button" className="vocab-button" aria-label="Vocabulary" aria-pressed={reviewOpen} onClick={toggleReview}>
+            <button type="button" className="vocab-button" aria-label="Vocabulary" aria-pressed={mode === "scroll" ? reviewOpen : reviewCard === (mode === "sentence" ? "sentence" : "page")} onClick={startDefaultReview}>
               <img src={reviewIcon} alt="" width={20} height={20} />
             </button>
             <span className="vocab-split-divider" aria-hidden="true" />
@@ -1821,6 +1849,8 @@ export default function Reader() {
           </div>
         </div>
       ) : null}
+
+      {reviewCard ? <div className="review-scrim" aria-hidden="true" /> : null}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Check, EyeOff, Plus } from "lucide-react";
 
 const DETAILS = {
   Ignored: { label: "Ignore", icon: EyeOff },
+  Blue: { label: "Blue Words", icon: Plus },
   Create: { label: "Add", icon: Plus },
   New: { label: "New", numeral: "1" },
   Recognized: { label: "Recognized", numeral: "2" },

@@ -670,6 +670,7 @@ img {
 }
 
 .lesson-area {
+  position: relative;
   flex: 1;
   width: 100%;
   min-height: 0;
@@ -1815,6 +1816,13 @@ img {
 .status-button[data-state="focus"][data-status="Ignored"] {
   border-color: var(--border);
   background: var(--surface);
+}
+
+.status-button[data-state="focus"][data-status="Blue"],
+.status-button[data-status="Blue"]:hover {
+  border-color: var(--fg-secondary);
+  background: var(--new-fill);
+  color: var(--fg-secondary);
 }
 
 .status-button[data-state="focus"][data-status="New"],
@@ -3134,6 +3142,67 @@ button:focus-visible {
 .review-start img {
   width: 16px;
   height: 16px;
+}
+
+.review-scrim {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  background: rgb(0 0 0 / 10%);
+}
+
+.review-card-layer {
+  position: absolute;
+  z-index: 41;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  pointer-events: none;
+}
+
+.review-card {
+  position: relative;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(1000px, 100%);
+  height: min(750px, 100%);
+  max-height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-page);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.review-card p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.review-card-close {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-default);
+  cursor: pointer;
+}
+
+.review-card-close:hover {
+  background: #f4f6f7;
 }
 
 .review-filter {

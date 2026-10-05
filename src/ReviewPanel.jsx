@@ -5,6 +5,7 @@ import {
   BookOpen,
   Check,
   ChevronDown,
+  CirclePlus,
   ChevronRight,
   EyeOff,
   Library,
@@ -24,6 +25,7 @@ import reviewIcon from "../assets/Vocabulary_Blue.png";
 const SORTS = ["Importance", "Status", "Creation Date", "A-Z", "Z-A"];
 const MATCHES = ["Contains", "Starts With", "Ends With", "Source Text Containing", "Meaning Containing"];
 const STATUS_RANK = {
+  Blue: -1,
   New: 0,
   Recognized: 1,
   Familiar: 2,
@@ -32,6 +34,7 @@ const STATUS_RANK = {
   Ignored: 5,
 };
 const FILTER_STATUSES = [
+  { id: "Blue", label: "Blue Words", icon: CirclePlus },
   { id: "Ignored", icon: EyeOff },
   { id: "New", numeral: "1" },
   { id: "Recognized", numeral: "2" },
@@ -107,11 +110,11 @@ export function reviewTermsFrom(lesson, savedPhrases) {
       phraseId: null,
       term: token.value,
       meaning: token.meaning || meaningsFor(token.value).join(" ; "),
-      status: token.status,
+      status: token.kind === "new" ? "Blue" : token.status,
     });
   }
 
-  ["lingq", "known", "ignored"].forEach((kind) => {
+  ["lingq", "known", "ignored", "new"].forEach((kind) => {
     lesson.forEach((paragraph, paragraphIndex) => {
       paragraph.forEach((token, tokenIndex) => {
         if (token.type !== "word" || token.kind !== kind) return;
@@ -416,7 +419,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose }) {
                   onClick={() => toggleStatus(status.id)}
                 >
                   {Icon ? <Icon size={16} strokeWidth={1.5} absoluteStrokeWidth /> : <span>{status.numeral}</span>}
-                  {status.id}
+                  {status.label ?? status.id}
                 </button>
               );
             })}
@@ -432,7 +435,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose }) {
   );
 }
 
-export default function ReviewPanel({ terms, onStatus, onClose }) {
+export default function ReviewPanel({ terms, onStatus, onClose, onReview }) {
   const matchButtonRef = useRef(null);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState(null);
@@ -648,7 +651,7 @@ export default function ReviewPanel({ terms, onStatus, onClose }) {
         />
       ) : null}
       <footer className="review-footer">
-        <button type="button" className="review-start">
+        <button type="button" className="review-start" onClick={onReview}>
           <img src={reviewIcon} alt="" width={16} height={16} />
           {reviewActionLabel(listed.length, (appliedFilters ?? defaultFilters()).terms)}
         </button>

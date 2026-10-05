@@ -822,6 +822,7 @@ export default function Reader() {
         openSaved(saved, paragraphIndex, tokenIndex, "medium");
         return;
       }
+      createLingQ(paragraphIndex, tokenIndex);
       setActive({
         paragraphIndex,
         tokenIndex,

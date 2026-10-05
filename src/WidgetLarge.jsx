@@ -11,7 +11,7 @@ import {
   Volume2,
 } from "lucide-react";
 import flagIcon from "../assets/language_flag_icon.png";
-import lynxIcon from "../assets/lynx_icon_light.png";
+import lynxIcon from "../assets/lynx-icon-blue.png";
 import sentenceIcon from "../assets/sentencemode_icon_light.png";
 import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
 
@@ -26,7 +26,7 @@ function SectionHeading({ icon, label }) {
         <span>{label}</span>
       </div>
       <button type="button" className="widget-large-heading-chevron" aria-label={`More ${label.toLowerCase()}`}>
-        <ChevronRight size={18} strokeWidth={1.5} absoluteStrokeWidth />
+        <ChevronRight size={16} strokeWidth={1.33} absoluteStrokeWidth />
       </button>
     </div>
   );
@@ -93,27 +93,17 @@ export default function WidgetLarge({
             ) : null}
           </div>
         </div>
-        <div className="widget-large-tags">
-          <button type="button" className="widget-large-add-tag" aria-label="Add tag">
-            <Tags size={18} strokeWidth={1.5} absoluteStrokeWidth />
-          </button>
-          <div className="widget-large-tag-scroll">
-            {TAGS.map((tag) => (
-              <span key={tag} className="widget-tag">{tag}</span>
-            ))}
-          </div>
-        </div>
       </header>
 
       <div className="widget-large-scroll">
         <div className="widget-large-body">
           <section className="widget-large-section">
             <SectionHeading
-              icon={<TextSearch size={18} strokeWidth={1.5} absoluteStrokeWidth />}
+              icon={<TextSearch size={16} strokeWidth={1.33} absoluteStrokeWidth />}
               label="Meanings"
             />
             <div className="widget-large-meanings">
-                {shownMeanings.map((meaning, index) => (
+              {shownMeanings.map((meaning, index) => (
                 <div key={`${meaning}-${index}`} className="widget-large-meaning">
                   <p>{meaning}</p>
                   {isNew ? (
@@ -128,6 +118,16 @@ export default function WidgetLarge({
                   ) : null}
                 </div>
               ))}
+            </div>
+            <div className="widget-large-tags">
+              <button type="button" className="widget-large-add-tag" aria-label="Add tag">
+                <Tags size={18} strokeWidth={1.5} absoluteStrokeWidth />
+              </button>
+              <div className="widget-large-tag-scroll">
+                {TAGS.map((tag) => (
+                  <span key={tag} className="widget-tag">{tag}</span>
+                ))}
+              </div>
             </div>
             {isNew ? (
               <div className="widget-dictionaries widget-large-dictionaries">
@@ -148,7 +148,7 @@ export default function WidgetLarge({
 
           <section className="widget-large-section">
             <SectionHeading
-              icon={<img src={sentenceIcon} alt="" width={18} height={18} />}
+              icon={<img src={sentenceIcon} alt="" width={16} height={16} />}
               label="Sentence"
             />
             <div className="widget-large-sentence">
@@ -168,7 +168,7 @@ export default function WidgetLarge({
           <section className="widget-large-section">
             <div className="widget-large-heading">
               <div className="widget-large-heading-label">
-                <NotebookPen size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                <NotebookPen size={16} strokeWidth={1.33} absoluteStrokeWidth />
                 <span>Notes</span>
               </div>
               <button type="button" className="widget-large-generate">

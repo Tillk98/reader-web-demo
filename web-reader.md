@@ -30,7 +30,7 @@ Applying the status the word or phrase already has is a no-op: no write, no snac
 
 - **Click** opens the small widget. Click the same word again to close it.
 - **Click a blue word** creates a LingQ 1, then opens the small widget.
-- **Long-press (~480ms)** opens the medium widget. Movement over 8px cancels the press. The click that follows a long-press is ignored, so a long-press on a blue word does **not** create a LingQ.
+- **Long-press (~480ms)** opens the medium widget. On a blue word it first creates a LingQ 1, the same as a click, so the card opens in the LingQ state. Movement over 8px cancels the press. The click that follows a long-press is ignored.
 - Scrolling the word out of view closes the small and medium widgets.
 - Click outside or Escape closes the open widget. The snackbar is not an outside click.
 
@@ -49,9 +49,9 @@ Long-press card, also kept inside the text column.
 
 **LingQ** (saved word or saved phrase): meaning with an inert play button, status chip, chevron, tags, horizontally scrollable actions.
 
-**New** (still-blue word, or an unsaved valid phrase): header “Suggested Meanings”, up to 2 glosses with a plus, tags, dictionary row (Google Translate, Linguee, DeepL, WörterBuch). No status chip.
+**New** (unsaved valid phrase): header “Suggested Meanings”, up to 2 glosses with a plus, tags, dictionary row (Google Translate, Linguee, DeepL, WörterBuch). No status chip. A blue word is already a LingQ before this card opens.
 
-- Tags and dictionary buttons are visual only.
+- Tag and dictionary rows match. Each is a white leading icon button, then chips (radius 4, fill `#FBFCFD`). Labels are 12px regular, `#49525B`. The large widget uses the same rows. Both are visual only.
 - Actions row scrolls by swipe or click-and-drag. A drag does not fire the button.
 - **Ignore** and **Known** update status and close the widget.
 - Status chip opens a vertical labeled menu, clamped to the text column. Any choice collapses the menu and leaves the widget open.
@@ -62,8 +62,13 @@ Long-press card, also kept inside the text column.
 
 Centered in the lesson column, 400×600 (shrinks if the column is shorter). Not anchored to the word.
 
-- Shows the term, meanings, the full sentence, and its English translation. Original sentence clamps to 2 lines. Translation does not. German transliteration is hidden.
-- **New** variant (blue word, or unsaved valid phrase): up to 3 suggested meanings with a plus, plus the dictionary row.
+- Shows the term, meanings, the full sentence, and its English translation. Original sentence is regular and italic, and clamps to 2 lines. Translation is not italic and does not clamp. German transliteration is hidden.
+- Header and footer are white. Each section (Meanings, Sentence, Notes) keeps its header outside a `#F6F8F9` card, radius 12, with 12px padding on the left and right.
+- Section labels are 14px regular, `#49525B`, 18px line height. Icons and chevrons are 16px. Lucide strokes are 1.33. The Sentence icon is the custom image at 16px.
+- The reader's default grey buttons, including these section chevrons, are `#F6F8F9`. Borders and the meaning dividers are `#F1F3F4`.
+- Meaning dividers are inset from the left, in line with the text, and run to the right edge.
+- Tags are not in the term header. They sit under the meanings. On a word that is not a LingQ they sit between the meanings and the dictionaries.
+- **New** variant (unsaved valid phrase): up to 3 suggested meanings with a plus, tags between the meanings and the dictionary row.
 - Saving a meaning creates a LingQ 1 and **keeps the widget open**, switching it to the saved form.
 - Footer status bar updates the word or saved phrase and leaves the widget open.
 - Click outside or Escape closes it.
@@ -86,7 +91,7 @@ Known phrase meanings come from a small glossary. Anything else falls back to wo
 
 Shown at the bottom center of the lesson text (same slot as the phrase hint) after every real status change:
 
-- Clicking a blue word into a LingQ
+- Clicking or long-pressing a blue word into a LingQ
 - Saving a suggested meaning (word or phrase)
 - Ignore, Known, or any status-bar choice that actually changes status
 

@@ -12,7 +12,7 @@ import {
   CircleCheck,
   ChevronsUpDown,
   Contrast,
-  Ellipsis,
+  EllipsisVertical,
   Gauge,
   Languages,
   List,
@@ -66,15 +66,20 @@ const PARAGRAPHS = [
   "Wenn du jetzt sowieso maximal jeden Tag 15 Minuten zur Verfügung hast, dann wirst du wahrscheinlich nicht weit kommen mit mehreren Sprachen, ja.",
   "Also, und wir gehen davon aus, für den Fall, dass du gute Levels erreichen möchtest, ja.",
   "Es ist auch möglich, dass du zehn Sprachen gleichzeitig lernst und dann in keiner Sprache wirklich gute Fortschritte machst.",
-  "Aber wenn es dir irgendwie Spaß macht und du willst in allen Sprachen nur ein paar Sätze lernen, dann kannst du das natürlich machen, aber meine Tipps sind jetzt dahingehend, dass du auch",
-];
-
-const SCROLL_PARAGRAPHS = [
+  "Aber wenn es dir irgendwie Spaß macht und du willst in allen Sprachen nur ein paar Sätze lernen, dann kannst du das natürlich machen, aber meine Tipps sind jetzt dahingehend, dass du auch wirklich Erfolge feierst, ja, sag ich mal so.",
   "Und der zweite große Faktor in diesem, dieser Frage ist: Welche Sprachen hast du denn vor zu lernen?",
   "Ja, weil ich würde nicht unbedingt empfehlen, vor allem wenn du nicht viel Erfahrung hast mit dem Sprachenlernen, würde ich nicht empfehlen, jetzt von null anzufangen, zwei sehr schwere Sprachen zu lernen, ja, zum Beispiel Arabisch und Japanisch.",
   "Ja, also wenn da, das ist in meinen Augen quasi zum Scheitern verurteilt, weil eine dieser Sprachen schon mehr als genug ist und da kannst du schon und musst du schon mehr als genug Zeit aufwenden, um da wirklich ein gutes Level zu erreichen.",
-  "Das heißt in so einem Fall würde ich mich lieber erstmal auf eine dieser Sprachen beschränken, und wenn du dann irgendwann ein gutes Level erreicht hast oder keine Lust mehr hast, sag ich mal, dann kannst du natürlich auch zur nächsten Sprache übergehen.",
+  "D.h. in so einem Fall würde ich mich lieber erstmal auf eine dieser Sprachen beschränken, und wenn du dann irgendwann ein gutes Level erreicht hast oder keine Lust mehr hast, sag ich mal, dann kannst du natürlich auch zur nächsten Sprache übergehen.",
+  "Ein ähnlicher Fall, den, oder eine ähnliche Konstellation, die ich auch nicht unbedingt empfehlen würde, ist jetzt, wenn du von null anfängst, zwei sehr ähnliche Sprachen zu lernen, ja, sag ich mal Spanisch und Portugiesisch oder so.",
+  "Ja, also kann man machen, ja, aber wenn du jetzt wirklich von null anfängst, dann wird es einfach sehr verwirrend sein, weil die Sprachen einfach so ähnlich sind und du kannst du gar nicht zuordnen, oh, ist das jetzt, ist es jetzt Spanisch oder ist das Portugiesisch oder ist das jetzt Italienisch oder Spanisch.",
+  "Das würde ich nicht empfehlen.",
+  "Ich würde dir, das kannst du aber ohne Probleme machen, sobald du in einer dieser Sprachen ein gutes Level erreicht hast, ja, eine gute Basis, mittleres Niveau vielleicht erreicht hast, dann kannst du auch anfangen, eine andere romanische Sprache zu lernen und die andere dennoch weiter voranzutreiben.",
+  "Ja, das ist möglich, aber dieses beides von null anfangen kann ein bisschen verwirrend sein.",
+  "Möglich ist es, ja, aber wie gesagt, würde ich es nicht unbedingt empfehlen.",
 ];
+
+const SCROLL_PARAGRAPHS = [];
 
 const PAGE_COUNT = PARAGRAPHS.length;
 
@@ -159,10 +164,10 @@ const MODES = [
   { id: "scroll", label: "Scroll Mode" },
 ];
 
-function modeIcon(id) {
-  if (id === "sentence") return <img src={sentenceModeIcon} alt="" width={22} height={13} />;
-  if (id === "scroll") return <WrapText size={24} strokeWidth={1.5} absoluteStrokeWidth />;
-  return <img src={pageModeIcon} alt="" width={22} height={17} />;
+function modeIcon(id, size = 24) {
+  if (id === "sentence") return <img src={sentenceModeIcon} alt="" width={size} height={size} />;
+  if (id === "scroll") return <WrapText size={size} strokeWidth={1.5} absoluteStrokeWidth />;
+  return <img src={pageModeIcon} alt="" width={size} height={size} />;
 }
 
 const REVIEW_CARDS = {
@@ -453,8 +458,89 @@ function TermStatusMenu({ anchorKey, status, onStatus, onClose }) {
   );
 }
 
+const AUDIO_DURATION = 20 * 60 + 45;
+
+function formatAudioTime(seconds) {
+  const rounded = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(rounded / 60);
+  const remain = rounded % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(remain).padStart(2, "0")}`;
+}
+
+function AudioTimeline({ time, duration, scrubbing, onScrub, onScrubbing }) {
+  const trackRef = useRef(null);
+  const scrubbingRef = useRef(false);
+
+  function seek(clientX) {
+    const rect = trackRef.current.getBoundingClientRect();
+    if (!rect.width) return;
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    onScrub(ratio * duration);
+  }
+
+  function beginScrub(event) {
+    scrubbingRef.current = true;
+    onScrubbing(true);
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* Pointer capture needs a real pointer. */
+    }
+    seek(event.clientX);
+  }
+
+  function moveScrub(event) {
+    if (!scrubbingRef.current) return;
+    seek(event.clientX);
+  }
+
+  function endScrub() {
+    if (!scrubbingRef.current) return;
+    scrubbingRef.current = false;
+    onScrubbing(false);
+  }
+
+  function onKeyDown(event) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    onScrubbing(true);
+    const delta = event.key === "ArrowRight" ? 5 : -5;
+    onScrub(Math.min(duration, Math.max(0, time + delta)));
+  }
+
+  return (
+    <div className={`audio-bar-timeline${scrubbing ? " is-scrubbing" : ""}`}>
+      <div className="audio-bar-float-times">
+        <span>{formatAudioTime(time)}</span>
+        <span>{formatAudioTime(duration)}</span>
+      </div>
+      <div
+        className="audio-bar-progress"
+        ref={trackRef}
+        role="slider"
+        tabIndex={0}
+        aria-label="Audio progress"
+        aria-valuemin={0}
+        aria-valuemax={duration}
+        aria-valuenow={Math.round(time)}
+        aria-valuetext={`${formatAudioTime(time)} of ${formatAudioTime(duration)}`}
+        onPointerDown={beginScrub}
+        onPointerMove={moveScrub}
+        onPointerUp={endScrub}
+        onPointerCancel={endScrub}
+        onKeyDown={onKeyDown}
+        onKeyUp={() => onScrubbing(false)}
+        onBlur={() => onScrubbing(false)}
+      >
+        <span style={{ width: `${(time / duration) * 100}%` }} />
+      </div>
+    </div>
+  );
+}
+
 export default function Reader() {
   const textRef = useRef(null);
+  const footerRef = useRef(null);
   const pressRef = useRef({ suppressClick: false });
   const phraseIdRef = useRef(1);
   const [lesson, setLesson] = useState(LESSON);
@@ -470,6 +556,8 @@ export default function Reader() {
   const [modeMenu, setModeMenu] = useState(false);
   const [chromeMenu, setChromeMenu] = useState(null);
   const [playerMenu, setPlayerMenu] = useState(false);
+  const [audioTime, setAudioTime] = useState(3 * 60 + 30);
+  const [scrubbing, setScrubbing] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [loopAudio, setLoopAudio] = useState(false);
   const [theme, setTheme] = useState("light");
@@ -502,19 +590,43 @@ export default function Reader() {
     if (mode !== "page" || pageStarts !== null || !textRef.current) return;
     const nodes = [...textRef.current.querySelectorAll("[data-page-paragraph]")];
     if (!nodes.length) return;
+    const limit = textRef.current.clientHeight;
+    if (!limit) return;
+    const lines = nodes.flatMap((node) => {
+      const lineHeight = parseFloat(getComputedStyle(node).lineHeight) || node.offsetHeight;
+      const count = Math.max(1, Math.round(node.offsetHeight / lineHeight));
+      const top = node.offsetTop;
+      return Array.from({ length: count }, (_, index) => ({
+        top: top + index * lineHeight,
+        bottom: top + (index + 1) * lineHeight,
+      }));
+    });
     const starts = [0];
-    let used = 0;
-    nodes.forEach((node, index) => {
-      const height = node.offsetHeight + parseFloat(getComputedStyle(node).marginBottom);
-      if (index > 0 && used + height > 550) {
-        starts.push(index);
-        used = height;
-      } else {
-        used += height;
-      }
+    let pageTop = 0;
+    lines.forEach((line) => {
+      if (line.bottom - pageTop <= limit + 0.5) return;
+      if (line.top <= pageTop + 0.5) return;
+      starts.push(line.top);
+      pageTop = line.top;
     });
     setPageStarts(starts);
+    setPageIndex((index) => Math.min(index, Math.max(0, starts.length - 1)));
   }, [mode, lesson, pageStarts]);
+
+  useEffect(() => {
+    if (mode !== "page") return undefined;
+    const node = textRef.current;
+    if (!node) return undefined;
+    let last = node.clientHeight;
+    const observer = new ResizeObserver(() => {
+      const next = node.clientHeight;
+      if (!next || Math.abs(next - last) < 1) return;
+      last = next;
+      setPageStarts(null);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [mode]);
 
   useEffect(() => {
     const node = textRef.current;
@@ -664,6 +776,82 @@ export default function Reader() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [finishPrompt]);
+
+  useLayoutEffect(() => {
+    const footer = footerRef.current;
+    if (!footer) return undefined;
+
+    const place = () => {
+      const player = footer.querySelector(":scope > .audio-player");
+      const nav = footer.querySelector(":scope > .floating-nav");
+      const clear = () => {
+        footer.style.removeProperty("--nav-shift");
+        footer.style.removeProperty("--player-max");
+      };
+      if (!player || !nav || getComputedStyle(nav).display === "none") {
+        clear();
+        return;
+      }
+
+      if (!player.dataset.naturalWidth) {
+        const applied = footer.style.getPropertyValue("--player-max");
+        footer.style.setProperty("--player-max", "none");
+        player.dataset.naturalWidth = String(player.getBoundingClientRect().width);
+        if (applied) footer.style.setProperty("--player-max", applied);
+        else footer.style.removeProperty("--player-max");
+      }
+
+      const natural = Number(player.dataset.naturalWidth);
+      const footerBox = footer.getBoundingClientRect();
+      const playerLeft = player.getBoundingClientRect().left;
+      const navWidth = nav.getBoundingClientRect().width;
+      const lynx = footer.querySelector(":scope > .lynx-control");
+      const rightEdge = lynx && getComputedStyle(lynx).display !== "none"
+        ? lynx.getBoundingClientRect().left
+        : footerBox.right - parseFloat(getComputedStyle(footer).paddingRight);
+      const centeredLeft = footerBox.left + (footerBox.width - navWidth) / 2;
+      const minNavLeft = playerLeft + natural + 16;
+      const maxNavLeft = rightEdge - 16 - navWidth;
+
+      let navLeft = centeredLeft;
+      let playerWidth = natural;
+      if (minNavLeft > centeredLeft + 0.5) {
+        if (minNavLeft <= maxNavLeft) {
+          navLeft = minNavLeft;
+        } else {
+          navLeft = Math.max(centeredLeft, maxNavLeft);
+          playerWidth = Math.min(natural, navLeft - 16 - playerLeft);
+        }
+      }
+
+      const shift = Math.max(0, Math.ceil(navLeft - centeredLeft - 0.5));
+      const shiftValue = shift ? `${shift}px` : "";
+      const maxValue = playerWidth < natural - 0.5 ? `${Math.floor(playerWidth)}px` : "";
+      if ((footer.style.getPropertyValue("--nav-shift") || "") !== shiftValue) {
+        if (shiftValue) footer.style.setProperty("--nav-shift", shiftValue);
+        else footer.style.removeProperty("--nav-shift");
+      }
+      if ((footer.style.getPropertyValue("--player-max") || "") !== maxValue) {
+        if (maxValue) footer.style.setProperty("--player-max", maxValue);
+        else footer.style.removeProperty("--player-max");
+      }
+    };
+
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(footer);
+    const nav = footer.querySelector(":scope > .floating-nav");
+    const player = footer.querySelector(":scope > .audio-player");
+    const lynx = footer.querySelector(":scope > .lynx-control");
+    if (nav) observer.observe(nav);
+    if (player) observer.observe(player);
+    if (lynx) observer.observe(lynx);
+    return () => {
+      observer.disconnect();
+      footer.style.removeProperty("--nav-shift");
+      footer.style.removeProperty("--player-max");
+    };
+  }, [playing, playerOpen, mode, lynxOpen]);
 
   function transition(update) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1286,7 +1474,7 @@ export default function Reader() {
               <ChevronDown size={14} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
             </button>
 
-            <button type="button" className="status-pill">
+            <button type="button" className="status-pill language-pill">
               <span className="pill-stat">
                 <img className="language-flag" src={flagIcon} alt="" width={21} height={16} />
                 <span>3050</span>
@@ -1321,14 +1509,14 @@ export default function Reader() {
             </span>
             <span className="chrome-menu-anchor">
               <button type="button" className="icon-button" aria-label="More options" aria-expanded={chromeMenu === "more"} onClick={() => setChromeMenu((current) => (current === "more" ? null : "more"))}>
-                <Ellipsis size={24} strokeWidth={1.5} absoluteStrokeWidth />
+                <EllipsisVertical size={24} strokeWidth={1.5} absoluteStrokeWidth />
               </button>
               {chromeMenu === "more" ? (
                 <ReaderOptionsMenu mode={mode} showTranslation={showTranslation} onToggleTranslation={() => setShowTranslation((open) => !open)} />
               ) : null}
             </span>
             {sidePanel || reviewOpen ? null : (
-            <button type="button" className="icon-button" aria-label="Open side panel" onClick={toggleSidePanel}>
+            <button type="button" className="icon-button panel-button" aria-label="Open side panel" onClick={toggleSidePanel}>
               <PanelRight size={24} strokeWidth={1.5} absoluteStrokeWidth />
             </button>
             )}
@@ -1477,12 +1665,20 @@ export default function Reader() {
             ) : null}
             {mode === "sentence" ? null : (() => {
               const pageSource = lesson.slice(0, PAGE_COUNT);
-              const measuring = mode === "page" && pageStarts === null;
-              const start = measuring ? 0 : (pageStarts?.[pageIndex] ?? 0);
-              const end = measuring ? pageSource.length : (pageStarts?.[pageIndex + 1] ?? pageSource.length);
-              const paragraphs = mode === "scroll" ? lesson : pageSource.slice(start, end);
-              return paragraphs.map((tokens, listIndex) => {
-              const paragraphIndex = mode === "page" ? start + listIndex : listIndex;
+              const paragraphs = mode === "scroll" ? lesson : pageSource;
+              const pageOffset = mode === "page" ? (pageStarts?.[pageIndex] ?? 0) : 0;
+              const pageEnd = mode === "page" ? pageStarts?.[pageIndex + 1] : undefined;
+              return (
+              <div
+                className="page-flow"
+                style={mode === "page" && pageEnd != null ? { height: pageEnd - pageOffset, overflow: "hidden" } : undefined}
+              >
+              <div
+                className="page-flow-shift"
+                style={mode === "page" ? { transform: `translateY(-${pageOffset}px)` } : undefined}
+              >
+              {paragraphs.map((tokens, listIndex) => {
+              const paragraphIndex = listIndex;
               const nodes = [];
               let tokenIndex = 0;
               while (tokenIndex < tokens.length) {
@@ -1517,7 +1713,10 @@ export default function Reader() {
                   {nodes}
                 </p>
               );
-            });
+            })}
+              </div>
+              </div>
+              );
             })()}
             {mode === "scroll" ? (
               <button type="button" className={`finish-lesson${atScrollEnd ? " is-visible" : ""}`} onClick={openFinishPrompt}>
@@ -1551,10 +1750,6 @@ export default function Reader() {
                 suggestions={activeSuggestions}
                 isNew={activeIsNew}
                 phraseError={pendingPhrase?.invalid ? pendingPhrase.text : null}
-                statusMenu={active.statusMenu}
-                onToggleStatusMenu={() => setActive((current) => (
-                  current ? { ...current, statusMenu: !current.statusMenu } : current
-                ))}
                 onStatus={handleStatusChange}
                 onChooseMeaning={chooseMeaning}
                 onSelectPhrase={startPhraseSelect}
@@ -1663,32 +1858,52 @@ export default function Reader() {
         </div>
       </main>
 
-      <footer className={`reader-footer${playerOpen ? " is-player-open" : ""}`}>
+      <footer ref={footerRef} className={`reader-footer${playerOpen ? " is-player-open" : ""}`}>
         {playerOpen ? (
           <div className="audio-bar" role="group" aria-label="Lesson audio">
-            <div className="audio-bar-progress" aria-hidden="true"><span /></div>
+            <AudioTimeline
+              time={audioTime}
+              duration={AUDIO_DURATION}
+              scrubbing={scrubbing}
+              onScrub={setAudioTime}
+              onScrubbing={setScrubbing}
+            />
             <div className="audio-bar-row">
-              <div className="audio-bar-controls">
+              <div className="audio-bar-transport">
+                <button type="button" className="audio-bar-control audio-bar-back" aria-label="Back 5 seconds">
+                  <img src={skipBackIcon} alt="" width={20} height={20} />
+                </button>
                 <button type="button" className="audio-bar-pause" aria-label={playing ? "Pause" : "Play"} onClick={() => setPlayback(!playing)}>
-                  {playing ? <Pause size={20} strokeWidth={1.5} absoluteStrokeWidth /> : <Play size={20} strokeWidth={1.5} absoluteStrokeWidth />}
+                  {playing ? <Pause size={24} strokeWidth={1.5} absoluteStrokeWidth /> : <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />}
                 </button>
-                <button type="button" className="audio-bar-control" aria-label="Back 5 seconds">
-                  <img src={skipBackIcon} alt="" width={18} height={18} />
+                <button type="button" className="audio-bar-control audio-bar-forward" aria-label="Forward 5 seconds">
+                  <img src={skipForwardIcon} alt="" width={20} height={20} />
                 </button>
-                <button type="button" className="audio-bar-control" aria-label="Forward 5 seconds">
-                  <img src={skipForwardIcon} alt="" width={18} height={18} />
-                </button>
-                <button type="button" className="audio-bar-control" aria-label="Repeat">
-                  <Repeat2 size={18} strokeWidth={1.33} absoluteStrokeWidth />
-                </button>
-                <button type="button" className="audio-bar-speed" aria-label="Playback speed">1x</button>
-                <span className="audio-bar-divider" aria-hidden="true" />
-                <span className="audio-bar-time">03:30 / 20:45</span>
               </div>
-              <div className="audio-bar-tools">
+              <button type="button" className="audio-bar-control audio-bar-repeat" aria-label="Repeat">
+                <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+              </button>
+              <span className="audio-bar-divider audio-bar-time-divider" aria-hidden="true" />
+              <span className="audio-bar-time">
+                <span className="audio-bar-time-current">{formatAudioTime(audioTime)}</span>
+                <span className="audio-bar-time-sep"> / </span>
+                <span className="audio-bar-time-total">{formatAudioTime(AUDIO_DURATION)}</span>
+              </span>
+              <div className="audio-bar-secondary">
+                <button type="button" className="audio-bar-speed" aria-label="Playback speed">1x</button>
+                <span className="mode-anchor">
+                  <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
+                    {modeIcon(mode, 20)}
+                    <ChevronsUpDown size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
+                  </button>
+                  {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
+                </span>
+                <button type="button" className="audio-bar-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
+                  <img src={lynxIcon} alt="" width={20} height={20} />
+                </button>
                 <span className="player-menu-anchor">
                   <button type="button" className="audio-bar-control" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
-                    <Ellipsis size={18} strokeWidth={1.35} absoluteStrokeWidth />
+                    <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
                   </button>
                   {playerMenu ? (
                     <PlayerOptionsMenu
@@ -1699,61 +1914,65 @@ export default function Reader() {
                     />
                   ) : null}
                 </span>
-                <span className="audio-bar-divider" aria-hidden="true" />
-                <span className="mode-anchor">
-                  <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
-                    {modeIcon(mode)}
-                    <ChevronsUpDown size={18} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
-                  </button>
-                  {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
-                </span>
-                <button type="button" className="audio-bar-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
-                  <img src={lynxIcon} alt="" width={22} height={22} />
-                </button>
-                <button type="button" className="audio-bar-control" aria-label="Collapse player" onClick={() => setPlayerOpen(false)}>
-                  <ChevronDown size={18} strokeWidth={1.35} absoluteStrokeWidth />
+                <span className="audio-bar-divider audio-bar-tools-divider" aria-hidden="true" />
+                <button type="button" className="audio-bar-control audio-bar-collapse" aria-label="Collapse player" onClick={() => setPlayerOpen(false)}>
+                  <ChevronDown size={20} strokeWidth={1.5} absoluteStrokeWidth />
                 </button>
               </div>
             </div>
           </div>
         ) : playing ? (
-          <div className="audio-player" role="group" aria-label="Lesson audio">
+          <div
+            className="audio-player"
+            role="group"
+            aria-label="Lesson audio"
+            onClick={(event) => {
+              if (event.target.closest("button, .player-menu")) return;
+              if (!window.matchMedia("(max-width: 767px)").matches) return;
+              openPlayer();
+            }}
+          >
             <div className="audio-player-main">
-              <div className="audio-player-lesson">
-                <div className="audio-player-thumb">
-                  <img src={thumbnail} alt="" width={45} height={45} />
-                  <button type="button" className="audio-player-pause" aria-label="Pause" onClick={() => setPlayback(false)}>
-                    <Pause size={16} strokeWidth={1.5} absoluteStrokeWidth />
-                  </button>
-                </div>
-                <div className="audio-player-text">
-                  <p>Mehrere Sprachen auf einmal lernen?! Wie lange jeden Tag lernen?</p>
-                  <div className="audio-player-course">
-                    <span>YouTube auf Deutsch</span>
-                    <span>(3/5)</span>
-                  </div>
-                </div>
-              </div>
-              <button type="button" className="audio-player-icon" aria-label="Replay 10 seconds">
-                <img src={replayIcon} alt="" width={19} height={23} />
-              </button>
-              <span className="player-menu-anchor">
-                <button type="button" className="audio-player-icon" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
-                  <Ellipsis size={18} strokeWidth={1.5} absoluteStrokeWidth />
+              <div className="audio-player-leading">
+                <button type="button" className="audio-player-pause" aria-label="Pause" onClick={() => setPlayback(false)}>
+                  <Pause size={24} strokeWidth={1.5} absoluteStrokeWidth />
                 </button>
-                {playerMenu ? (
-                  <PlayerOptionsMenu
-                    autoAdvance={autoAdvance}
-                    onAutoAdvance={() => setAutoAdvance((on) => !on)}
-                    loopAudio={loopAudio}
-                    onLoopAudio={() => setLoopAudio((on) => !on)}
-                  />
-                ) : null}
-              </span>
-              <span className="audio-player-divider" aria-hidden="true" />
-              <button type="button" className="audio-player-icon" aria-label="Expand player" onClick={openPlayer}>
-                <ChevronRight size={18} strokeWidth={1.5} absoluteStrokeWidth />
-              </button>
+                <button type="button" className="audio-player-icon audio-player-back" aria-label="Replay 10 seconds">
+                  <img src={replayIcon} alt="" width={20} height={20} />
+                </button>
+              </div>
+              <div className="audio-player-tools">
+                <button type="button" className="audio-player-icon audio-player-replay" aria-label="Replay 10 seconds">
+                  <img src={replayIcon} alt="" width={20} height={20} />
+                </button>
+                <span className="mode-anchor audio-player-mode">
+                  <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
+                    {modeIcon(mode, 20)}
+                    <ChevronsUpDown size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
+                  </button>
+                  {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
+                </span>
+                <button type="button" className="audio-player-icon audio-player-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
+                  <img src={lynxIcon} alt="" width={20} height={20} />
+                </button>
+                <span className="player-menu-anchor">
+                  <button type="button" className="audio-player-icon" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
+                    <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                  </button>
+                  {playerMenu ? (
+                    <PlayerOptionsMenu
+                      autoAdvance={autoAdvance}
+                      onAutoAdvance={() => setAutoAdvance((on) => !on)}
+                      loopAudio={loopAudio}
+                      onLoopAudio={() => setLoopAudio((on) => !on)}
+                    />
+                  ) : null}
+                </span>
+                <span className="audio-player-divider" aria-hidden="true" />
+                <button type="button" className="audio-player-icon audio-player-expand" aria-label="Expand player" onClick={openPlayer}>
+                  <ChevronRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                </button>
+              </div>
             </div>
             <div className="audio-player-progress" aria-hidden="true">
               <span />
@@ -1772,18 +1991,18 @@ export default function Reader() {
             <button type="button" className="mode-selector" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
               {modeIcon(mode)}
               <span>{MODES.find((item) => item.id === mode)?.label}</span>
-              <ChevronsUpDown size={18} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
+              <ChevronsUpDown size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
             </button>
             {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
           </span>
           <span className="nav-divider" aria-hidden="true" />
           <span className="vocab-split">
             <button type="button" className="vocab-button" aria-label="Vocabulary" aria-pressed={mode === "scroll" ? reviewOpen : reviewCard === (mode === "sentence" ? "sentence" : "page")} onClick={startDefaultReview}>
-              <img src={reviewIcon} alt="" width={20} height={20} />
+              <img src={reviewIcon} alt="" width={24} height={24} />
             </button>
             <span className="vocab-split-divider" aria-hidden="true" />
             <button type="button" className="vocab-split-menu" aria-label="Review actions" aria-haspopup="menu" aria-expanded={reviewMenu} onClick={() => { setModeMenu(false); setReviewMenu((open) => !open); }}>
-              <ChevronDown size={16} strokeWidth={1.5} absoluteStrokeWidth />
+              <ChevronDown size={20} strokeWidth={1.5} absoluteStrokeWidth />
             </button>
             {reviewMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
           </span>
@@ -1793,7 +2012,7 @@ export default function Reader() {
         <form className="lynx-control" onClick={openLynx} onSubmit={(event) => { event.preventDefault(); openLynx(); }}>
           <input type="text" placeholder="Ask Lynx AI ..." aria-label="Ask Lynx AI" readOnly />
           <button type="submit" className="lynx-button" aria-label="Ask Lynx AI">
-            <img src={lynxIcon} alt="" width={22} height={22} />
+            <img src={lynxIcon} alt="" width={24} height={24} />
           </button>
         </form>
         )}

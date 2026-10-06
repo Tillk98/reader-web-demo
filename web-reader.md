@@ -9,7 +9,9 @@ This file is the source for how the reader behaves and how it is drawn. Where th
 - Words match letters and numbers. Punctuation stays outside the word frame.
 - On load, ~75% of words are **Known**. The rest split evenly between **LingQs** (levels 1–4) and **New** (blue). Assignment is random per load, then stable.
 - Multiple glosses render joined with ` ; `. A saved meaning replaces the glossary for that word.
+- LingQ and blue highlights have no border until that word is open in a popup. Hover does not add one.
 - Phrase highlights use a stroke that does not change text layout.
+- The reading column is 620px wide and centered, with no horizontal padding, so the paragraph box is 620px. Body text is 18px regular with a 36px line height. Paragraphs are separated by 36px. Each word has 1px of vertical padding and none on the sides. Page, sentence, and scroll use this same text.
 
 ## Status
 
@@ -47,14 +49,14 @@ Anchored 8px above the word, inside the text column. Flips below if it would lea
 
 Long-press card, also kept inside the text column.
 
-**LingQ** (saved word or saved phrase): meaning with an inert play button, status chip, chevron, tags, horizontally scrollable actions.
+**LingQ** (saved word or saved phrase): meaning with an inert play button, chevron, tags, horizontally scrollable actions, and the full status bar along the bottom.
 
 **New** (unsaved valid phrase): header “Suggested Meanings”, up to 2 glosses with a plus, tags, dictionary row (Google Translate, Linguee, DeepL, WörterBuch). No status chip. A blue word is already a LingQ before this card opens.
 
 - Tag and dictionary rows match. Each is a white leading icon button, then chips (radius 4, fill `#FBFCFD`). Labels are 12px regular, `#49525B`. The large widget uses the same rows. Both are visual only.
 - Actions row scrolls by swipe or click-and-drag. A drag does not fire the button.
 - **Ignore** and **Known** update status and close the widget.
-- Status chip opens a vertical labeled menu, clamped to the text column. Any choice collapses the menu and leaves the widget open.
+- The status bar is visible by default, under the actions. Choosing a status updates the word and leaves the widget open.
 - Forward chevron opens the large widget.
 - **Select Phrase** starts phrase selection.
 
@@ -103,17 +105,17 @@ It shows that status’s chip and name. One snackbar at a time; a newer change r
 
 ## Reading modes
 
-Page, sentence, and scroll. The mode control sits in the center of the bottom bar. With the expanded player open, the same menu sits in the player.
+Page, sentence, and scroll. The mode control sits in the center of the bottom bar. The same menu opens from the player.
 
-In the expanded player the mode control is not the filled chip. Transparent, radius 6, padding 6px, gap 10px. The active mode icon is `--fg-default` (`#0a0a0a`). The up-down chevron stays `--fg-muted`.
+In the player the control is a white pill, 40px tall, radius 999, no shadow, with 10px of padding on either side and 8px between the marks. It shows the mode icon and the up-down chevron, both 20px, and not the mode name. The icon is `--fg-default` (`#0a0a0a`). The chevron stays `--fg-muted`. That control is in the expanded player at every width, and in the collapsed player only below 767px.
 
-- **Page:** the lesson text is 550px tall. Overflow is hidden. Paragraphs that do not fit move to the next page. Left and right controls change page.
+- **Page:** the lesson text fills the space between the lesson header and the bottom bar. Overflow is hidden. A page ends on the last line that fits, so a paragraph can continue on the next page. Left and right controls change page. The controls stay vertically centered on the text.
 - **Sentence:** one sentence, with its translation when Show Translations is on. Left and right controls change sentence. Entering sentence mode starts at the first sentence.
 - **Scroll:** the full lesson scrolls. Page controls are hidden.
 
 Switching to page mode from scroll or sentence while the expanded player is open and playing asks “Video will be stopped.” Cancel stays put. Continue stops playback, closes the player, and switches to page.
 
-Sentence mode lists the sentence’s LingQs as term cards under the text. A card’s status button opens the same vertical status menu as the medium widget. Tapping the card opens the large widget, or updates the side panel when that panel is already open.
+Sentence mode lists the sentence’s LingQs as term cards under the text. A card is at least 100px wide, with 8px of vertical padding and 12px on the sides. The status button and the text are 12px apart. The term is 16px regular with a 20px line height, and the meaning is 14px medium with an 18px line height, with no gap between them. A card’s status button opens a vertical status menu. Tapping the card opens the large widget, or updates the side panel when that panel is already open.
 
 ## Finish lesson
 
@@ -135,19 +137,22 @@ The confirm dialog is the design-system dialog, horizontal on wide screens and s
 
 ## Site header and lesson chrome
 
-The site header has no extra fill and no bottom border. The lesson header sits 12px below it, the same gap the lesson header already has above the text. That gap closes while video is open, so the exit and panel buttons stay at the top of the video.
+The site header has no extra fill and no bottom border. Below 767px the language pill (flag and word count) hides. The streak pill stays. The lesson header has 12px of padding on top and 16px on the bottom. The bottom bar has 24px of padding on top and 16px on the bottom. There is no extra gap between the site header and the lesson header, between the lesson header and the lesson text, or between the lesson text and the bottom bar. On desktop and tablet that padding closes while video is open, so the exit and text buttons stay at the top of the video. Below 767px the lesson header stays at full height and the video starts below it, so the video does not cover those buttons.
 
 - **Exit** sits on the far left of the lesson header, opposite the Aa, ellipsis, and panel buttons. Same 45px icon button, radius 6, 24px icon. Lucide log-out, flipped so the arrow points left. Inset 12px, including when video collapses the header. It leaves the lesson and returns to where that lesson was opened.
-- The lesson progress bar floats in the lesson header, centered with the exit, text, more, and panel buttons. It shrinks before it meets those buttons. The track is `#F1F3F4`. It hides while video is showing so the video can sit in that space. The exit button stays on the left in that state.
+- The lesson progress bar matches the lesson text: 620px max, the same left edge, and the same width when that fits. It keeps the same clearance from the buttons on the right as it keeps from the exit button, and shortens from the right when the text would run underneath them. The track is `#F1F3F4`. It hides while video is showing so the video can sit in that space. The exit button stays on the left in that state. Below 767px the header does not give up that space: the video begins under the header.
+- Below 1024px the side-panel button in the lesson header hides. The progress bar then clears only the Aa and ellipsis buttons.
 - Page and sentence controls are the full tall hit target, inset 12px from the screen edges. Hover is `#f4f6f7`, pressed is `#e8ecee`.
 - The **Aa** menu changes theme and font. Visual only.
-- The **ellipsis** menu (page, sentence, and scroll) includes Show Translations. The first item sits against the lesson header.
-- Scroll mode fades the lesson text at the top and bottom. Words under the fade stay clickable. At the top of the scroll, the first line is not faded. The last line can scroll clear of the bottom fade.
+- The **ellipsis** in the lesson header is vertical, the same mark as in the player. Its menu (page, sentence, and scroll) includes Show Translations. The first item sits against the lesson header.
+- Scroll mode fades the lesson text at the top and bottom. Words under the fade stay clickable. At the top of the scroll, the first line is not faded. The last line can scroll clear of the bottom fade. Menus opened from the bottom bar paint above that fade.
 - With video open in sentence mode, the same top fade sits above the sentence.
 
 ## Bottom bar
 
-Default bar: play on the left, mode and vocabulary in the center, Ask Lynx on the right. Items sit 16px above the bottom of the screen. The center group is vertically centered with play and Lynx.
+Default bar: play on the left, mode and vocabulary in the center, Ask Lynx on the right. Items sit 16px above the bottom of the screen. The center group stays horizontally centered as the bar narrows. Play and Ask Lynx are 48px circles: white, no border, 24px marks, shadow `0 4px 6px rgba(0,0,0,0.08)`. Icons in this default bar are 24×24. Its chevrons are 20px. The center group is a pill (radius 999), the same white fill and shadow, padding 6px 12px, gap 10px. A 1px divider in `--border` (`#F1F3F4`) stretches the height of that pill between the mode control and the vocabulary section. The mode label is 14px medium with an 18px line height. Its hover fills the 48px control, with 12px of padding on either side, the same inset as a 24px icon in a 48px circle. The pill’s 6px padding stays clear of that fill. The collapsed player is its own pill, at least 300px wide, with shadow `0 4px 12px rgba(0,0,0,0.08)`.
+
+Below 767px the mode control drops its label and keeps the mode icon plus the up-down chevrons. On that same width, starting playback replaces the center group and Lynx with the player stretched across the bar.
 
 - **Play** morphs into the collapsed player. Pause on the collapsed player stops playback and returns to the play button.
 - **Expand** opens the full player and, if the lesson is in page mode, switches to scroll. Video shows in scroll and sentence, not in page mode.
@@ -157,9 +162,13 @@ Default bar: play on the left, mode and vocabulary in the center, Ask Lynx on th
 
 [AudioPlayer (Web)](https://www.figma.com/design/2hnfSE92imLKR8gnp4qa36/Reader?node-id=5700-84606)
 
-- Expand control is a single right chevron (18px), not chevrons-up-down.
-- Progress track sits inside the card and is clipped to the bottom corners (`0 0 11px 11px`). It does not bleed 1px past the border, and it is not a full pill.
-- The card itself does not clip overflow. Only the progress track is clipped, so the audio menu can float above the card.
+- No lesson thumbnail, title, or course. The card is a pill: radius 999, padding 6px 12px, no border, white. Its shadow is `0 4px 12px rgba(0,0,0,0.08)`. Pause and the other controls sit at opposite ends.
+- Pause is a 48px circle with a 24px icon and no border or shadow of its own. On desktop and tablet it sits at the left. Replay, the more menu, and the expand chevron sit at the right, gap 10px. Those are 40px circles with 20px icons (1.5px stroke where the icon is stroked). The pill is at least 300px wide.
+- Expand control is a right chevron (20px), after a 1px divider the height of those 40px controls.
+- Below 767px the card fills the bar. Pause comes first, then the same replay control as on wider screens, both on the left. Mode, Lynx, and the ellipsis sit on the right, in that order. The divider and the expand chevron are hidden. Tapping the card, outside its buttons, expands the player.
+- On desktop and tablet, the mode and vocabulary group stays centered while more than 16px remains between it and the collapsed player. When the player would come closer, the group shifts right until that gap is 16px. It stops 16px short of Lynx. Below 767px the player takes the whole bar and that center group hides.
+- Progress is a 4px line on the bottom edge of the pill. The track is `#D1D6D9`. The fill is `#2E75CD` and 76px wide. The line is clipped to the pill, so the ends follow the curve.
+- The pill itself does not clip overflow. Only the progress line is clipped, so the audio menu can float above the pill.
 
 ### Expanded player
 
@@ -168,19 +177,20 @@ Default bar: play on the left, mode and vocabulary in the center, Ask Lynx on th
 - No lesson thumbnail, title, or course in this bar.
 - Progress is a full-bleed 4px track on the top edge. No thumb. No `0:00` / duration labels on either side of a scrubber.
 - Time is one muted label in the control row (`03:30 / 20:45`), after a 1px divider. Footnote Medium, `--fg-muted`.
-- Transport order: pause, back 5, forward 5, repeat, `1x`. Pause is a 45px circle, 1px `--border`, white fill, shadow `0 2px 8px rgba(0,0,0,0.02)`, 20px icon.
-- Other transport icons are 18px in 45px hit targets, radius 6. Hover fill `#f4f6f7`.
-- Right cluster stays grouped: ellipsis, divider, mode, Lynx, collapse chevron. Horizontal padding is 16px, not 24px.
-- Lynx is a plain 45px icon button (22px mark), not the 42px bordered circle.
-- The ellipsis opens a menu above the button (lesson, Auto-Advance, Playback Speed, Timer, Loop Audio, Theme, Settings, and Chat with Lynx). Toggles are local and visual. Outside click or Escape closes it. The same menu works on the collapsed player.
+- Transport order: pause, back 5, forward 5, repeat, `1x`. Play and pause stay a 48px pill with Play’s shadow (`0 4px 6px rgba(0,0,0,0.08)`) and a 24px icon. Every other control is a 40px pill with the same white fill and no shadow. Icon buttons are circles. Speed (`1x`, 14px semibold) and the mode control are wider pills, 40px tall, with 10px of padding on either side. Icons are 20px, with a 1.5px stroke where the icon is stroked. Chevrons are 20px. The row stays tall enough for the 48px play control, and the 40px controls sit centered on it. Controls in the row are 16px apart.
+- Hover fill is `#f4f6f7`.
+- Right cluster stays grouped: mode, Lynx, ellipsis, divider, collapse chevron. The mode control is the icon and chevron only. Horizontal padding is 16px, not 24px.
+- Lynx is a 40px circle with a 20px mark.
+- The more control is a vertical ellipsis, in the expanded player and the collapsed player. It opens a vertical menu above the button (lesson, Auto-Advance, Playback Speed, Timer, Loop Audio, Theme, Settings, and Chat with Lynx). Toggles are local and visual. Outside click or Escape closes it.
+- Below 767px the expanded player stacks. Play and pause stay 48px, and the other controls stay 40px. Back, play, and forward sit centered on the first row. The next row is speed, mode, Lynx, the vertical ellipsis, then the collapse chevron, spread across the width. Repeat is not on this layout. The progress track is full width along the bottom. While it is dragged, `12px` regular timestamps sit just above it: the current time on the left and the duration on the right. They hide when the drag ends.
 
 ### Vocabulary button
 
 One split control, not an icon and a separate chevron. Hidden while the player is open.
 
-- 36px tall, radius 8px. One fill for the whole button, `#FBFCFD`. Border `1px solid #F1F3F4`.
-- Icon half is 40×36. Chevron half is 32×36. Both are transparent so the container color shows through.
-- Divider is 1×16px and vertically centered. It does not run the full height. Color is `--fg-muted` (`#49525B`), not the border.
+- A pill inside the center pill. Fill `#FBFCFD`. No border. Horizontal padding 4px. The icon, divider, and chevron live in that one section.
+- Icon half is 48×48. Chevron half is 40×40. Both are transparent so the section color shows through.
+- Divider is 1×34px and vertically centered. Color is `--border` (`#F1F3F4`).
 - The icon starts the default review for the current reading mode. It does not toggle the list shut.
 - The chevron opens Review actions and rotates 180° while that menu is open. 150ms ease. No transition when reduced motion is on. The search-type chevron in the vocabulary search field uses the same flip.
 - Opening the mode menu or the review menu closes the other. Outside click or Escape closes it.
@@ -252,9 +262,9 @@ Same blue button: `1px var(--fg-secondary)`, fill `#F1F7FE`, 14/500/18, 16px voc
 
 [LynxChat](https://www.figma.com/design/2hnfSE92imLKR8gnp4qa36/Reader?node-id=5871-55466)
 
-The whole Ask Lynx pill opens the chat, including the icon and padding. The click highlight is blue (`2px solid #2e75cd`), not green.
+The Ask Lynx circle in the bottom bar opens the chat. The click highlight is blue (`2px solid #2e75cd`), not green.
 
-- The footer pill is the collapsed state of this panel. In the default bottom bar, the field morphs into a panel in the same right-hand column as the word panel. The panel’s bottom edge is the pill’s bottom edge. The footer field hides while the chat is open.
+- The footer circle is the collapsed state of this panel. It morphs into a panel in the same right-hand column as the word panel. The panel’s bottom edge is the circle’s bottom edge. The footer circle hides while the chat is open.
 - Close control is a downward chevron in the same circular outline button, not an X.
 - Shadow is `0 -4px 12px rgba(0,0,0,0.08)`, same as the word panel. Not `0 4px 6 rgba(0,0,0,0.08)`.
 - Border `1px #f1f3f4` and radius 16 match the docked word panel. Keep the two panels on the same values.

@@ -77,27 +77,6 @@ function placeCard(anchor, boundary, width, height) {
   };
 }
 
-function placeMenu(button, boundary, width, height) {
-  const trigger = button.getBoundingClientRect();
-  const bounds = boundary.getBoundingClientRect();
-  let left = trigger.right - bounds.left + boundary.scrollLeft + GAP;
-  const minLeft = boundary.scrollLeft;
-  const maxLeft = boundary.scrollLeft + boundary.clientWidth - width;
-
-  if (left > maxLeft) {
-    left = trigger.left - bounds.left + boundary.scrollLeft - GAP - width;
-  }
-
-  const minTop = boundary.scrollTop;
-  const maxTop = boundary.scrollTop + boundary.clientHeight - height;
-  const top = clamp(trigger.top - bounds.top + boundary.scrollTop, minTop, maxTop);
-
-  return {
-    top,
-    left: clamp(left, minLeft, maxLeft),
-  };
-}
-
 function TagRow() {
   return (
     <div className="widget-medium-tags">
@@ -120,8 +99,6 @@ export default function WidgetMedium({
   meaning,
   suggestions = [],
   isNew = false,
-  statusMenu,
-  onToggleStatusMenu,
   onStatus,
   onChooseMeaning,
   onSelectPhrase,
@@ -131,12 +108,9 @@ export default function WidgetMedium({
   onOpenLarge,
 }) {
   const cardRef = useRef(null);
-  const menuRef = useRef(null);
-  const statusButtonRef = useRef(null);
   const actionsDrag = useDragScroll();
   const dictionaryDrag = useDragScroll();
   const [cardPos, setCardPos] = useState(null);
-  const [menuPos, setMenuPos] = useState(null);
 
   useLayoutEffect(() => {
     const boundary = boundaryRef.current;
@@ -144,18 +118,7 @@ export default function WidgetMedium({
     const anchor = boundary?.querySelector(`[data-word-id="${anchorId}"]`);
     if (!boundary || !card || !anchor) return;
     setCardPos(placeCard(anchor, boundary, card.offsetWidth, card.offsetHeight));
-  }, [anchorId, boundaryRef, meaning, isNew, suggestions, phraseError]);
-
-  useLayoutEffect(() => {
-    const boundary = boundaryRef.current;
-    const menu = menuRef.current;
-    const button = statusButtonRef.current;
-    if (!statusMenu || !boundary || !menu || !button) {
-      setMenuPos(null);
-      return;
-    }
-    setMenuPos(placeMenu(button, boundary, menu.offsetWidth, menu.offsetHeight));
-  }, [anchorId, boundaryRef, statusMenu, status, cardPos]);
+  }, [anchorId, boundaryRef, meaning, isNew, suggestions, phraseError, status]);
 
   useEffect(() => {
     const boundary = boundaryRef.current;
@@ -174,11 +137,6 @@ export default function WidgetMedium({
       }
       const nextCard = placeCard(anchor, boundary, card.offsetWidth, card.offsetHeight);
       setCardPos(nextCard);
-      const menu = menuRef.current;
-      const button = statusButtonRef.current;
-      if (statusMenu && menu && button) {
-        setMenuPos(placeMenu(button, boundary, menu.offsetWidth, menu.offsetHeight));
-      }
     }
 
     boundary.addEventListener("scroll", sync, { passive: true });
@@ -187,12 +145,11 @@ export default function WidgetMedium({
       boundary.removeEventListener("scroll", sync);
       window.removeEventListener("resize", sync);
     };
-  }, [anchorId, boundaryRef, onClose, statusMenu]);
+  }, [anchorId, boundaryRef, onClose]);
 
   useEffect(() => {
     function onPointerDown(event) {
       if (cardRef.current?.contains(event.target)) return;
-      if (menuRef.current?.contains(event.target)) return;
       if (event.target.closest?.(".word")) return;
       if (event.target.closest?.(".status-snackbar")) return;
       onClose();
@@ -295,9 +252,6 @@ export default function WidgetMedium({
                 <p className="widget-medium-meaning">{meaning}</p>
               </div>
               <div className="widget-medium-tools">
-                <span ref={statusButtonRef}>
-                  <StatusButton status={status} state="focus" onClick={onToggleStatusMenu} />
-                </span>
                 <button type="button" className="widget-medium-chevron" aria-label="More details" onClick={onOpenLarge}>
                   <ChevronRight size={18} strokeWidth={1.5} absoluteStrokeWidth />
                 </button>
@@ -325,32 +279,19 @@ export default function WidgetMedium({
           </div>
         </div>
         )}
+        {!phraseError && !isNew ? (
+          <div className="widget-medium-status-bar">
+            {WORD_BAR_STATUSES.map((item) => (
+              <StatusButton
+                key={item}
+                status={item}
+                state={item === status ? "focus" : "default"}
+                onClick={() => onStatus(item)}
+              />
+            ))}
+          </div>
+        ) : null}
       </div>
-
-      {statusMenu ? (
-        <div
-          ref={menuRef}
-          className="widget-status-menu"
-          data-placed={menuPos ? "true" : "false"}
-          role="menu"
-          aria-label="Word status"
-          style={menuPos ? { top: menuPos.top, left: menuPos.left } : { top: 0, left: 0 }}
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          {WORD_BAR_STATUSES.map((item) => (
-            <StatusButton
-              key={item}
-              status={item}
-              label
-              state={item === status ? "focus" : "default"}
-              onClick={() => {
-                onStatus(item);
-                onToggleStatusMenu();
-              }}
-            />
-          ))}
-        </div>
-      ) : null}
     </>
   );
 }

@@ -552,7 +552,7 @@ img {
 
 .menu-toggle.is-on {
   justify-content: flex-end;
-  background: var(--fg-primary);
+  background: var(--fg-secondary);
 }
 
 .theme-menu {
@@ -2828,6 +2828,10 @@ button:focus-visible {
   }
 
   .mode-selector span {
+    display: none;
+  }
+
+  .lesson-area.is-scroll .page-control {
     display: none;
   }
 

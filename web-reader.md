@@ -111,7 +111,7 @@ In the player the control is a white pill, 40px tall, radius 999, no shadow, wit
 
 - **Page:** the lesson text fills the space between the lesson header and the bottom bar. Overflow is hidden. A page ends on the last line that fits, so a paragraph can continue on the next page. Left and right controls change page. The controls stay vertically centered on the text.
 - **Sentence:** one sentence, with its translation when Show Translations is on. Left and right controls change sentence. Entering sentence mode starts at the first sentence.
-- **Scroll:** the full lesson scrolls. Page controls are hidden.
+- **Scroll:** the full lesson scrolls. Page controls are hidden, but above 767px they still occupy their 52px columns so the text stays aligned with page and sentence mode. Below 767px those columns leave the layout. The text keeps the 12px screen inset and uses the rest of the width.
 
 Switching to page mode from scroll or sentence while the expanded player is open and playing asks “Video will be stopped.” Cancel stays put. Continue stops playback, closes the player, and switches to page.
 
@@ -144,7 +144,7 @@ The site header has no extra fill and no bottom border. Below 767px the language
 - Below 1024px the side-panel button in the lesson header hides. The progress bar then clears only the Aa and ellipsis buttons.
 - Page and sentence controls are the full tall hit target, inset 12px from the screen edges. Hover is `#f4f6f7`, pressed is `#e8ecee`.
 - The **Aa** menu changes theme and font. Visual only.
-- The **ellipsis** in the lesson header is vertical, the same mark as in the player. Its menu (page, sentence, and scroll) includes Show Translations. The first item sits against the lesson header.
+- The **ellipsis** in the lesson header is vertical, the same mark as in the player. Its menu (page, sentence, and scroll) includes Show Translations. The first item sits against the lesson header. On-state switches in the menus are `#2E75CD`.
 - Scroll mode fades the lesson text at the top and bottom. Words under the fade stay clickable. At the top of the scroll, the first line is not faded. The last line can scroll clear of the bottom fade. Menus opened from the bottom bar paint above that fade.
 - With video open in sentence mode, the same top fade sits above the sentence.
 
@@ -181,7 +181,7 @@ Below 767px the mode control drops its label and keeps the mode icon plus the up
 - Hover fill is `#f4f6f7`.
 - Right cluster stays grouped: mode, Lynx, ellipsis, divider, collapse chevron. The mode control is the icon and chevron only. Horizontal padding is 16px, not 24px.
 - Lynx is a 40px circle with a 20px mark.
-- The more control is a vertical ellipsis, in the expanded player and the collapsed player. It opens a vertical menu above the button (lesson, Auto-Advance, Playback Speed, Timer, Loop Audio, Theme, Settings, and Chat with Lynx). Toggles are local and visual. Outside click or Escape closes it.
+- The more control is a vertical ellipsis, in the expanded player and the collapsed player. It opens a vertical menu above the button (lesson, Auto-Advance, Playback Speed, Timer, Loop Audio, Theme, Settings, and Chat with Lynx). Those switches use the same `#2E75CD` on state. Toggles are local and visual. Outside click or Escape closes it.
 - Below 767px the expanded player stacks. Play and pause stay 48px, and the other controls stay 40px. Back, play, and forward sit centered on the first row. The next row is speed, mode, Lynx, the vertical ellipsis, then the collapse chevron, spread across the width. Repeat is not on this layout. The progress track is full width along the bottom. While it is dragged, `12px` regular timestamps sit just above it: the current time on the left and the duration on the right. They hide when the drag ends.
 
 ### Vocabulary button

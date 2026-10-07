@@ -3404,7 +3404,8 @@ button:focus-visible {
   .audio-bar-repeat,
   .audio-bar-time-divider,
   .audio-bar-tools-divider,
-  .audio-bar-time-sep {
+  .audio-bar-time-sep,
+  .audio-bar-collapse {
     display: none;
   }
 

@@ -267,7 +267,23 @@ function MatchMenu({ anchorRef, selected, onSelect, onClose }) {
   );
 }
 
-function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose }) {
+function PanelClose({ sheet, onClose }) {
+  return (
+    <button
+      type="button"
+      className="widget-large-icon-button"
+      aria-label={sheet ? "Close" : "Close side panel"}
+      aria-pressed={sheet ? undefined : true}
+      onClick={onClose}
+    >
+      {sheet
+        ? <X size={18} strokeWidth={1.5} absoluteStrokeWidth />
+        : <PanelRight size={18} strokeWidth={1.5} absoluteStrokeWidth />}
+    </button>
+  );
+}
+
+function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet }) {
   const [clearing, setClearing] = useState(false);
   const allStatusesSelected = FILTER_STATUSES.every((status) => draft.statuses.includes(status.id));
   const someStatusesSelected = draft.statuses.length > 0 && !allStatusesSelected;
@@ -309,9 +325,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose }) {
             </span>
             Clear
           </button>
-          <button type="button" className="widget-large-icon-button" aria-label="Close side panel" aria-pressed="true" onClick={onClose}>
-            <PanelRight size={18} strokeWidth={1.5} absoluteStrokeWidth />
-          </button>
+          <PanelClose sheet={sheet} onClose={onClose} />
         </div>
       </header>
       <div className="review-filter-body">
@@ -435,7 +449,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose }) {
   );
 }
 
-export default function ReviewPanel({ terms, onStatus, onClose, onReview }) {
+export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet = false }) {
   const matchButtonRef = useRef(null);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState(null);
@@ -506,6 +520,7 @@ export default function ReviewPanel({ terms, onStatus, onClose, onReview }) {
             setPage("list");
           }}
           onClose={onClose}
+          sheet={sheet}
         />
       ) : null}
       {page === "filters" ? null : (
@@ -513,9 +528,7 @@ export default function ReviewPanel({ terms, onStatus, onClose, onReview }) {
       <header className="review-panel-header">
         <div className="review-header-bar">
           <h2>Vocabulary</h2>
-          <button type="button" className="widget-large-icon-button" aria-label="Close side panel" aria-pressed="true" onClick={onClose}>
-            <PanelRight size={18} strokeWidth={1.5} absoluteStrokeWidth />
-          </button>
+          <PanelClose sheet={sheet} onClose={onClose} />
         </div>
         <form className="review-search" onSubmit={(event) => event.preventDefault()}>
             <input

@@ -264,14 +264,18 @@ export default function WidgetMedium({
         {phraseError ? null : (
         <div className="widget-medium-actions">
           <div className="widget-medium-scroll" {...actionsDrag}>
-            <button type="button" className="widget-action" onClick={() => { onStatus("Ignored"); onClose(); }}>
-              <EyeOff size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
-              <span>Ignore</span>
-            </button>
-            <button type="button" className="widget-action" onClick={() => { onStatus("Known"); onClose(); }}>
-              <Check size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
-              <span>Known</span>
-            </button>
+            {isNew ? (
+              <>
+                <button type="button" className="widget-action" onClick={() => { onStatus("Ignored"); onClose(); }}>
+                  <EyeOff size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
+                  <span>Ignore</span>
+                </button>
+                <button type="button" className="widget-action" onClick={() => { onStatus("Known"); onClose(); }}>
+                  <Check size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
+                  <span>Known</span>
+                </button>
+              </>
+            ) : null}
             <button type="button" className="widget-action" onClick={onSelectPhrase}>
               <Brackets size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
               <span>Select Phrase</span>

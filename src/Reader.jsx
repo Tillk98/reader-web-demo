@@ -1,18 +1,23 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
+import { flushSync, createPortal } from "react-dom";
 import {
   ArrowDownNarrowWide,
   ArrowUpRight,
+  BellOff,
   BookOpenText,
   CaseSensitive,
+  ChartColumn,
   ChevronDown,
+  Columns2,
   FileText,
   ChevronLeft,
   ChevronRight,
   CircleCheck,
   ChevronsUpDown,
   Contrast,
+  Download,
   EllipsisVertical,
+  FlaskConical,
   Gauge,
   Languages,
   List,
@@ -33,6 +38,7 @@ import {
   Undo2,
   WrapText,
   X,
+  Youtube,
 } from "lucide-react";
 import WidgetSmall from "./WidgetSmall.jsx";
 import WidgetMedium from "./WidgetMedium.jsx";
@@ -254,10 +260,21 @@ const FONT_STYLES = [
   ["Noto Serif, serif", "400", "Noto Serif"],
 ];
 
-function MenuRow({ icon, label, onClick, children }) {
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 767px)");
+    const onChange = () => setMobile(query.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+  return mobile;
+}
+
+function MenuRow({ icon, label, onClick, children, destructive }) {
   return (
     <div className="reader-menu-row">
-      <button type="button" className="reader-menu-item" onClick={onClick}>
+      <button type="button" className={`reader-menu-item${destructive ? " is-destructive" : ""}`} onClick={onClick}>
         {icon}
         <span>{label}</span>
         {children}
@@ -266,9 +283,99 @@ function MenuRow({ icon, label, onClick, children }) {
   );
 }
 
-function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation }) {
+const LESSON_TYPES = [
+  { id: "video", label: "Video" },
+  { id: "audio", label: "Audio Only" },
+  { id: "both", label: "Audio & Video" },
+];
+
+function DemoSettings({ lessonType, onLessonType, onClose }) {
   return (
-    <div className="reader-menu" role="menu">
+    <div className="demo-settings-layer" onClick={onClose}>
+      <div
+        className="demo-settings"
+        role="dialog"
+        aria-labelledby="demo-settings-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="demo-settings-heading">
+          <p id="demo-settings-title">Demo settings</p>
+          <button type="button" className="demo-settings-close" aria-label="Close demo settings" onClick={onClose}>
+            <X size={16} strokeWidth={1.5} absoluteStrokeWidth />
+          </button>
+        </div>
+        <p className="demo-settings-note">Placeholder for previewing lesson formats. Not part of the reader.</p>
+        <div className="demo-type">
+          <p id="demo-type-label">Lesson type</p>
+          <div role="radiogroup" aria-labelledby="demo-type-label">
+            {LESSON_TYPES.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={lessonType === item.id}
+                className={lessonType === item.id ? "is-selected" : ""}
+                onClick={() => onLessonType(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DownloadMenu() {
+  const mobile = useIsMobile();
+  const [open, setOpen] = useState(false);
+  function onBlur(event) {
+    if (event.currentTarget.contains(event.relatedTarget)) return;
+    setOpen(false);
+  }
+  return (
+    <div
+      className={`reader-menu-row reader-menu-submenu-anchor${open ? " is-open" : ""}`}
+      onMouseEnter={() => { if (!mobile) setOpen(true); }}
+      onMouseLeave={() => { if (!mobile) setOpen(false); }}
+      onFocus={() => { if (!mobile) setOpen(true); }}
+      onBlur={onBlur}
+    >
+      <button
+        type="button"
+        className="reader-menu-item"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => { if (mobile) setOpen((value) => !value); }}
+      >
+        <Download size={16} strokeWidth={1.5} absoluteStrokeWidth />
+        <span>Download</span>
+        <ChevronRight className="reader-menu-chevron" size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
+      </button>
+      <div className="reader-submenu" role="menu">
+        <div className="reader-menu-row">
+          <button type="button" className="reader-menu-item" role="menuitem">
+            <Download size={16} strokeWidth={1.5} absoluteStrokeWidth />
+            <span>Download Audio</span>
+          </button>
+        </div>
+        <div className="reader-menu-row">
+          <button type="button" className="reader-menu-item" role="menuitem">
+            <Download size={16} strokeWidth={1.5} absoluteStrokeWidth />
+            <span>Download SRT File</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, onOpenDemo, onClose }) {
+  const mobile = useIsMobile();
+  const menu = (
+    <div className={`reader-menu${mobile ? " is-sheet" : ""}`} role="menu">
+      {mobile ? <PlayerDragHandle label="Close menu" onDragDown={onClose} /> : null}
       <div className="reader-menu-header">
         <button type="button" className="reader-menu-nav" aria-label="Previous lesson">
           <ChevronLeft size={16} strokeWidth={1.5} absoluteStrokeWidth />
@@ -293,20 +400,29 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation }) {
         <MenuRow icon={<ArrowDownNarrowWide size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Simplify Lesson (AI)" />
         <div className="reader-menu-divider" />
         <MenuRow icon={<SquarePen size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Edit Lesson" />
+        <MenuRow icon={<BellOff size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Unsubscribe" destructive />
         <MenuRow icon={<RefreshCw size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Refresh Lesson" />
         <MenuRow icon={<Printer size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Print Lesson" />
+        <DownloadMenu />
         <MenuRow icon={<ListPlus size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Add to Playlist" />
         <div className="reader-menu-divider" />
         <MenuRow icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Settings" />
+        <MenuRow icon={<ChartColumn size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Statistics" />
         <MenuRow icon={<img src={lynxIcon} alt="" width={16} height={16} />} label="Help" />
+        <div className="reader-menu-divider" />
+        <MenuRow icon={<FlaskConical size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Demo settings" onClick={onOpenDemo} />
       </div>
     </div>
   );
+  if (mobile) return createPortal(menu, document.body);
+  return menu;
 }
 
-function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio }) {
-  return (
-    <div className="reader-menu player-menu" role="menu">
+function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio, sideBySide, onSideBySide, showLayout, onClose }) {
+  const mobile = useIsMobile();
+  const menu = (
+    <div className={`reader-menu player-menu${mobile ? " is-sheet" : ""}`} role="menu">
+      {mobile ? <PlayerDragHandle label="Close menu" onDragDown={onClose} /> : null}
       <div className="reader-menu-header">
         <div className="reader-menu-lesson">
           <img src={thumbnail} alt="" width={32} height={32} />
@@ -329,6 +445,13 @@ function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio 
         <MenuRow icon={<Repeat2 size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Loop Audio" onClick={onLoopAudio}>
           <span className={`menu-toggle${loopAudio ? " is-on" : ""}`} aria-hidden="true"><span /></span>
         </MenuRow>
+        {showLayout ? (
+          <div className="player-menu-layout">
+            <MenuRow icon={<Columns2 size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Split view" onClick={onSideBySide}>
+              <span className={`menu-toggle${sideBySide ? " is-on" : ""}`} aria-hidden="true"><span /></span>
+            </MenuRow>
+          </div>
+        ) : null}
         <div className="reader-menu-divider" />
         <MenuRow icon={<CaseSensitive size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Theme" />
         <MenuRow icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Settings" />
@@ -338,11 +461,15 @@ function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio 
       </div>
     </div>
   );
+  if (mobile) return createPortal(menu, document.body);
+  return menu;
 }
 
-function ThemeMenu({ theme, onTheme, font, onFont }) {
-  return (
-    <div className="theme-menu" role="menu">
+function ThemeMenu({ theme, onTheme, font, onFont, onClose }) {
+  const mobile = useIsMobile();
+  const menu = (
+    <div className={`theme-menu${mobile ? " is-sheet" : ""}`} role="menu">
+      {mobile ? <PlayerDragHandle label="Close menu" onDragDown={onClose} /> : null}
       <section>
         <p>Background Color</p>
         <div className="theme-swatches">
@@ -391,11 +518,59 @@ function ThemeMenu({ theme, onTheme, font, onFont }) {
       </section>
     </div>
   );
+  if (mobile) return createPortal(menu, document.body);
+  return menu;
 }
 
 function wordClassName(token) {
   if (token.kind === "lingq") return `word word-lingq word-lingq-${token.level}`;
   return `word word-${token.kind}`;
+}
+
+function PlayerDragHandle({ onDragUp, onDragDown, label }) {
+  const drag = useRef(null);
+
+  function onPointerDown(event) {
+    if (event.button !== 0) return;
+    drag.current = { y: event.clientY, handled: false };
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Synthetic pointer events cannot capture.
+    }
+  }
+
+  function onPointerMove(event) {
+    const current = drag.current;
+    if (!current || current.handled) return;
+    const delta = event.clientY - current.y;
+    if (delta <= -40 && onDragUp) {
+      current.handled = true;
+      onDragUp();
+    } else if (delta >= 40 && onDragDown) {
+      current.handled = true;
+      onDragDown();
+    }
+  }
+
+  function onClick() {
+    if (drag.current?.handled) {
+      drag.current = null;
+      return;
+    }
+    onDragDown?.();
+  }
+
+  return (
+    <button
+      type="button"
+      className="player-drag-handle"
+      aria-label={label}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onClick={onClick}
+    />
+  );
 }
 
 function TermStatusMenu({ anchorKey, status, onStatus, onClose }) {
@@ -540,6 +715,7 @@ function AudioTimeline({ time, duration, scrubbing, onScrub, onScrubbing }) {
 
 export default function Reader() {
   const textRef = useRef(null);
+  const termsRef = useRef(null);
   const footerRef = useRef(null);
   const pressRef = useRef({ suppressClick: false });
   const phraseIdRef = useRef(1);
@@ -549,7 +725,14 @@ export default function Reader() {
   const [savedPhrases, setSavedPhrases] = useState([]);
   const [snackbar, setSnackbar] = useState(null);
   const [playing, setPlaying] = useState(false);
+  const [playerShown, setPlayerShown] = useState(false);
   const [playerOpen, setPlayerOpen] = useState(false);
+  const [sideBySide, setSideBySide] = useState(false);
+  const [lessonType, setLessonType] = useState("video");
+  const [media, setMedia] = useState("video");
+  const [playMenu, setPlayMenu] = useState(false);
+  const lessonHasVideo = lessonType !== "audio";
+  const [demoSettings, setDemoSettings] = useState(false);
   const [mode, setMode] = useState("page");
   const [sentenceIndex, setSentenceIndex] = useState(1);
   const [showTranslation, setShowTranslation] = useState(true);
@@ -573,9 +756,11 @@ export default function Reader() {
   const [reviewCard, setReviewCard] = useState(null);
   const [showMini, setShowMini] = useState(false);
   const [termMenu, setTermMenu] = useState(null);
+  const [termPulse, setTermPulse] = useState(null);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageStarts, setPageStarts] = useState(null);
   const [atScrollEnd, setAtScrollEnd] = useState(false);
+  const mobile = useIsMobile();
 
   const lessonRef = useRef(lesson);
   const modeRef = useRef(mode);
@@ -646,27 +831,55 @@ export default function Reader() {
       node.removeEventListener("scroll", update);
       observer.disconnect();
     };
-  }, [mode, lesson, playerOpen]);
+  }, [mode, lesson, playerOpen, playerShown]);
 
   function openPlayer() {
+    setPlayerShown(true);
     setPlayerOpen(true);
-    if (mode === "page") setMode("scroll");
+    if (lessonHasVideo && media === "video" && mode === "page") setMode("scroll");
     setModeMenu(false);
   }
 
   function applyMode(next) {
     if (next === "sentence") setSentenceIndex(1);
-    setMode(next);
+    const openingVideo = lessonHasVideo && media === "video" && next !== "page" && mode === "page";
+    transition(() => {
+      setMode(next);
+      if (!openingVideo) return;
+      setPlayerShown(true);
+      setPlayerOpen(false);
+      setPlaying(false);
+    });
   }
 
   useEffect(() => {
     if (mode !== "sentence") return;
     textRef.current?.scrollTo({ top: 0 });
-  }, [mode, sentenceIndex, playerOpen]);
+  }, [mode, sentenceIndex, playerOpen, playerShown]);
+
+  useLayoutEffect(() => {
+    if (!termPulse || mode !== "sentence") return undefined;
+    const scroller = termsRef.current;
+    const tile = scroller?.querySelector(`[data-term-key="${termPulse.key}"]`);
+    if (!scroller || !tile) return undefined;
+    const pad = parseFloat(getComputedStyle(scroller).paddingLeft) || 0;
+    const left = tile.getBoundingClientRect().left - scroller.getBoundingClientRect().left + scroller.scrollLeft - pad;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    scroller.scrollTo({ left: Math.max(0, left), behavior: reduce ? "auto" : "smooth" });
+    tile.classList.remove("is-pulsing");
+    void tile.offsetWidth;
+    tile.classList.add("is-pulsing");
+    const stop = () => tile.classList.remove("is-pulsing");
+    tile.addEventListener("animationend", stop);
+    return () => {
+      tile.removeEventListener("animationend", stop);
+      tile.classList.remove("is-pulsing");
+    };
+  }, [termPulse, mode]);
 
   function chooseMode(next) {
     setModeMenu(false);
-    if (next === "page" && (mode === "scroll" || mode === "sentence") && playerOpen && playing) {
+    if (lessonHasVideo && media === "video" && next === "page" && mode !== "page" && playerShown) {
       setPageModePrompt(true);
       return;
     }
@@ -675,9 +888,24 @@ export default function Reader() {
 
   function confirmPageMode() {
     setPageModePrompt(false);
-    setPlayerOpen(false);
-    setPlayback(false);
-    setMode("page");
+    transition(() => {
+      setPlayerOpen(false);
+      setPlayerShown(false);
+      setPlaying(false);
+      setMode("page");
+    });
+  }
+
+  function dismissPlayer() {
+    transition(() => {
+      setPlayerMenu(false);
+      setModeMenu(false);
+      setPlayMenu(false);
+      setPlayerOpen(false);
+      setPlayerShown(false);
+      setPlaying(false);
+      if (lessonType === "video") setMedia("video");
+    });
   }
 
   function openFinishPrompt() {
@@ -726,9 +954,26 @@ export default function Reader() {
   }, [modeMenu]);
 
   useEffect(() => {
+    if (!demoSettings) return undefined;
+    function onPointerDown(event) {
+      if (event.target.closest?.(".demo-settings")) return;
+      setDemoSettings(false);
+    }
+    function onKeyDown(event) {
+      if (event.key === "Escape") setDemoSettings(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [demoSettings]);
+
+  useEffect(() => {
     if (!chromeMenu) return undefined;
     function onPointerDown(event) {
-      if (event.target.closest?.(".chrome-menu") || event.target.closest?.(".chrome-menu-anchor")) return;
+      if (event.target.closest?.(".chrome-menu") || event.target.closest?.(".chrome-menu-anchor") || event.target.closest?.(".reader-menu") || event.target.closest?.(".theme-menu")) return;
       setChromeMenu(null);
     }
     function onKeyDown(event) {
@@ -758,6 +1003,23 @@ export default function Reader() {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [playerMenu]);
+
+  useEffect(() => {
+    if (!playMenu) return undefined;
+    function onPointerDown(event) {
+      if (event.target.closest?.(".play-split")) return;
+      setPlayMenu(false);
+    }
+    function onKeyDown(event) {
+      if (event.key === "Escape") setPlayMenu(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [playMenu]);
 
   useEffect(() => {
     if (!pageModePrompt) return undefined;
@@ -851,7 +1113,7 @@ export default function Reader() {
       footer.style.removeProperty("--nav-shift");
       footer.style.removeProperty("--player-max");
     };
-  }, [playing, playerOpen, mode, lynxOpen]);
+  }, [playing, playerShown, playerOpen, mode, lynxOpen]);
 
   function transition(update) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -872,6 +1134,41 @@ export default function Reader() {
   function setPlayback(next) {
     transition(() => setPlaying(next));
   }
+
+  function startPlayback(kind) {
+    const asVideo = kind !== "audio" && lessonHasVideo;
+    transition(() => {
+      setPlayMenu(false);
+      setMedia(asVideo ? "video" : "audio");
+      if (asVideo && mode === "page") setMode("scroll");
+      setPlayerShown(true);
+      setPlaying(true);
+    });
+  }
+
+  function chooseLessonType(next) {
+    if (next === lessonType) return;
+    transition(() => {
+      setLessonType(next);
+      setPlayMenu(false);
+      setPlayerMenu(false);
+      setPlayerOpen(false);
+      setPlayerShown(false);
+      setPlaying(false);
+      setMedia(next === "audio" ? "audio" : "video");
+    });
+  }
+
+  useEffect(() => {
+    if (!playerShown) return undefined;
+    function onKeyDown(event) {
+      if (event.key !== "Escape") return;
+      if (modeMenu || reviewMenu || playerMenu || playMenu || chromeMenu || demoSettings || pageModePrompt || finishPrompt || phrasePick || active || termMenu || reviewCard || reviewOpen || lynxOpen) return;
+      dismissPlayer();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [playerShown, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, pageModePrompt, finishPrompt, phrasePick, active, termMenu, reviewCard, reviewOpen, lynxOpen]);
 
   function openLynx() {
     transition(() => setLynxOpen(true));
@@ -949,6 +1246,21 @@ export default function Reader() {
     showSnackbar("New", () => restoreToken(paragraphIndex, tokenIndex, previous));
   }
 
+  function highlightSentenceTerm(paragraphIndex, tokenIndex) {
+    if (mode !== "sentence" || paragraphIndex !== sentenceIndex) return;
+    const phrase = savedPhrases.find((item) => phraseCovers(item, paragraphIndex, tokenIndex));
+    if (phrase) {
+      if (phrase.kind !== "lingq" || phrase.level < 1 || phrase.level > 3) return;
+      setTermPulse({ key: `phrase-${phrase.id}`, id: Date.now() });
+      return;
+    }
+    const token = lesson[paragraphIndex]?.[tokenIndex];
+    if (!token || token.type !== "word") return;
+    const inTicker = (token.kind === "lingq" && token.level >= 1 && token.level <= 3) || token.kind === "new";
+    if (!inTicker) return;
+    setTermPulse({ key: `word-${paragraphIndex}-${tokenIndex}`, id: Date.now() });
+  }
+
   function handleWordClick(event, paragraphIndex, tokenIndex) {
     event.stopPropagation();
     if (pressRef.current.suppressClick) {
@@ -970,32 +1282,43 @@ export default function Reader() {
       return;
     }
     const saved = savedAt(paragraphIndex, tokenIndex);
+    const panelShowsList = sidePanel && reviewOpen;
     if (saved) {
-      if (active?.phrase?.savedId === saved.id) {
+      if (active?.phrase?.savedId === saved.id && !panelShowsList) {
         if (sidePanel) {
           setActive((current) => (current ? { ...current, size: "small" } : current));
           setShowMini((open) => !open);
+          highlightSentenceTerm(paragraphIndex, tokenIndex);
         } else setActive(null);
         return;
       }
       openSaved(saved, paragraphIndex, tokenIndex, "small");
-      if (sidePanel) setShowMini(true);
+      highlightSentenceTerm(paragraphIndex, tokenIndex);
+      if (sidePanel) {
+        setReviewOpen(false);
+        setShowMini(true);
+      }
       return;
     }
     const closing = active
       && !active.phrase
       && active.paragraphIndex === paragraphIndex
       && active.tokenIndex === tokenIndex;
-    if (closing) {
-      if (sidePanel) {
-        setActive((current) => (current ? { ...current, size: "small", mode: "meaning", statusMenu: false } : current));
-        setShowMini((open) => !open);
-      } else setActive(null);
-      return;
-    }
+    if (closing && !panelShowsList) {
+        if (sidePanel) {
+          setActive((current) => (current ? { ...current, size: "small", mode: "meaning", statusMenu: false } : current));
+          setShowMini((open) => !open);
+          highlightSentenceTerm(paragraphIndex, tokenIndex);
+        } else setActive(null);
+        return;
+      }
     createLingQ(paragraphIndex, tokenIndex);
     setActive({ paragraphIndex, tokenIndex, size: "small", mode: "meaning", statusMenu: false });
-    if (sidePanel) setShowMini(true);
+    highlightSentenceTerm(paragraphIndex, tokenIndex);
+    if (sidePanel) {
+      setReviewOpen(false);
+      setShowMini(true);
+    }
   }
 
   function handlePointerDown(event, paragraphIndex, tokenIndex) {
@@ -1008,6 +1331,7 @@ export default function Reader() {
       pressRef.current.suppressClick = true;
       if (saved) {
         openSaved(saved, paragraphIndex, tokenIndex, "medium");
+        highlightSentenceTerm(paragraphIndex, tokenIndex);
         return;
       }
       createLingQ(paragraphIndex, tokenIndex);
@@ -1018,6 +1342,7 @@ export default function Reader() {
         mode: "meaning",
         statusMenu: false,
       });
+      highlightSentenceTerm(paragraphIndex, tokenIndex);
     }, 480);
 
     function endPress(event) {
@@ -1250,7 +1575,10 @@ export default function Reader() {
     setTermMenu(null);
     if (phrase) openSaved(phrase, paragraphIndex, tokenIndex, "large");
     else setActive({ paragraphIndex, tokenIndex, size: "large", mode: "meaning", statusMenu: false });
-    if (sidePanel) setShowMini(false);
+    if (sidePanel) {
+      setReviewOpen(false);
+      setShowMini(false);
+    }
   }
 
   function openLarge() {
@@ -1262,7 +1590,7 @@ export default function Reader() {
     if (action === "list") {
       setReviewCard(null);
       setReviewOpen(true);
-      setSidePanel(true);
+      if (!mobile) setSidePanel(true);
       return;
     }
     if (REVIEW_CARDS[action]) {
@@ -1282,7 +1610,7 @@ export default function Reader() {
   function toggleSidePanel() {
     if (!sidePanel && !active) {
       setReviewOpen(true);
-      setSidePanel(true);
+      if (!mobile) setSidePanel(true);
       return;
     }
     if (!sidePanel) {
@@ -1299,6 +1627,15 @@ export default function Reader() {
     setShowMini(false);
     setActive(null);
   }
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 1024px)");
+    function closeIfNarrow() {
+      if (query.matches) collapseSidePanel();
+    }
+    query.addEventListener("change", closeIfNarrow);
+    return () => query.removeEventListener("change", closeIfNarrow);
+  }, [sidePanel, reviewOpen]);
 
   function startPhraseSelect() {
     if (!active) return;
@@ -1331,6 +1668,7 @@ export default function Reader() {
   }, [phrasePick]);
 
   const activeToken = active ? lesson[active.paragraphIndex][active.tokenIndex] : null;
+  const showVideo = lessonHasVideo && media === "video" && mode !== "page" && playerShown;
   const savedOpen = active?.phrase?.savedId
     ? savedPhrases.find((phrase) => phrase.id === active.phrase.savedId)
     : null;
@@ -1487,14 +1825,12 @@ export default function Reader() {
 
       <main className="reader-content">
         <div className="reader-stage">
-        <div className={`reader-stage-main${playerOpen && mode !== "page" ? " has-video" : ""}`}>
+        <div className="reader-stage-main">
         <div className="reader-chrome">
-          {playerOpen && mode !== "page" ? null : (
           <div className="progress" aria-hidden="true">
             <div className="progress-track" />
             <div className="progress-fill" />
           </div>
-          )}
           <button type="button" className="icon-button chrome-exit" aria-label="Exit lesson">
             <LogOut className="chrome-exit-icon" size={24} strokeWidth={1.5} absoluteStrokeWidth />
           </button>
@@ -1504,7 +1840,7 @@ export default function Reader() {
                 <CaseSensitive size={24} strokeWidth={1.5} absoluteStrokeWidth />
               </button>
               {chromeMenu === "theme" ? (
-                <ThemeMenu theme={theme} onTheme={setTheme} font={fontStyle} onFont={setFontStyle} />
+                <ThemeMenu theme={theme} onTheme={setTheme} font={fontStyle} onFont={setFontStyle} onClose={() => setChromeMenu(null)} />
               ) : null}
             </span>
             <span className="chrome-menu-anchor">
@@ -1512,7 +1848,16 @@ export default function Reader() {
                 <EllipsisVertical size={24} strokeWidth={1.5} absoluteStrokeWidth />
               </button>
               {chromeMenu === "more" ? (
-                <ReaderOptionsMenu mode={mode} showTranslation={showTranslation} onToggleTranslation={() => setShowTranslation((open) => !open)} />
+                <ReaderOptionsMenu
+                  mode={mode}
+                  showTranslation={showTranslation}
+                  onToggleTranslation={() => setShowTranslation((open) => !open)}
+                  onOpenDemo={() => {
+                    setChromeMenu(null);
+                    setDemoSettings(true);
+                  }}
+                  onClose={() => setChromeMenu(null)}
+                />
               ) : null}
             </span>
             {sidePanel || reviewOpen ? null : (
@@ -1523,7 +1868,7 @@ export default function Reader() {
           </div>
         </div>
 
-        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${playerOpen && mode !== "page" ? " has-video" : ""}`}>
+        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${showVideo ? " has-video" : ""}${showVideo && sideBySide ? " is-side" : ""}`}>
           <div className="page-control">
             <button
               type="button"
@@ -1539,14 +1884,14 @@ export default function Reader() {
           </div>
 
           <div className="page-column">
-          {playerOpen && mode !== "page" ? (
+          {showVideo ? (
             <div className={`lesson-video${playing ? "" : " is-paused"}`}>
               <img src={videoDefault} alt="" />
               <img className="is-active" src={videoActive} alt="" />
             </div>
           ) : null}
           <article className="page-text" lang="de" ref={textRef}>
-            {mode === "scroll" || (playerOpen && mode === "sentence") ? <div className="video-text-fade" aria-hidden="true" /> : null}
+            {mode === "scroll" || (showVideo && mode === "sentence") ? <div className="video-text-fade" aria-hidden="true" /> : null}
             {mode === "sentence" ? (
               <div className="sentence-view">
                 <div className="sentence-block">
@@ -1574,7 +1919,7 @@ export default function Reader() {
                   </div>
                   {showTranslation ? <p className="sentence-translation">{sentenceFor(lesson, sentenceIndex, 0).translation}</p> : null}
                 </div>
-                <div className="sentence-terms">
+                <div className="sentence-terms" ref={termsRef}>
                   {lesson[sentenceIndex].flatMap((token, tokenIndex) => {
                     if (token.type !== "word") return [];
                     const phrase = savedPhrases.find((item) => phraseCovers(item, sentenceIndex, tokenIndex));
@@ -1586,6 +1931,7 @@ export default function Reader() {
                         <div
                           className="term-card"
                           key={menuKey}
+                          data-term-key={menuKey}
                           role="button"
                           tabIndex={0}
                           onClick={() => openTerm(sentenceIndex, tokenIndex, phrase)}
@@ -1620,7 +1966,8 @@ export default function Reader() {
                     return [(
                       <div
                         className="term-card"
-                        key={tokenIndex}
+                        key={menuKey}
+                        data-term-key={menuKey}
                         role="button"
                         tabIndex={0}
                         onClick={() => openTerm(sentenceIndex, tokenIndex, null)}
@@ -1826,9 +2173,9 @@ export default function Reader() {
           ) : null}
         </div>
         </div>
-        {(sidePanel && activeToken) || lynxOpen || reviewOpen ? (
-          <aside className={`side-panel${lynxOpen && !playerOpen ? " is-anchored" : ""}${lynxOpen && ((sidePanel && activeToken) || reviewOpen) ? " is-split" : ""}`}>
-            {reviewOpen ? (
+        {(sidePanel && activeToken) || lynxOpen || (reviewOpen && !mobile) ? (
+          <aside className={`side-panel${lynxOpen && !playerOpen ? " is-anchored" : ""}${lynxOpen && ((sidePanel && activeToken) || (reviewOpen && !mobile)) ? " is-split" : ""}`}>
+            {reviewOpen && !mobile ? (
               <ReviewPanel
                 terms={reviewTermsFrom(lesson, savedPhrases)}
                 onStatus={changeReviewStatus}
@@ -1855,12 +2202,26 @@ export default function Reader() {
             {lynxOpen ? <LynxChat onClose={closeLynx} /> : null}
           </aside>
         ) : null}
+        {reviewOpen && mobile ? createPortal(
+          <div className="review-sheet" role="dialog" aria-label="Vocabulary">
+            <PlayerDragHandle label="Close vocabulary" onDragDown={() => setReviewOpen(false)} />
+            <ReviewPanel
+              terms={reviewTermsFrom(lesson, savedPhrases)}
+              onStatus={changeReviewStatus}
+              onClose={() => setReviewOpen(false)}
+              onReview={startDefaultReview}
+              sheet
+            />
+          </div>,
+          document.body,
+        ) : null}
         </div>
       </main>
 
       <footer ref={footerRef} className={`reader-footer${playerOpen ? " is-player-open" : ""}`}>
         {playerOpen ? (
           <div className="audio-bar" role="group" aria-label="Lesson audio">
+            <PlayerDragHandle label="Collapse player" onDragDown={() => setPlayerOpen(false)} />
             <AudioTimeline
               time={audioTime}
               duration={AUDIO_DURATION}
@@ -1883,6 +2244,11 @@ export default function Reader() {
               <button type="button" className="audio-bar-control audio-bar-repeat" aria-label="Repeat">
                 <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
               </button>
+              {lessonHasVideo ? (
+                <button type="button" className={`audio-bar-control audio-bar-layout${sideBySide ? " is-on" : ""}`} aria-label="Split view" aria-pressed={sideBySide} onClick={() => setSideBySide((on) => !on)}>
+                  <Columns2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                </button>
+              ) : null}
               <span className="audio-bar-divider audio-bar-time-divider" aria-hidden="true" />
               <span className="audio-bar-time">
                 <span className="audio-bar-time-current">{formatAudioTime(audioTime)}</span>
@@ -1911,6 +2277,7 @@ export default function Reader() {
                       onAutoAdvance={() => setAutoAdvance((on) => !on)}
                       loopAudio={loopAudio}
                       onLoopAudio={() => setLoopAudio((on) => !on)}
+                      onClose={() => setPlayerMenu(false)}
                     />
                   ) : null}
                 </span>
@@ -1921,7 +2288,7 @@ export default function Reader() {
               </div>
             </div>
           </div>
-        ) : playing ? (
+        ) : playerShown ? (
           <div
             className="audio-player"
             role="group"
@@ -1932,10 +2299,11 @@ export default function Reader() {
               openPlayer();
             }}
           >
+            <PlayerDragHandle label="Close player" onDragUp={openPlayer} onDragDown={dismissPlayer} />
             <div className="audio-player-main">
               <div className="audio-player-leading">
-                <button type="button" className="audio-player-pause" aria-label="Pause" onClick={() => setPlayback(false)}>
-                  <Pause size={24} strokeWidth={1.5} absoluteStrokeWidth />
+                <button type="button" className="audio-player-pause" aria-label={playing ? "Pause" : "Play"} onClick={() => setPlayback(!playing)}>
+                  {playing ? <Pause size={24} strokeWidth={1.5} absoluteStrokeWidth /> : <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />}
                 </button>
                 <button type="button" className="audio-player-icon audio-player-back" aria-label="Replay 10 seconds">
                   <img src={replayIcon} alt="" width={20} height={20} />
@@ -1965,6 +2333,10 @@ export default function Reader() {
                       onAutoAdvance={() => setAutoAdvance((on) => !on)}
                       loopAudio={loopAudio}
                       onLoopAudio={() => setLoopAudio((on) => !on)}
+                      sideBySide={sideBySide}
+                      onSideBySide={() => setSideBySide((on) => !on)}
+                      showLayout={lessonHasVideo}
+                      onClose={() => setPlayerMenu(false)}
                     />
                   ) : null}
                 </span>
@@ -1972,15 +2344,54 @@ export default function Reader() {
                 <button type="button" className="audio-player-icon audio-player-expand" aria-label="Expand player" onClick={openPlayer}>
                   <ChevronRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
                 </button>
+                <button type="button" className="audio-player-icon audio-player-close" aria-label={lessonHasVideo && media === "video" ? "Dismiss video" : "Dismiss audio"} onClick={dismissPlayer}>
+                  <X size={16} strokeWidth={1.5} absoluteStrokeWidth />
+                </button>
               </div>
             </div>
             <div className="audio-player-progress" aria-hidden="true">
               <span />
             </div>
           </div>
+        ) : lessonType === "both" ? (
+          <span className="play-split">
+            <button type="button" className="play-button" aria-label={media === "audio" ? "Play audio" : "Play video"} onClick={() => startPlayback(media === "audio" ? "audio" : "video")}>
+              {media === "audio"
+                ? <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />
+                : <Youtube size={24} strokeWidth={1.5} absoluteStrokeWidth />}
+            </button>
+            <span className="play-split-divider" aria-hidden="true" />
+            <button
+              type="button"
+              className="play-split-chevron"
+              aria-label="Playback options"
+              aria-haspopup="menu"
+              aria-expanded={playMenu}
+              onClick={() => setPlayMenu((open) => !open)}
+            >
+              <ChevronDown size={20} strokeWidth={1.5} absoluteStrokeWidth />
+            </button>
+            {playMenu ? (
+              <div className="play-split-menu" role="menu">
+                {media === "audio" ? (
+                  <button type="button" role="menuitem" onClick={() => startPlayback("video")}>
+                    <Youtube size={16} strokeWidth={1.5} absoluteStrokeWidth />
+                    Play video
+                  </button>
+                ) : (
+                  <button type="button" role="menuitem" onClick={() => startPlayback("audio")}>
+                    <Play size={16} strokeWidth={1.5} absoluteStrokeWidth />
+                    Play audio
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </span>
         ) : (
-          <button type="button" className="play-button" aria-label="Play" onClick={() => setPlayback(true)}>
-            <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />
+          <button type="button" className="play-button" aria-label="Play" onClick={() => startPlayback(lessonHasVideo ? "video" : "audio")}>
+            {lessonHasVideo
+              ? <Youtube size={24} strokeWidth={1.5} absoluteStrokeWidth />
+              : <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />}
           </button>
         )}
 
@@ -2047,6 +2458,14 @@ export default function Reader() {
             </label>
           </div>
         </div>
+      ) : null}
+
+      {demoSettings ? (
+        <DemoSettings
+          lessonType={lessonType}
+          onLessonType={chooseLessonType}
+          onClose={() => setDemoSettings(false)}
+        />
       ) : null}
 
       {pageModePrompt ? (

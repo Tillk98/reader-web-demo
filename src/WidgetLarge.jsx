@@ -87,7 +87,7 @@ export default function WidgetLarge({
               <Volume2 size={18} strokeWidth={1.5} absoluteStrokeWidth />
             </button>
             {docked ? (
-              <button type="button" className="widget-large-icon-button" aria-label="Close side panel" aria-pressed="true" onClick={onTogglePanel}>
+              <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={onTogglePanel}>
                 <PanelRight size={18} strokeWidth={1.5} absoluteStrokeWidth />
               </button>
             ) : null}

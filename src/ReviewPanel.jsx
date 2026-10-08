@@ -273,7 +273,6 @@ function PanelClose({ sheet, onClose }) {
       type="button"
       className="widget-large-icon-button"
       aria-label={sheet ? "Close" : "Close side panel"}
-      aria-pressed={sheet ? undefined : true}
       onClick={onClose}
     >
       {sheet

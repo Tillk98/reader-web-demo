@@ -23,6 +23,8 @@ import {
   List,
   ListPlus,
   LogOut,
+  Maximize,
+  Minimize,
   MousePointerClick,
   PanelRight,
   Pause,
@@ -418,7 +420,7 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, onOpenD
   return menu;
 }
 
-function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio, sideBySide, onSideBySide, showLayout, onClose }) {
+function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio, sideBySide, onSideBySide, theater, onTheater, showLayout, onClose }) {
   const mobile = useIsMobile();
   const menu = (
     <div className={`reader-menu player-menu${mobile ? " is-sheet" : ""}`} role="menu">
@@ -451,6 +453,11 @@ function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio,
               <span className={`menu-toggle${sideBySide ? " is-on" : ""}`} aria-hidden="true"><span /></span>
             </MenuRow>
           </div>
+        ) : null}
+        {showLayout ? (
+          <MenuRow icon={theater ? <Minimize size={16} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Theater mode" onClick={onTheater}>
+            <span className={`menu-toggle${theater ? " is-on" : ""}`} aria-hidden="true"><span /></span>
+          </MenuRow>
         ) : null}
         <div className="reader-menu-divider" />
         <MenuRow icon={<CaseSensitive size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Theme" />
@@ -494,7 +501,18 @@ function ThemeMenu({ theme, onTheme, font, onFont, onClose }) {
         <p>Text Size</p>
         <div className="theme-size">
           <span>A</span>
-          <input type="range" min="0" max="4" defaultValue="1" aria-label="Text size" />
+          <input
+            type="range"
+            min="0"
+            max="4"
+            defaultValue="1"
+            aria-label="Text size"
+            onInput={(event) => {
+              const input = event.currentTarget;
+              const span = Number(input.max) - Number(input.min);
+              input.style.setProperty("--size", `${((input.valueAsNumber - Number(input.min)) / span) * 100}%`);
+            }}
+          />
           <span>A</span>
         </div>
       </section>
@@ -715,6 +733,8 @@ function AudioTimeline({ time, duration, scrubbing, onScrub, onScrubbing }) {
 
 export default function Reader() {
   const textRef = useRef(null);
+  const theaterMotion = useRef(0);
+  const splitMotion = useRef(0);
   const termsRef = useRef(null);
   const footerRef = useRef(null);
   const pressRef = useRef({ suppressClick: false });
@@ -728,6 +748,9 @@ export default function Reader() {
   const [playerShown, setPlayerShown] = useState(false);
   const [playerOpen, setPlayerOpen] = useState(false);
   const [sideBySide, setSideBySide] = useState(false);
+  const [theater, setTheater] = useState(false);
+  const [theaterLine, setTheaterLine] = useState(null);
+  const [theaterView, setTheaterView] = useState(null);
   const [lessonType, setLessonType] = useState("video");
   const [media, setMedia] = useState("video");
   const [playMenu, setPlayMenu] = useState(false);
@@ -892,6 +915,7 @@ export default function Reader() {
       setPlayerOpen(false);
       setPlayerShown(false);
       setPlaying(false);
+      setTheater(false);
       setMode("page");
     });
   }
@@ -904,9 +928,157 @@ export default function Reader() {
       setPlayerOpen(false);
       setPlayerShown(false);
       setPlaying(false);
+      setTheater(false);
       if (lessonType === "video") setMedia("video");
     });
   }
+
+  function collapsePlayer() {
+    if (!theater) {
+      setPlayerOpen(false);
+      return;
+    }
+    runTheater(() => {
+      setPlayerOpen(false);
+      setTheater(false);
+    });
+  }
+
+  function measureContext(size) {
+    const sample = textRef.current;
+    const family = sample ? getComputedStyle(sample).fontFamily : "DM Sans, sans-serif";
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (ctx) ctx.font = `400 ${size}px ${family}`;
+    return ctx;
+  }
+
+  function fitTranslation(text, maxWidth) {
+    const ctx = measureContext(16);
+    if (!ctx) return text;
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = "";
+    for (const word of words) {
+      const trial = line ? `${line} ${word}` : word;
+      if (ctx.measureText(trial).width > maxWidth && line) {
+        lines.push(line);
+        if (lines.length >= 2) return lines.join(" ");
+        line = word;
+      } else {
+        line = trial;
+      }
+    }
+    if (line && lines.length < 2) lines.push(line);
+    return lines.join(" ");
+  }
+
+  function sliceTranslation(tokens, start, end, translation) {
+    const english = translation.split(/\s+/).filter(Boolean);
+    if (!english.length) return "";
+    const wordAt = [];
+    tokens.forEach((token, index) => {
+      if (token.type === "word") wordAt.push(index);
+    });
+    if (!wordAt.length) return "";
+    const first = wordAt.findIndex((index) => index >= start);
+    const fromWord = first === -1 ? wordAt.length : first;
+    let toWord = fromWord;
+    while (toWord < wordAt.length && wordAt[toWord] < end) toWord += 1;
+    if (toWord <= fromWord) return "";
+    const from = Math.round((fromWord / wordAt.length) * english.length);
+    const to = Math.max(from + 1, Math.round((toWord / wordAt.length) * english.length));
+    return english.slice(from, Math.min(english.length, to)).join(" ");
+  }
+
+  function theaterTranslation(line, end, maxWidth) {
+    const tokens = lesson[line.paragraphIndex] || [];
+    const aligned = sliceTranslation(tokens, line.start, end, sentenceFor(lesson, line.paragraphIndex, line.start).translation);
+    return fitTranslation(aligned, maxWidth);
+  }
+
+  function captureTheaterLine() {
+    const root = textRef.current;
+    const scope = mode === "sentence" ? root?.querySelector(".sentence-original") : root;
+    const words = scope ? [...scope.querySelectorAll("[data-word-id]")] : [];
+    const bounds = scope?.getBoundingClientRect();
+    let chosen = [];
+    if (words.length && bounds) {
+      const visible = words.filter((el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.bottom > bounds.top + 1 && rect.top < bounds.bottom - 1;
+      });
+      const pool = visible.length ? visible : words;
+      const top = Math.min(...pool.map((el) => el.getBoundingClientRect().top));
+      chosen = pool.filter((el) => Math.abs(el.getBoundingClientRect().top - top) < 8);
+    }
+    let paragraphIndex = 0;
+    let start = 0;
+    let end = 0;
+    if (chosen.length) {
+      const first = chosen[0].dataset.wordId.split("-").map(Number);
+      const last = chosen[chosen.length - 1].dataset.wordId.split("-").map(Number);
+      paragraphIndex = first[0];
+      start = first[1];
+      end = last[1] + 1;
+      const tokens = lesson[paragraphIndex];
+      if (tokens?.[end]?.type === "text") end += 1;
+    } else {
+      const tokens = lesson[0] || [];
+      let chars = 0;
+      for (const token of tokens) {
+        chars += token.value.length;
+        end += 1;
+        if (chars > 72) break;
+      }
+    }
+    return { paragraphIndex, start, end };
+  }
+
+  function toggleTheater() {
+    if (theater) {
+      runTheater(() => setTheater(false));
+      return;
+    }
+    const line = captureTheaterLine();
+    runTheater(() => {
+      setTheaterLine(line);
+      setPlayerMenu(false);
+      setMedia("video");
+      setPlayerShown(true);
+      setPlayerOpen(true);
+      setTheater(true);
+    });
+  }
+
+  useLayoutEffect(() => {
+    if (!theater || !theaterLine) return undefined;
+    const node = textRef.current;
+    if (!node) return undefined;
+    function fit() {
+      const caption = node.querySelector(".theater-caption");
+      const measure = node.querySelector(".theater-measure");
+      const pieces = measure ? [...measure.querySelectorAll("[data-token-index]")] : [];
+      const maxWidth = caption?.clientWidth || 0;
+      if (!maxWidth || !pieces.length) return;
+      const origin = pieces[0].getBoundingClientRect().left;
+      let end = theaterLine.start;
+      for (const el of pieces) {
+        if (el.getBoundingClientRect().right - origin <= maxWidth + 0.5) end = Number(el.dataset.tokenIndex) + 1;
+        else break;
+      }
+      const tokens = lesson[theaterLine.paragraphIndex] || [];
+      while (end > theaterLine.start + 1 && tokens[end - 1]?.type === "text" && !/\S/.test(tokens[end - 1].value)) end -= 1;
+      const next = { end, translation: theaterTranslation(theaterLine, end, maxWidth) };
+      setTheaterView((current) => (
+        current && current.end === next.end && current.translation === next.translation ? current : next
+      ));
+    }
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [theater, theaterLine, lesson]);
 
   function openFinishPrompt() {
     if (hideFinishPrompt) return;
@@ -1115,6 +1287,44 @@ export default function Reader() {
     };
   }, [playing, playerShown, playerOpen, mode, lynxOpen]);
 
+  function runNamedMotion(className, counter, update) {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!document.startViewTransition || reduced) {
+      update();
+      return;
+    }
+    counter.current += 1;
+    document.documentElement.classList.add(className);
+    const finish = () => {
+      counter.current -= 1;
+      if (counter.current <= 0) {
+        counter.current = 0;
+        document.documentElement.classList.remove(className);
+      }
+    };
+    try {
+      const vt = document.startViewTransition(() => {
+        flushSync(update);
+      });
+      vt.finished.then(finish, finish);
+    } catch {
+      finish();
+      update();
+    }
+  }
+
+  function runTheater(update) {
+    runNamedMotion("theater-motion", theaterMotion, update);
+  }
+
+  function runSplit(update) {
+    runNamedMotion("split-motion", splitMotion, update);
+  }
+
+  function toggleSplit() {
+    runSplit(() => setSideBySide((on) => !on));
+  }
+
   function transition(update) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (document.startViewTransition && !reduced) {
@@ -1155,6 +1365,7 @@ export default function Reader() {
       setPlayerOpen(false);
       setPlayerShown(false);
       setPlaying(false);
+      setTheater(false);
       setMedia(next === "audio" ? "audio" : "video");
     });
   }
@@ -1164,14 +1375,21 @@ export default function Reader() {
     function onKeyDown(event) {
       if (event.key !== "Escape") return;
       if (modeMenu || reviewMenu || playerMenu || playMenu || chromeMenu || demoSettings || pageModePrompt || finishPrompt || phrasePick || active || termMenu || reviewCard || reviewOpen || lynxOpen) return;
+      if (theater) {
+        runTheater(() => setTheater(false));
+        return;
+      }
       dismissPlayer();
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [playerShown, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, pageModePrompt, finishPrompt, phrasePick, active, termMenu, reviewCard, reviewOpen, lynxOpen]);
+  }, [playerShown, theater, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, pageModePrompt, finishPrompt, phrasePick, active, termMenu, reviewCard, reviewOpen, lynxOpen]);
 
   function openLynx() {
-    transition(() => setLynxOpen(true));
+    transition(() => {
+      if (mobile) setReviewOpen(false);
+      setLynxOpen(true);
+    });
   }
 
   function closeLynx() {
@@ -1590,7 +1808,8 @@ export default function Reader() {
     if (action === "list") {
       setReviewCard(null);
       setReviewOpen(true);
-      if (!mobile) setSidePanel(true);
+      if (mobile) setLynxOpen(false);
+      else setSidePanel(true);
       return;
     }
     if (REVIEW_CARDS[action]) {
@@ -1608,16 +1827,18 @@ export default function Reader() {
   }
 
   function toggleSidePanel() {
-    if (!sidePanel && !active) {
-      setReviewOpen(true);
-      if (!mobile) setSidePanel(true);
+    if (sidePanel) {
+      setSidePanel(false);
       return;
     }
-    if (!sidePanel) {
-      setActive((current) => (current ? { ...current, size: "large", statusMenu: false } : current));
-      if (active?.size === "small") setShowMini(true);
+    if (!mobile && active?.size === "large") {
+      setReviewOpen(false);
+      setSidePanel(true);
+      return;
     }
-    setSidePanel((open) => !open);
+    setReviewOpen(true);
+    if (mobile) setLynxOpen(false);
+    else setSidePanel(true);
   }
 
   function collapseSidePanel() {
@@ -1668,7 +1889,7 @@ export default function Reader() {
   }, [phrasePick]);
 
   const activeToken = active ? lesson[active.paragraphIndex][active.tokenIndex] : null;
-  const showVideo = lessonHasVideo && media === "video" && mode !== "page" && playerShown;
+  const showVideo = lessonHasVideo && media === "video" && playerShown && (theater || mode !== "page");
   const savedOpen = active?.phrase?.savedId
     ? savedPhrases.find((phrase) => phrase.id === active.phrase.savedId)
     : null;
@@ -1713,13 +1934,14 @@ export default function Reader() {
   }
 
   function renderToken(token, paragraphIndex, tokenIndex) {
-    if (token.type !== "word") return <span key={tokenIndex}>{token.value}</span>;
+    if (token.type !== "word") return <span key={tokenIndex} data-token-index={tokenIndex}>{token.value}</span>;
     const picking = phrasePick?.paragraphIndex === paragraphIndex && phrasePick?.tokenIndex === tokenIndex;
     const open = active?.paragraphIndex === paragraphIndex && active?.tokenIndex === tokenIndex;
     return (
       <span
         key={tokenIndex}
         className={`${wordClassName(token)}${open ? " is-open" : ""}${picking ? " is-phrase-anchor" : ""}`}
+        data-token-index={tokenIndex}
         data-word-id={`${paragraphIndex}-${tokenIndex}`}
         role="button"
         tabIndex={0}
@@ -1772,11 +1994,46 @@ export default function Reader() {
     return nodes;
   }
 
+  function renderSlice(paragraphIndex, start, end) {
+    const tokens = lesson[paragraphIndex] || [];
+    const nodes = [];
+    let tokenIndex = start;
+    const last = Math.min(end, tokens.length);
+    while (tokenIndex < last) {
+      const mark = markAt(paragraphIndex, tokenIndex);
+      if (!mark) {
+        nodes.push(renderToken(tokens[tokenIndex], paragraphIndex, tokenIndex));
+        tokenIndex += 1;
+        continue;
+      }
+      const chunk = [];
+      const { key, kind, level } = mark;
+      const chunkStart = tokenIndex;
+      while (tokenIndex < last) {
+        const next = markAt(paragraphIndex, tokenIndex);
+        if (!next || next.key !== key) break;
+        chunk.push(renderToken(tokens[tokenIndex], paragraphIndex, tokenIndex));
+        tokenIndex += 1;
+      }
+      nodes.push(
+        <span
+          key={`${key}-${chunkStart}`}
+          className="phrase-range"
+          data-kind={kind}
+          data-level={level || undefined}
+        >
+          {chunk}
+        </span>,
+      );
+    }
+    return nodes;
+  }
+
   const showFinish = (mode === "sentence" && sentenceIndex >= lesson.length - 1)
     || (mode === "page" && pageStarts !== null && pageIndex >= pageStarts.length - 1);
 
   return (
-    <div className="reader">
+    <div className={`reader${theater ? " is-theater" : ""}`}>
       <header className="reader-header">
         <div className="logo-slot">
           <button type="button" className="logo-button" aria-label="LingQ">
@@ -1868,7 +2125,7 @@ export default function Reader() {
           </div>
         </div>
 
-        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${showVideo ? " has-video" : ""}${showVideo && sideBySide ? " is-side" : ""}`}>
+        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${showVideo ? " has-video" : ""}${showVideo && sideBySide && !theater ? " is-side" : ""}`}>
           <div className="page-control">
             <button
               type="button"
@@ -1891,8 +2148,20 @@ export default function Reader() {
             </div>
           ) : null}
           <article className="page-text" lang="de" ref={textRef}>
-            {mode === "scroll" || (showVideo && mode === "sentence") ? <div className="video-text-fade" aria-hidden="true" /> : null}
-            {mode === "sentence" ? (
+            {theater && theaterLine ? (
+              <div className="theater-caption">
+                <p className="theater-line theater-measure" aria-hidden="true">
+                  {renderSlice(theaterLine.paragraphIndex, theaterLine.start, theaterLine.end)}
+                </p>
+                <p className="theater-line">
+                  {renderSlice(theaterLine.paragraphIndex, theaterLine.start, theaterView?.end ?? theaterLine.end)}
+                  <span className="theater-scan" aria-hidden="true" />
+                </p>
+                {showTranslation && theaterView?.translation ? <p className="theater-translation">{theaterView.translation}</p> : null}
+              </div>
+            ) : null}
+            {theater ? null : mode === "scroll" || (showVideo && mode === "sentence") ? <div className="video-text-fade" aria-hidden="true" /> : null}
+            {theater || mode !== "sentence" ? null : (
               <div className="sentence-view">
                 <div className="sentence-block">
                   <p className="sentence-original">{renderParagraph(sentenceIndex)}</p>
@@ -2009,8 +2278,8 @@ export default function Reader() {
                   />
                 ) : null}
               </div>
-            ) : null}
-            {mode === "sentence" ? null : (() => {
+            )}
+            {theater || mode === "sentence" ? null : (() => {
               const pageSource = lesson.slice(0, PAGE_COUNT);
               const paragraphs = mode === "scroll" ? lesson : pageSource;
               const pageOffset = mode === "page" ? (pageStarts?.[pageIndex] ?? 0) : 0;
@@ -2065,12 +2334,12 @@ export default function Reader() {
               </div>
               );
             })()}
-            {mode === "scroll" ? (
+            {theater || mode !== "scroll" ? null : (
               <button type="button" className={`finish-lesson${atScrollEnd ? " is-visible" : ""}`} onClick={openFinishPrompt}>
                 <CircleCheck size={16} strokeWidth={1.36} absoluteStrokeWidth />
                 Finish Lesson
               </button>
-            ) : null}
+            )}
             {activeToken && active.size !== "medium" && active.size !== "large" && (!sidePanel || showMini) ? (
               <WidgetSmall
                 anchorId={`${active.paragraphIndex}-${active.tokenIndex}`}
@@ -2173,7 +2442,7 @@ export default function Reader() {
           ) : null}
         </div>
         </div>
-        {(sidePanel && activeToken) || lynxOpen || (reviewOpen && !mobile) ? (
+        {(sidePanel && activeToken) || (lynxOpen && !mobile) || (reviewOpen && !mobile) ? (
           <aside className={`side-panel${lynxOpen && !playerOpen ? " is-anchored" : ""}${lynxOpen && ((sidePanel && activeToken) || (reviewOpen && !mobile)) ? " is-split" : ""}`}>
             {reviewOpen && !mobile ? (
               <ReviewPanel
@@ -2199,7 +2468,7 @@ export default function Reader() {
               onTogglePanel={toggleSidePanel}
             />
             ) : null}
-            {lynxOpen ? <LynxChat onClose={closeLynx} /> : null}
+            {lynxOpen && !mobile ? <LynxChat onClose={closeLynx} /> : null}
           </aside>
         ) : null}
         {reviewOpen && mobile ? createPortal(
@@ -2215,13 +2484,20 @@ export default function Reader() {
           </div>,
           document.body,
         ) : null}
+        {lynxOpen && mobile ? createPortal(
+          <div className="review-sheet lynx-sheet" role="dialog" aria-label="Lynx AI">
+            <PlayerDragHandle label="Close Lynx" onDragDown={closeLynx} />
+            <LynxChat onClose={closeLynx} sheet />
+          </div>,
+          document.body,
+        ) : null}
         </div>
       </main>
 
       <footer ref={footerRef} className={`reader-footer${playerOpen ? " is-player-open" : ""}`}>
         {playerOpen ? (
           <div className="audio-bar" role="group" aria-label="Lesson audio">
-            <PlayerDragHandle label="Collapse player" onDragDown={() => setPlayerOpen(false)} />
+            <PlayerDragHandle label="Collapse player" onDragDown={collapsePlayer} />
             <AudioTimeline
               time={audioTime}
               duration={AUDIO_DURATION}
@@ -2240,23 +2516,43 @@ export default function Reader() {
                 <button type="button" className="audio-bar-control audio-bar-forward" aria-label="Forward 5 seconds">
                   <img src={skipForwardIcon} alt="" width={20} height={20} />
                 </button>
-              </div>
-              <button type="button" className="audio-bar-control audio-bar-repeat" aria-label="Repeat">
-                <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
-              </button>
-              {lessonHasVideo ? (
-                <button type="button" className={`audio-bar-control audio-bar-layout${sideBySide ? " is-on" : ""}`} aria-label="Split view" aria-pressed={sideBySide} onClick={() => setSideBySide((on) => !on)}>
-                  <Columns2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                <button type="button" className="audio-bar-control audio-bar-repeat" aria-label="Repeat">
+                  <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
                 </button>
-              ) : null}
-              <span className="audio-bar-divider audio-bar-time-divider" aria-hidden="true" />
-              <span className="audio-bar-time">
-                <span className="audio-bar-time-current">{formatAudioTime(audioTime)}</span>
-                <span className="audio-bar-time-sep"> / </span>
-                <span className="audio-bar-time-total">{formatAudioTime(AUDIO_DURATION)}</span>
-              </span>
+                <span className="audio-bar-time">
+                  <span className="audio-bar-time-current">{formatAudioTime(audioTime)}</span>
+                  <span className="audio-bar-time-sep">/</span>
+                  <span className="audio-bar-time-total">{formatAudioTime(AUDIO_DURATION)}</span>
+                </span>
+              </div>
               <div className="audio-bar-secondary">
-                <button type="button" className="audio-bar-speed" aria-label="Playback speed">1x</button>
+                <div className="audio-bar-actions">
+                  {lessonHasVideo && !theater ? (
+                    <button type="button" className={`audio-bar-control audio-bar-layout${sideBySide ? " is-on" : ""}`} aria-label="Split view" aria-pressed={sideBySide} onClick={toggleSplit}>
+                      <Columns2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                  ) : null}
+                  {lessonHasVideo ? (
+                    <button type="button" className={`audio-bar-control audio-bar-theater${theater ? " is-on" : ""}`} aria-label={theater ? "Exit theater mode" : "Theater mode"} aria-pressed={theater} onClick={toggleTheater}>
+                      {theater ? <Minimize size={20} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={20} strokeWidth={1.5} absoluteStrokeWidth />}
+                    </button>
+                  ) : null}
+                  <button type="button" className="audio-bar-speed" aria-label="Playback speed">1x</button>
+                  <span className="player-menu-anchor">
+                    <button type="button" className="audio-bar-control" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
+                      <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                    {playerMenu ? (
+                      <PlayerOptionsMenu
+                        autoAdvance={autoAdvance}
+                        onAutoAdvance={() => setAutoAdvance((on) => !on)}
+                        loopAudio={loopAudio}
+                        onLoopAudio={() => setLoopAudio((on) => !on)}
+                        onClose={() => setPlayerMenu(false)}
+                      />
+                    ) : null}
+                  </span>
+                </div>
                 <span className="mode-anchor">
                   <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
                     {modeIcon(mode, 20)}
@@ -2267,22 +2563,8 @@ export default function Reader() {
                 <button type="button" className="audio-bar-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
                   <img src={lynxIcon} alt="" width={20} height={20} />
                 </button>
-                <span className="player-menu-anchor">
-                  <button type="button" className="audio-bar-control" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
-                    <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                  </button>
-                  {playerMenu ? (
-                    <PlayerOptionsMenu
-                      autoAdvance={autoAdvance}
-                      onAutoAdvance={() => setAutoAdvance((on) => !on)}
-                      loopAudio={loopAudio}
-                      onLoopAudio={() => setLoopAudio((on) => !on)}
-                      onClose={() => setPlayerMenu(false)}
-                    />
-                  ) : null}
-                </span>
                 <span className="audio-bar-divider audio-bar-tools-divider" aria-hidden="true" />
-                <button type="button" className="audio-bar-control audio-bar-collapse" aria-label="Collapse player" onClick={() => setPlayerOpen(false)}>
+                <button type="button" className="audio-bar-control audio-bar-collapse" aria-label="Collapse player" onClick={collapsePlayer}>
                   <ChevronDown size={20} strokeWidth={1.5} absoluteStrokeWidth />
                 </button>
               </div>
@@ -2334,8 +2616,10 @@ export default function Reader() {
                       loopAudio={loopAudio}
                       onLoopAudio={() => setLoopAudio((on) => !on)}
                       sideBySide={sideBySide}
-                      onSideBySide={() => setSideBySide((on) => !on)}
+                      onSideBySide={toggleSplit}
                       showLayout={lessonHasVideo}
+                      theater={theater}
+                      onTheater={toggleTheater}
                       onClose={() => setPlayerMenu(false)}
                     />
                   ) : null}
@@ -2408,7 +2692,7 @@ export default function Reader() {
           </span>
           <span className="nav-divider" aria-hidden="true" />
           <span className="vocab-split">
-            <button type="button" className="vocab-button" aria-label="Vocabulary" aria-pressed={mode === "scroll" ? reviewOpen : reviewCard === (mode === "sentence" ? "sentence" : "page")} onClick={startDefaultReview}>
+            <button type="button" className="vocab-button" aria-label="Vocabulary" onClick={startDefaultReview}>
               <img src={reviewIcon} alt="" width={24} height={24} />
             </button>
             <span className="vocab-split-divider" aria-hidden="true" />

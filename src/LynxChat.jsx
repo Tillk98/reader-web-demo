@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUp, ChevronDown, CornerDownRight, Mic } from "lucide-react";
+import { ArrowUp, ChevronDown, CornerDownRight, Mic, X } from "lucide-react";
 import lynxIcon from "../assets/lynx_icon_light.png";
 import thumbnail from "../assets/lesson-thumbnail.jpg";
 
@@ -8,7 +8,7 @@ const SUGGESTIONS = [
   "Wiederhole die Wörter, die ich falsch hatte.",
 ];
 
-export default function LynxChat({ onClose }) {
+export default function LynxChat({ onClose, sheet = false }) {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState([]);
 
@@ -21,15 +21,26 @@ export default function LynxChat({ onClose }) {
 
   return (
     <section className="lynx-chat" aria-label="Lynx AI">
-      <header className="lynx-chat-header">
-        <div className="lynx-chat-title">
-          <img src={lynxIcon} alt="" width={18} height={18} />
-          <p>Lynx AI</p>
-        </div>
-        <button type="button" className="lynx-chat-close" aria-label="Close Lynx" onClick={onClose}>
-          <ChevronDown size={18} strokeWidth={1.5} absoluteStrokeWidth />
-        </button>
-      </header>
+      {sheet ? (
+        <header className="review-panel-header">
+          <div className="review-header-bar">
+            <h2>Lynx AI</h2>
+            <button type="button" className="widget-large-icon-button" aria-label="Close" onClick={onClose}>
+              <X size={18} strokeWidth={1.5} absoluteStrokeWidth />
+            </button>
+          </div>
+        </header>
+      ) : (
+        <header className="lynx-chat-header">
+          <div className="lynx-chat-title">
+            <img src={lynxIcon} alt="" width={18} height={18} />
+            <p>Lynx AI</p>
+          </div>
+          <button type="button" className="lynx-chat-close" aria-label="Close Lynx" onClick={onClose}>
+            <ChevronDown size={18} strokeWidth={1.5} absoluteStrokeWidth />
+          </button>
+        </header>
+      )}
       <div className="lynx-chat-lesson">
         <img src={thumbnail} alt="" width={32} height={32} />
         <span>

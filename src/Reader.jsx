@@ -1332,6 +1332,7 @@ export default function Reader() {
     runTheater(() => {
       setTheaterLine(line);
       setPlayerMenu(false);
+      setModeMenu(false);
       setMedia("video");
       setPlayerShown(true);
       setPlayerOpen(true);
@@ -2825,7 +2826,15 @@ export default function Reader() {
                       {theater ? <Minimize size={20} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={20} strokeWidth={1.5} absoluteStrokeWidth />}
                     </button>
                   ) : null}
-                  <button type="button" className="audio-bar-speed" aria-label="Playback speed">1x</button>
+                  <div className="audio-bar-actions-core">
+                    <button type="button" className="audio-bar-speed" aria-label="Playback speed">1x</button>
+                    <button type="button" className="audio-bar-control audio-bar-timer" aria-label="Timer">
+                      <Timer size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                    <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} aria-label="Loop audio" aria-pressed={loopAudio} onClick={() => setLoopAudio((on) => !on)}>
+                      <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                  </div>
                   <span className="player-menu-anchor">
                     <button type="button" className="audio-bar-control" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
                       <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
@@ -2841,12 +2850,13 @@ export default function Reader() {
                     ) : null}
                   </span>
                 </div>
-                <span className="mode-anchor">
-                  <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
+                <span className={`mode-anchor${theater ? " is-disabled" : ""}`}>
+                  <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} disabled={theater} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
                     {modeIcon(mode, 20)}
                     <ChevronsUpDown size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
                   </button>
-                  {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
+                  {theater ? <span className="mode-theater-tip" role="tooltip">Exit theater view to switch modes</span> : null}
+                  {modeMenu && !theater ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
                 </span>
                 <button type="button" className="audio-bar-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
                   <img src={lynxIcon} alt="" width={20} height={20} />

@@ -49,14 +49,15 @@ Anchored 8px above the word, inside the text column. Flips below if it would lea
 
 Long-press card, also kept inside the text column.
 
-**LingQ** (saved word or saved phrase): meaning with an inert play button, chevron, tags, a Select Phrase action, and the full status bar along the bottom. Ignore and Known are not repeated as buttons while that bar is showing.
+**LingQ** (saved word or saved phrase): meaning with an inert play button, chevron, then one row with Select Phrase, a 30px divider, and the tags. The full status bar sits along the bottom. Ignore and Known are not repeated as buttons while that bar is showing.
 
 **New** (unsaved valid phrase): header “Suggested Meanings”, up to 2 glosses with a plus, tags, dictionary row (Google Translate, Linguee, DeepL, WörterBuch). No status chip. A blue word is already a LingQ before this card opens.
 
 - Tag and dictionary rows match. Each is a white leading icon button, then chips (radius 4). Tags are `#F8F9FA`. Dictionary chips are `#FBFCFD`. Labels are 12px regular, `#49525B`. The large widget uses the same rows. Both are visual only.
 - Actions row scrolls by swipe or click-and-drag. A drag does not fire the button.
-- **Ignore** and **Known** appear only when the status bar is hidden, on an unsaved phrase. They update status and close the widget.
-- The status bar is visible by default, under the actions. Choosing a status updates the word and leaves the widget open.
+- **Ignore** and **Known** appear only when the status bar is hidden, on an unsaved phrase. They stay on their own row under the content, update status, and close the widget.
+- Select Phrase sits on the tags row in both states, before a 30px divider.
+- The status bar is visible by default, under the tags row. Choosing a status updates the word and leaves the widget open.
 - Forward chevron opens the large widget.
 - **Select Phrase** starts phrase selection.
 
@@ -120,21 +121,13 @@ Sentence mode lists that sentence’s LingQs at levels 1–3 (New, Recognized, a
 
 ## Finish lesson
 
-Not in the reader Figma frames. On the last page, or the last sentence, the right chevron becomes a circle-check in the same tall control. Clicking it opens “Finish this Lesson?”.
+[Complete Lesson](https://www.figma.com/design/2hnfSE92imLKR8gnp4qa36/Reader?node-id=7893-26313). On the last page, and on the last sentence, the control sits in the lesson column. The paging chevrons stay chevrons. The right one does nothing once there is no next page or sentence, so it is not a finish button.
 
-- **Page and sentence:** the right paging control keeps its size (52px wide, up to 408px tall, radius 12). The chevron becomes a 16px circle-check. Fill `#F4FCEF`. Icon and 1px stroke are `#42A564`.
-- **Scroll:** the side chevrons stay hidden. The same control lies flat under the text, full text-column width, 52px tall, radius 12, same fill and stroke. Label is “Finish Lesson” beside the check. 16px below the last line, 48px of space under the bar. It fades in only at the bottom of the scroll.
+- **Page:** the button is at the bottom of the last page only. It is the same width as the lesson text, 620px max. 16px of padding sits above it and below it, and page breaks keep the text out of that block. When the last page is already full, the lines that would meet the button move onto one more page. That page holds those lines, with the button at the bottom.
+- **Sentence:** the button floats at the bottom of the lesson, above the bottom bar, at the same 620px max width. A short fade into the page background sits above it, and the sentence can scroll underneath. Extra space at the end of that scroll lets the last line clear the button. Side by side, the button matches the text column.
+- **Scroll:** the side chevrons stay hidden. The same button lies under the text, full text-column width. 16px below the last line, 48px of space under the button. It fades in only at the bottom of the scroll.
 
-The confirm dialog is the design-system dialog, horizontal on wide screens and stacked below 768px:
-
-- [Dialog, horizontal](https://www.figma.com/design/kLZpcEEsV9ZUCTBiipPN6y/LingQ-Design-System--Lynx-Fluent-?node-id=3502-820)
-- [Dialog, vertical](https://www.figma.com/design/kLZpcEEsV9ZUCTBiipPN6y/LingQ-Design-System--Lynx-Fluent-?node-id=3502-840)
-
-- Title “Finish this Lesson?”. Body “Confirm to wrap up this lesson and view your learning stats.” Primary button label is “Finish Lesson”, green `#42A564`.
-- **Cancel**, the backdrop, or Escape closes it and stays in the lesson.
-- **Finish Lesson** closes it. There is no stats screen yet.
-- **Don’t show this again** applies only after Finish Lesson. Later finish clicks in that session do not open the dialog. Refresh clears it.
-- Below 768px the actions stack full width, Cancel above Finish Lesson.
+The button is full width: fill `#F4FCEF`, 1px stroke and label `#42A564`, radius 6, padding 10px by 16px, 8px between icon and label. The label is “Finish Lesson”, 16px medium with a 20px line height. The icon is a 20px circle-check. On the last page and the last sentence it fades and eases up into place. Hovering lifts it slightly and shows a soft shadow underneath. Pressing settles it back down. Clicking it does not open a page. A small tooltip, “goes to lesson complete page”, sits above the button for a few seconds. There is no confirm dialog. Menus opened from the bottom bar paint above this control.
 
 ## Site header and lesson chrome
 
@@ -150,21 +143,37 @@ The site header has no extra fill and no bottom border. Below 767px the language
 
 ## Menus
 
-Above 767px, list menus share one row. The row is 36px. The label is 14px medium with an 18px line height. Lucide icons are 16px with a 1.5px stroke. The icon and the label are 8px apart, and the icon sits 12px in from the menu edge. Rows sit against each other. A divider is a 1px line with 4px above and below it.
+Above 767px, the mode menu, review menus, and the play split menu share one row. The row is 36px. The label is 14px medium with an 18px line height. Lucide icons are 16px with a 1.5px stroke. The icon and the label are 8px apart, and the icon sits 12px in from the menu edge. Rows sit against each other. A divider is a 1px line with 4px above and below it.
 
-That row is the lesson menu, the audio menu, the mode menu, review menus, and the play split menu. The mode marks stay the mode icons. The theme menu is not this row. It keeps its color swatches and font cards. The text size slider’s track is `#F8F9FA`. Its fill and thumb stay `#D1D6D9`.
+The reader menu and the audio menu use the reader-menu row instead. On a wide screen that row is 38px, with 10px of padding and a 6px radius. The icon is 16px, 8px from the label. The label is 14px medium with an 18px line height. Hover and pressed fill `#F8F9FA`. Below 767px the row is 48px, with 12px of horizontal padding. The icon grows to 18px and sits 12px from the label. A submenu chevron is 12px and `--fg-muted` on a wide screen, and 14px below 767px.
 
-Below 767px those list rows are a 48px button with 4px of padding above and below, and 12px of padding inside the button. Text stays 14px medium. Icons stay 16px with a 1.5px stroke. The theme menu, the lesson menu, and the audio menu open as bottom sheets. A 36×4 `#D1D6D9` handle sits on the top edge. Dragging it down, or pressing it, closes the sheet. The mode menu and the vocabulary menu stay anchored to their buttons.
+The theme menu is not this row. It keeps its color swatches and font cards. The text size slider’s track is `#F8F9FA`. Its fill and thumb stay `#D1D6D9`.
 
-### Lesson menu
+Below 767px the theme menu, the reader menu, and the audio menu open as bottom sheets. The reader and audio sheets use a 35% scrim. Tapping the scrim, or dragging the handle down, closes the sheet. Their handle is a 36×5 `#D1D6D9` pill, 8px below the top edge and 2px above the first row. The sheet’s top radius is 16px, the bottom is square, and the shadow is `0 -4px 24px rgba(0,0,0,0.12)`. The theme sheet keeps a 36×4 handle. The mode menu and the vocabulary menu stay anchored to their buttons.
 
-The menu is 360px wide. It does not scroll, so Download can open beside it. The first item sits against the lesson header. On-state switches are `#2E75CD`.
+### Reader menu
 
-In sentence mode, Edit Sentence is first. Then Show Translations, Regenerate Lesson (AI), and Simplify Lesson (AI). Then Edit Lesson, Unsubscribe, Refresh Lesson, Print Lesson, Download, and Add to Playlist. Then Settings, Statistics, and Help. Demo settings is last, under its own divider.
+The menu is 367px wide, radius 12, shadow `0 8px 24px rgba(0,0,0,0.1)`. It does not scroll. Groups are split by a full-width 1px `#F1F3F4` divider. There are no group headings. On-state switches are 36×18, on `#2E75CD`.
 
-Unsubscribe, under Edit Lesson, is `#DD2525` with a crossed-out bell. It does nothing. Download, under Print Lesson, shows a muted chevron. On a wide screen, hovering or focusing it opens a menu to the left, 8px away and 220px wide: Download Audio and Download SRT File, each with the same download icon. Below 767px, tapping Download opens those two items inside the sheet. Neither downloads a file. Statistics, a column chart, sits between Settings and Help and does not open stats. Settings does nothing.
+The header is 64px, with 6px of padding. Previous and next are 34px circles on `#F8F9FA`, with 16px chevrons. The lesson card between them is 52px, radius 8, the same fill, with a 36px thumbnail. Its title is 14px medium. The card and the chevrons do not open another lesson in this demo. The course reads YouTube auf Deutsch (3/5).
 
-Demo settings uses a flask icon. It opens a placeholder dialog in the center of the screen over a black scrim at 10% opacity. It is not part of the reader. Clicking the scrim or pressing Escape closes it. Lesson type is a segmented control on a `#F8F9FA` track. The selected segment is white, with `--fg-secondary` text. The options are Video, Audio Only, and Audio & Video, and Video is the default.
+Four groups, then Demo settings under its own divider:
+
+- **Change what I see:** Show Translations, Simplify Lesson, Regenerate Lesson. Show Translations toggles and leaves the menu open.
+- **Change the content:** Edit Sentence in sentence mode, then Edit Lesson.
+- **Organise:** Course, Remove from Active Playlist, Add to Playlist, Download & Print. The lesson starts in Active Playlist, so that remove row is red `#DD2525` with a list-x icon. Choosing it removes the row and leaves the menu open. Add to Playlist can put it back.
+- **App:** Settings, Statistics, Help.
+
+Desktop rows with a chevron fly out to the left, 251px wide, 4px away, the first item level with the row. Hover opens one at once. Moving toward it keeps it open. Resting on another row switches after 300ms. Leaving both closes it after 300ms. Clicking the row opens it and focuses the first item. Left Arrow opens it. Right Arrow or Escape closes it and returns to the row.
+
+- **Course:** View Course, Subscribe, Edit Course. Subscribe flips to Unsubscribe, in red with a bell-minus icon, and the menu stays open.
+- **Add to Playlist:** New Playlist with a circle-plus icon, a divider, then playlists the lesson is not in. Those rows have no icon.
+- **Download & Print:** Download Audio, Download SRT File, Print Lesson. None of them download or print.
+- **Help:** Quick Start Guide, Grammar Guide, Chat with Lynx. Chat with Lynx opens Lynx and closes the menu.
+
+Below 767px, tapping a chevron row swaps the sheet to that submenu. A semibold back row replaces the lesson header, and the sheet height eases to fit over 220ms. The back row returns to the main list. Show Translations, Subscribe, and the playlist rows stay in the sheet. Any other row runs and closes it.
+
+Simplify Lesson, Regenerate Lesson, Edit Sentence, Edit Lesson, View Course, Edit Course, New Playlist, Settings, and Statistics do nothing. Statistics does not open stats. Demo settings stays last. It uses a flask icon and opens a placeholder dialog in the center of the screen over a black scrim at 10% opacity. It is not part of the reader. Clicking the scrim or pressing Escape closes it. Lesson type is a segmented control on a `#F8F9FA` track. The selected segment is white, with `--fg-secondary` text. The options are Video, Audio Only, and Audio & Video, and Video is the default.
 
 - **Video.** The play control is the YouTube icon. Play in page mode switches to scroll and starts the video. Entering sentence or scroll from page opens the video paused. Switching to page while the video is showing asks “Video will be stopped.”
 - **Audio Only.** The play control is the Play icon. Play stays in the current mode, including page. There is no video, no split view, and no page-mode prompt. The dismiss tooltip reads “Dismiss audio”.
@@ -173,7 +182,7 @@ Demo settings uses a flask icon. It opens a placeholder dialog in the center of 
 
 ### Audio menu
 
-The more control is a vertical ellipsis, in the expanded player and the collapsed player. Its rows use the shared menu row. On a wide screen the menu opens upward and scrolls once it is taller than 560px, or taller than the viewport minus 96px. Opened from the collapsed player, it grows to the right of the ellipsis so it stays on screen. Below 767px it is the bottom sheet described above.
+The more control is a vertical ellipsis, in the expanded player and the collapsed player. Its rows, lesson header, switches, and mobile sheet use the reader menu’s styling. The items stay as they are. On a wide screen the menu opens upward and scrolls once it is taller than 560px, or taller than the viewport minus 96px. Opened from the collapsed player, it grows to the right of the ellipsis so it stays on screen. Below 767px it is the bottom sheet described above.
 
 The items are the lesson, Auto-Advance, Playback Speed, Timer, Loop Audio, Theme, Settings, and Chat with Lynx. When the lesson has video, the collapsed player’s menu also has Split view and Theater mode, switches after Loop Audio. An audio-only lesson hides both switches, and hides the expanded player’s Split view and Theater mode buttons. Those switches use the same `#2E75CD` on state. Split view and theater mode are kept for the session. The other toggles are local and visual. Outside click or Escape closes the menu.
 
@@ -307,4 +316,4 @@ The Ask Lynx circle in the bottom bar opens the chat. The click highlight is blu
 
 ## Still inert
 
-Header pills (coins, streak, language count), copy, generate, notes, tag editing, dictionary links inside the widgets, section chevrons, and the audio menu’s speed, timer, theme, settings, and help rows. Settings in the lesson menu does nothing. Demo settings opens the placeholder dialog. Auto-Advance and Loop Audio remember their toggles for the session only. Split view and theater mode change the video layout when the lesson has video. Theater mode’s moving underline loops on the same frozen line for the demo and is not synced to playback. Finish Lesson does not open stats. Manage Vocabulary only closes its menu. Vocabulary search submit, row audio, and the Course, Lesson, and Tags rows do nothing.
+Header pills (coins, streak, language count), copy, generate, notes, tag editing, dictionary links inside the widgets, section chevrons, and the audio menu’s speed, timer, theme, settings, and help rows. Settings in the lesson menu does nothing. Demo settings opens the placeholder dialog. Auto-Advance and Loop Audio remember their toggles for the session only. Split view and theater mode change the video layout when the lesson has video. Theater mode’s moving underline loops on the same frozen line for the demo and is not synced to playback. Finish Lesson shows a short note that this goes to the lesson complete page. Manage Vocabulary only closes its menu. Vocabulary search submit, row audio, and the Course, Lesson, and Tags rows do nothing.

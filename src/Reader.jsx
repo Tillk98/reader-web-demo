@@ -3,7 +3,10 @@ import { flushSync, createPortal } from "react-dom";
 import {
   ArrowDownNarrowWide,
   ArrowUpRight,
-  BellOff,
+  BellMinus,
+  BellPlus,
+  BookCheck,
+  BookOpen,
   BookOpenText,
   CaseSensitive,
   ChartColumn,
@@ -12,6 +15,8 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  CircleHelp,
+  CirclePlus,
   CircleCheck,
   ChevronsUpDown,
   Contrast,
@@ -22,6 +27,7 @@ import {
   Languages,
   List,
   ListPlus,
+  ListX,
   LogOut,
   Maximize,
   Minimize,
@@ -32,7 +38,6 @@ import {
   Printer,
   Repeat2,
   RefreshCw,
-  RotateCw,
   Settings,
   SquarePen,
   StepForward,
@@ -90,6 +95,8 @@ const PARAGRAPHS = [
 const SCROLL_PARAGRAPHS = [];
 
 const PAGE_COUNT = PARAGRAPHS.length;
+// 16px pad + 42px button (10px + 20px label + 10px + 2px border) + 16px pad.
+const COMPLETE_BLOCK = 74;
 
 const WORD = /[\p{L}\p{N}]+/gu;
 
@@ -329,94 +336,357 @@ function DemoSettings({ lessonType, onLessonType, onClose }) {
   );
 }
 
-function DownloadMenu() {
-  const mobile = useIsMobile();
-  const [open, setOpen] = useState(false);
-  function onBlur(event) {
-    if (event.currentTarget.contains(event.relatedTarget)) return;
-    setOpen(false);
-  }
-  return (
-    <div
-      className={`reader-menu-row reader-menu-submenu-anchor${open ? " is-open" : ""}`}
-      onMouseEnter={() => { if (!mobile) setOpen(true); }}
-      onMouseLeave={() => { if (!mobile) setOpen(false); }}
-      onFocus={() => { if (!mobile) setOpen(true); }}
-      onBlur={onBlur}
-    >
-      <button
-        type="button"
-        className="reader-menu-item"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => { if (mobile) setOpen((value) => !value); }}
-      >
-        <Download size={16} strokeWidth={1.5} absoluteStrokeWidth />
-        <span>Download</span>
-        <ChevronRight className="reader-menu-chevron" size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
-      </button>
-      <div className="reader-submenu" role="menu">
-        <div className="reader-menu-row">
-          <button type="button" className="reader-menu-item" role="menuitem">
-            <Download size={16} strokeWidth={1.5} absoluteStrokeWidth />
-            <span>Download Audio</span>
-          </button>
-        </div>
-        <div className="reader-menu-row">
-          <button type="button" className="reader-menu-item" role="menuitem">
-            <Download size={16} strokeWidth={1.5} absoluteStrokeWidth />
-            <span>Download SRT File</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+function menuGlyph(Icon) {
+  return <Icon size={16} strokeWidth={1.5} absoluteStrokeWidth />;
 }
 
-function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, onOpenDemo, onClose }) {
+function menuChevron(Icon) {
+  return <Icon className="reader-menu-chevron" size={12} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />;
+}
+
+const READER_PLAYLISTS = ["Active Playlist", "YouTube auf Deutsch", "Deutsche Nachrichten"];
+
+function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, onOpenDemo, onOpenLynx, onClose }) {
   const mobile = useIsMobile();
-  const menu = (
-    <div className={`reader-menu${mobile ? " is-sheet" : ""}`} role="menu">
-      {mobile ? <PlayerDragHandle label="Close menu" onDragDown={onClose} /> : null}
-      <div className="reader-menu-header">
-        <button type="button" className="reader-menu-nav" aria-label="Previous lesson">
-          <ChevronLeft size={16} strokeWidth={1.5} absoluteStrokeWidth />
+  const menuRef = useRef(null);
+  const closeTimer = useRef(null);
+  const apex = useRef(null);
+  const sheetHeight = useRef(0);
+  const [openSub, setOpenSub] = useState(null);
+  const [drill, setDrill] = useState(null);
+  const [subscribed, setSubscribed] = useState(false);
+  const [playlists, setPlaylists] = useState(["Active Playlist"]);
+
+  function clearClose() {
+    clearTimeout(closeTimer.current);
+  }
+
+  function inGrace(point) {
+    const submenu = menuRef.current?.querySelector(".reader-submenu");
+    if (!apex.current || !submenu) return false;
+    const rect = submenu.getBoundingClientRect();
+    const a = apex.current;
+    const b = { x: rect.right, y: rect.top - 8 };
+    const c = { x: rect.right, y: rect.bottom + 8 };
+    const sign = (p1, p2, p3) => (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+    const d1 = sign(point, a, b);
+    const d2 = sign(point, b, c);
+    const d3 = sign(point, c, a);
+    return !(((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0)));
+  }
+
+  useEffect(() => () => clearClose(), []);
+
+  useLayoutEffect(() => {
+    if (mobile || !openSub || !menuRef.current) return;
+    const row = menuRef.current.querySelector(`[data-sub="${openSub}"]`);
+    const submenu = row?.querySelector(".reader-submenu");
+    if (!row || !submenu) return;
+    const rowBox = row.getBoundingClientRect();
+    let top = -6;
+    const bottom = rowBox.top + top + submenu.offsetHeight;
+    if (bottom > window.innerHeight - 8) top -= bottom - (window.innerHeight - 8);
+    if (rowBox.top + top < 8) top += 8 - (rowBox.top + top);
+    submenu.style.top = `${top}px`;
+  }, [mobile, openSub, subscribed, playlists, showTranslation, mode]);
+
+  useLayoutEffect(() => {
+    const sheet = menuRef.current;
+    if (!mobile || !sheet) return undefined;
+    const next = sheet.offsetHeight;
+    const previous = sheetHeight.current;
+    sheetHeight.current = next;
+    if (!previous || previous === next) return undefined;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+    sheet.style.height = `${previous}px`;
+    sheet.classList.add("is-animating");
+    const frame = requestAnimationFrame(() => {
+      sheet.style.height = `${next}px`;
+    });
+    function done() {
+      sheet.style.height = "";
+      sheet.classList.remove("is-animating");
+    }
+    sheet.addEventListener("transitionend", done);
+    return () => {
+      cancelAnimationFrame(frame);
+      sheet.removeEventListener("transitionend", done);
+    };
+  }, [mobile, drill, playlists, subscribed]);
+
+  function onMenuMove(event) {
+    if (mobile) return;
+    const point = { x: event.clientX, y: event.clientY };
+    if (event.target.closest(".reader-submenu")) {
+      clearClose();
+      return;
+    }
+    const row = event.target.closest("[data-sub]");
+    if (row) {
+      const id = row.dataset.sub;
+      if (openSub === id) {
+        apex.current = point;
+        clearClose();
+        return;
+      }
+      if (openSub && inGrace(point)) {
+        clearClose();
+        closeTimer.current = setTimeout(() => {
+          apex.current = point;
+          setOpenSub(id);
+        }, 300);
+        return;
+      }
+      apex.current = point;
+      clearClose();
+      setOpenSub(id);
+      return;
+    }
+    if (!openSub) return;
+    if (inGrace(point)) {
+      clearClose();
+      closeTimer.current = setTimeout(() => {
+        setOpenSub(null);
+        apex.current = null;
+      }, 300);
+      return;
+    }
+    clearClose();
+    setOpenSub(null);
+    apex.current = null;
+  }
+
+  function onMenuLeave() {
+    if (mobile || !openSub) return;
+    clearClose();
+    closeTimer.current = setTimeout(() => {
+      setOpenSub(null);
+      apex.current = null;
+    }, 300);
+  }
+
+  function chooseSubmenu(id) {
+    if (mobile) {
+      setDrill(id);
+      return;
+    }
+    apex.current = null;
+    flushSync(() => setOpenSub(id));
+    menuRef.current?.querySelector(`[data-sub="${id}"] .reader-submenu .reader-menu-item`)?.focus();
+  }
+
+  function togglePlaylist(title) {
+    setPlaylists((current) => (
+      current.includes(title) ? current.filter((item) => item !== title) : [...current, title]
+    ));
+  }
+
+  function row(id, label, icon, { onClick, trailing, danger, sub, plain, keepOpen } = {}) {
+    const open = !mobile && openSub === id;
+    return (
+      <div key={id} className={`reader-menu-row${sub ? " reader-menu-submenu-anchor" : ""}${open ? " is-open" : ""}`} data-sub={sub ? id : undefined}>
+        <button
+          type="button"
+          className={`reader-menu-item${danger ? " is-destructive" : ""}${open ? " is-open" : ""}${plain ? " is-plain" : ""}`}
+          role={trailing?.type === "toggle" ? "menuitemcheckbox" : "menuitem"}
+          aria-checked={trailing?.type === "toggle" ? showTranslation : undefined}
+          aria-haspopup={sub ? "menu" : undefined}
+          aria-expanded={sub && !mobile ? open : undefined}
+          onClick={() => {
+            if (sub) {
+              chooseSubmenu(id);
+              return;
+            }
+            onClick?.();
+            if (!keepOpen && mobile) onClose();
+          }}
+        >
+          {icon || null}
+          <span>{label}</span>
+          {trailing?.type === "toggle" ? (
+            <span className={`menu-toggle${trailing.on ? " is-on" : ""}`} aria-hidden="true"><span /></span>
+          ) : null}
+          {trailing?.type === "chevron" ? menuChevron(ChevronRight) : null}
         </button>
-        <div className="reader-menu-lesson">
-          <img src={thumbnail} alt="" width={32} height={32} />
-          <span>
-            <strong>Mehrere Sprachen auf einmal lernen?! Wie lange jeden Tag lernen?</strong>
-            <em>YouTube auf Deutsch <span>(3/5)</span></em>
-          </span>
-        </div>
-        <button type="button" className="reader-menu-nav" aria-label="Next lesson">
-          <ChevronRight size={16} strokeWidth={1.5} absoluteStrokeWidth />
-        </button>
+        {sub && open ? (
+          <div className="reader-submenu" role="menu" aria-label={label}>
+            <div className="reader-menu-group">{sub}</div>
+          </div>
+        ) : null}
       </div>
-      <div className="reader-menu-body">
-        {mode === "sentence" ? <MenuRow icon={<SquarePen size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Edit Sentence" /> : null}
-        <MenuRow icon={<Languages size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Show Translations" onClick={onToggleTranslation}>
-          <span className={`menu-toggle${showTranslation ? " is-on" : ""}`} aria-hidden="true"><span /></span>
-        </MenuRow>
-        <MenuRow icon={<RotateCw size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Regenerate Lesson (AI)" />
-        <MenuRow icon={<ArrowDownNarrowWide size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Simplify Lesson (AI)" />
-        <div className="reader-menu-divider" />
-        <MenuRow icon={<SquarePen size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Edit Lesson" />
-        <MenuRow icon={<BellOff size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Unsubscribe" destructive />
-        <MenuRow icon={<RefreshCw size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Refresh Lesson" />
-        <MenuRow icon={<Printer size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Print Lesson" />
-        <DownloadMenu />
-        <MenuRow icon={<ListPlus size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Add to Playlist" />
-        <div className="reader-menu-divider" />
-        <MenuRow icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Settings" />
-        <MenuRow icon={<ChartColumn size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Statistics" />
-        <MenuRow icon={<img src={lynxIcon} alt="" width={16} height={16} />} label="Help" />
-        <div className="reader-menu-divider" />
-        <MenuRow icon={<FlaskConical size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Demo settings" onClick={onOpenDemo} />
-      </div>
+    );
+  }
+
+  const courseItems = [
+    row("view-course", "View Course", menuGlyph(BookOpen)),
+    row(subscribed ? "unsubscribe" : "subscribe", subscribed ? "Unsubscribe" : "Subscribe", menuGlyph(subscribed ? BellMinus : BellPlus), {
+      danger: subscribed,
+      keepOpen: true,
+      onClick: () => setSubscribed((value) => !value),
+    }),
+    row("edit-course", "Edit Course", menuGlyph(SquarePen)),
+  ];
+  const playlistItems = [
+    row("new-playlist", "New Playlist", menuGlyph(CirclePlus)),
+    <div key="playlist-divider" className="reader-menu-divider" />,
+    ...READER_PLAYLISTS.filter((title) => !playlists.includes(title)).map((title) => (
+      row(`add-${title}`, title, null, { plain: true, keepOpen: true, onClick: () => togglePlaylist(title) })
+    )),
+  ];
+  const downloadItems = [
+    row("download-audio", "Download Audio", menuGlyph(Download)),
+    row("download-srt", "Download SRT File", menuGlyph(Download)),
+    row("print-lesson", "Print Lesson", menuGlyph(Printer)),
+  ];
+  const helpItems = [
+    row("quick-start", "Quick Start Guide", menuGlyph(Timer)),
+    row("grammar-guide", "Grammar Guide", menuGlyph(BookCheck)),
+    row("chat-lynx", "Chat with Lynx", <img src={lynxIcon} alt="" width={16} height={16} />, { onClick: onOpenLynx }),
+  ];
+
+  const groups = [
+    [
+      row("translations", "Show Translations", menuGlyph(Languages), {
+        keepOpen: true,
+        onClick: onToggleTranslation,
+        trailing: { type: "toggle", on: showTranslation },
+      }),
+      row("simplify", "Simplify Lesson", menuGlyph(ArrowDownNarrowWide)),
+      row("regenerate", "Regenerate Lesson", menuGlyph(RefreshCw)),
+    ],
+    [
+      mode === "sentence" ? row("edit-sentence", "Edit Sentence", menuGlyph(SquarePen)) : null,
+      row("edit-lesson", "Edit Lesson", menuGlyph(SquarePen)),
+    ].filter(Boolean),
+    [
+      row("course", "Course", menuGlyph(BookOpen), { trailing: { type: "chevron" }, sub: courseItems }),
+      ...playlists.map((title) => row(`remove-${title}`, `Remove from ${title}`, menuGlyph(ListX), {
+        danger: true,
+        keepOpen: true,
+        onClick: () => togglePlaylist(title),
+      })),
+      row("playlist", "Add to Playlist", menuGlyph(ListPlus), { trailing: { type: "chevron" }, sub: playlistItems }),
+      row("download", "Download & Print", menuGlyph(Download), { trailing: { type: "chevron" }, sub: downloadItems }),
+    ],
+    [
+      row("settings", "Settings", menuGlyph(Settings)),
+      row("statistics", "Statistics", menuGlyph(ChartColumn)),
+      row("help", "Help", menuGlyph(CircleHelp), { trailing: { type: "chevron" }, sub: helpItems }),
+    ],
+    [
+      row("demo", "Demo settings", menuGlyph(FlaskConical), { onClick: onOpenDemo }),
+    ],
+  ];
+
+  const drillParent = {
+    course: ["Course", courseItems],
+    playlist: ["Add to Playlist", playlistItems],
+    download: ["Download & Print", downloadItems],
+    help: ["Help", helpItems],
+  }[drill];
+
+  function onMenuKeyDown(event) {
+    const current = event.target.closest(".reader-menu-item");
+    if (!current || !menuRef.current?.contains(current)) return;
+    const inSub = Boolean(current.closest(".reader-submenu"));
+    const scope = inSub ? current.closest(".reader-submenu") : menuRef.current;
+    const list = [...scope.querySelectorAll(".reader-menu-item")].filter((item) => (
+      inSub ? item.closest(".reader-submenu") === scope : !item.closest(".reader-submenu")
+    ));
+    const index = list.indexOf(current);
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const next = event.key === "ArrowDown" ? (index + 1) % list.length : (index - 1 + list.length) % list.length;
+      list[next]?.focus();
+      return;
+    }
+    if (mobile && event.key === "Escape" && drill) {
+      event.preventDefault();
+      event.stopPropagation();
+      const id = drill;
+      setDrill(null);
+      requestAnimationFrame(() => menuRef.current?.querySelector(`[data-sub="${id}"] .reader-menu-item`)?.focus());
+      return;
+    }
+    if (!mobile && event.key === "ArrowLeft" && !inSub && current.closest("[data-sub]")) {
+      event.preventDefault();
+      chooseSubmenu(current.closest("[data-sub]").dataset.sub);
+      return;
+    }
+    if (!mobile && inSub && (event.key === "ArrowRight" || event.key === "Escape")) {
+      event.preventDefault();
+      event.stopPropagation();
+      const parent = openSub;
+      setOpenSub(null);
+      requestAnimationFrame(() => menuRef.current?.querySelector(`[data-sub="${parent}"] > .reader-menu-item`)?.focus());
+    }
+  }
+
+  const header = (
+    <div className="reader-menu-header">
+      <button type="button" className="reader-menu-nav" aria-label="Previous lesson">
+        <ChevronLeft size={16} strokeWidth={1.5} absoluteStrokeWidth />
+      </button>
+      <button type="button" className="reader-menu-lesson">
+        <img src={thumbnail} alt="" width={36} height={36} />
+        <span>
+          <strong>Mehrere Sprachen auf einmal lernen?! Wie lange jeden Tag lernen?</strong>
+          <em><span>YouTube auf Deutsch</span><span>(3/5)</span></em>
+        </span>
+      </button>
+      <button type="button" className="reader-menu-nav" aria-label="Next lesson">
+        <ChevronRight size={16} strokeWidth={1.5} absoluteStrokeWidth />
+      </button>
     </div>
   );
-  if (mobile) return createPortal(menu, document.body);
+
+  const menu = (
+    <div
+      ref={menuRef}
+      className={`reader-menu${mobile ? " is-sheet" : ""}`}
+      role="menu"
+      aria-label="Reader options"
+      onMouseMove={onMenuMove}
+      onMouseLeave={onMenuLeave}
+      onKeyDown={onMenuKeyDown}
+    >
+      {mobile ? <PlayerDragHandle label="Close menu" onDragDown={onClose} /> : null}
+      {mobile && drillParent ? (
+        <>
+          <div className="reader-menu-group">
+            <div className="reader-menu-row">
+              <button type="button" className="reader-menu-item is-back" onClick={() => setDrill(null)}>
+                <ChevronLeft size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                <span>{drillParent[0]}</span>
+              </button>
+            </div>
+          </div>
+          <div className="reader-menu-divider" />
+          <div className="reader-menu-group">{drillParent[1]}</div>
+        </>
+      ) : (
+        <>
+          {header}
+          {groups.map((items, index) => (
+            <div key={items[0]?.key || index}>
+              {index > 0 ? <div className="reader-menu-divider" /> : null}
+              <div className="reader-menu-group">{items}</div>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+
+  if (mobile) {
+    return createPortal(
+      <>
+        <button type="button" className="reader-menu-scrim" aria-label="Close menu" onClick={onClose} />
+        {menu}
+      </>,
+      document.body,
+    );
+  }
   return menu;
 }
 
@@ -427,10 +697,10 @@ function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio,
       {mobile ? <PlayerDragHandle label="Close menu" onDragDown={onClose} /> : null}
       <div className="reader-menu-header">
         <div className="reader-menu-lesson">
-          <img src={thumbnail} alt="" width={32} height={32} />
+          <img src={thumbnail} alt="" width={36} height={36} />
           <span>
             <strong>Mehrere Sprachen auf einmal lernen?! Wie lange jeden Tag lernen?</strong>
-            <em>YouTube auf Deutsch <span>(3/5)</span></em>
+            <em><span>YouTube auf Deutsch</span><span>(3/5)</span></em>
           </span>
         </div>
       </div>
@@ -463,12 +733,20 @@ function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio,
         <MenuRow icon={<CaseSensitive size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Theme" />
         <MenuRow icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Settings" />
         <MenuRow icon={<img src={lynxIcon} alt="" width={16} height={16} />} label="Help">
-          <span className="reader-menu-meta">Chat with Lynx <ChevronRight size={16} strokeWidth={1.5} absoluteStrokeWidth /></span>
+          <span className="reader-menu-meta">Chat with Lynx <ChevronRight className="reader-menu-chevron" size={12} strokeWidth={1.5} absoluteStrokeWidth /></span>
         </MenuRow>
       </div>
     </div>
   );
-  if (mobile) return createPortal(menu, document.body);
+  if (mobile) {
+    return createPortal(
+      <>
+        <button type="button" className="reader-menu-scrim" aria-label="Close menu" onClick={onClose} />
+        {menu}
+      </>,
+      document.body,
+    );
+  }
   return menu;
 }
 
@@ -769,9 +1047,8 @@ export default function Reader() {
   const [theme, setTheme] = useState("light");
   const [fontStyle, setFontStyle] = useState("Rubik Original");
   const [pageModePrompt, setPageModePrompt] = useState(false);
-  const [finishPrompt, setFinishPrompt] = useState(false);
-  const [finishDismiss, setFinishDismiss] = useState(false);
-  const [hideFinishPrompt, setHideFinishPrompt] = useState(false);
+  const [completeHint, setCompleteHint] = useState(false);
+  const completeHintTimer = useRef(null);
   const [sidePanel, setSidePanel] = useState(false);
   const [lynxOpen, setLynxOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -817,6 +1094,13 @@ export default function Reader() {
       starts.push(line.top);
       pageTop = line.top;
     });
+    const contentBottom = lines[lines.length - 1].bottom;
+    const lastStart = starts[starts.length - 1];
+    const lastLimit = Math.max(36, limit - COMPLETE_BLOCK);
+    if (contentBottom - lastStart > lastLimit + 0.5) {
+      const overflow = lines.find((line) => line.top > lastStart + 0.5 && line.bottom - lastStart > lastLimit + 0.5);
+      if (overflow) starts.push(overflow.top);
+    }
     setPageStarts(starts);
     setPageIndex((index) => Math.min(index, Math.max(0, starts.length - 1)));
   }, [mode, lesson, pageStarts]);
@@ -825,11 +1109,15 @@ export default function Reader() {
     if (mode !== "page") return undefined;
     const node = textRef.current;
     if (!node) return undefined;
-    let last = node.clientHeight;
+    let lastHeight = node.clientHeight;
+    let lastWidth = node.clientWidth;
     const observer = new ResizeObserver(() => {
-      const next = node.clientHeight;
-      if (!next || Math.abs(next - last) < 1) return;
-      last = next;
+      const nextHeight = node.clientHeight;
+      const nextWidth = node.clientWidth;
+      if (!nextHeight) return;
+      if (Math.abs(nextHeight - lastHeight) < 1 && Math.abs(nextWidth - lastWidth) < 1) return;
+      lastHeight = nextHeight;
+      lastWidth = nextWidth;
       setPageStarts(null);
     });
     observer.observe(node);
@@ -1080,16 +1368,13 @@ export default function Reader() {
     return () => observer.disconnect();
   }, [theater, theaterLine, lesson]);
 
-  function openFinishPrompt() {
-    if (hideFinishPrompt) return;
-    setFinishDismiss(false);
-    setFinishPrompt(true);
+  function completeLesson() {
+    setCompleteHint(true);
+    clearTimeout(completeHintTimer.current);
+    completeHintTimer.current = setTimeout(() => setCompleteHint(false), 3000);
   }
 
-  function confirmFinish() {
-    if (finishDismiss) setHideFinishPrompt(true);
-    setFinishPrompt(false);
-  }
+  useEffect(() => () => clearTimeout(completeHintTimer.current), []);
 
   useEffect(() => {
     if (!reviewMenu) return undefined;
@@ -1201,15 +1486,6 @@ export default function Reader() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [pageModePrompt]);
-
-  useEffect(() => {
-    if (!finishPrompt) return undefined;
-    function onKeyDown(event) {
-      if (event.key === "Escape") setFinishPrompt(false);
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [finishPrompt]);
 
   useLayoutEffect(() => {
     const footer = footerRef.current;
@@ -1374,7 +1650,7 @@ export default function Reader() {
     if (!playerShown) return undefined;
     function onKeyDown(event) {
       if (event.key !== "Escape") return;
-      if (modeMenu || reviewMenu || playerMenu || playMenu || chromeMenu || demoSettings || pageModePrompt || finishPrompt || phrasePick || active || termMenu || reviewCard || reviewOpen || lynxOpen) return;
+      if (modeMenu || reviewMenu || playerMenu || playMenu || chromeMenu || demoSettings || pageModePrompt || phrasePick || active || termMenu || reviewCard || reviewOpen || lynxOpen) return;
       if (theater) {
         runTheater(() => setTheater(false));
         return;
@@ -1383,7 +1659,7 @@ export default function Reader() {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [playerShown, theater, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, pageModePrompt, finishPrompt, phrasePick, active, termMenu, reviewCard, reviewOpen, lynxOpen]);
+  }, [playerShown, theater, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, pageModePrompt, phrasePick, active, termMenu, reviewCard, reviewOpen, lynxOpen]);
 
   function openLynx() {
     transition(() => {
@@ -2029,8 +2305,9 @@ export default function Reader() {
     return nodes;
   }
 
-  const showFinish = (mode === "sentence" && sentenceIndex >= lesson.length - 1)
-    || (mode === "page" && pageStarts !== null && pageIndex >= pageStarts.length - 1);
+  const atPageEnd = mode === "page" && pageStarts !== null && pageIndex >= pageStarts.length - 1;
+  const atSentenceEnd = mode === "sentence" && sentenceIndex >= lesson.length - 1;
+  const showComplete = !theater && (atPageEnd || atSentenceEnd);
 
   return (
     <div className={`reader${theater ? " is-theater" : ""}`}>
@@ -2113,6 +2390,10 @@ export default function Reader() {
                     setChromeMenu(null);
                     setDemoSettings(true);
                   }}
+                  onOpenLynx={() => {
+                    setChromeMenu(null);
+                    openLynx();
+                  }}
                   onClose={() => setChromeMenu(null)}
                 />
               ) : null}
@@ -2125,7 +2406,7 @@ export default function Reader() {
           </div>
         </div>
 
-        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${showVideo ? " has-video" : ""}${showVideo && sideBySide && !theater ? " is-side" : ""}`}>
+        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${showVideo ? " has-video" : ""}${showVideo && sideBySide && !theater ? " is-side" : ""}${showComplete && mode === "sentence" ? " is-complete" : ""}`}>
           <div className="page-control">
             <button
               type="button"
@@ -2335,10 +2616,13 @@ export default function Reader() {
               );
             })()}
             {theater || mode !== "scroll" ? null : (
-              <button type="button" className={`finish-lesson${atScrollEnd ? " is-visible" : ""}`} onClick={openFinishPrompt}>
-                <CircleCheck size={16} strokeWidth={1.36} absoluteStrokeWidth />
-                Finish Lesson
-              </button>
+              <div className={`finish-lesson${atScrollEnd ? " is-visible" : ""}`}>
+                <button type="button" className="complete-lesson-button" onClick={completeLesson}>
+                  <CircleCheck size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                  Finish Lesson
+                </button>
+                {completeHint ? <p className="complete-hint" role="status">goes to lesson complete page</p> : null}
+              </div>
             )}
             {activeToken && active.size !== "medium" && active.size !== "large" && (!sidePanel || showMini) ? (
               <WidgetSmall
@@ -2376,6 +2660,17 @@ export default function Reader() {
             ) : null}
           </article>
           {mode === "scroll" ? <div className="scroll-text-fade" aria-hidden="true" /> : null}
+          {showComplete ? (
+            <div className={`complete-lesson${mode === "sentence" ? " is-float" : ""}`}>
+              <div className="complete-lesson-anchor">
+                <button type="button" className="complete-lesson-button" onClick={completeLesson}>
+                  <CircleCheck size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                  Finish Lesson
+                </button>
+                {completeHint ? <p className="complete-hint" role="status">goes to lesson complete page</p> : null}
+              </div>
+            </div>
+          ) : null}
           {phrasePick ? (
             <div className="phrase-tooltip" role="status">
               <MousePointerClick size={18} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
@@ -2412,22 +2707,15 @@ export default function Reader() {
           <div className="page-control">
             <button
               type="button"
-              className={`page-button${showFinish ? " is-finish" : ""}`}
-              aria-label={showFinish ? "Finish lesson" : mode === "sentence" ? "Next sentence" : "Next page"}
+              className="page-button"
+              aria-label={mode === "sentence" ? "Next sentence" : "Next page"}
+              disabled={atPageEnd || atSentenceEnd}
               onClick={() => {
-                if (showFinish) {
-                  openFinishPrompt();
-                  return;
-                }
                 if (mode === "sentence") setSentenceIndex((index) => Math.min(lesson.length - 1, index + 1));
                 if (mode === "page") setPageIndex((index) => Math.min((pageStarts?.length ?? 1) - 1, index + 1));
               }}
             >
-              {showFinish ? (
-                <CircleCheck size={16} strokeWidth={1.36} absoluteStrokeWidth />
-              ) : (
-                <ChevronRight size={16} strokeWidth={1.36} absoluteStrokeWidth />
-              )}
+              <ChevronRight size={16} strokeWidth={1.36} absoluteStrokeWidth />
             </button>
           </div>
           {reviewCard ? (
@@ -2714,35 +3002,6 @@ export default function Reader() {
         </>
         )}
       </footer>
-
-      {finishPrompt ? (
-        <div className="mode-dialog-backdrop" onClick={() => setFinishPrompt(false)}>
-          <div
-            className="finish-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="finish-lesson-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="finish-dialog-copy">
-              <p id="finish-lesson-title">Finish this Lesson?</p>
-              <p>Confirm to wrap up this lesson and view your learning stats.</p>
-            </div>
-            <div className="finish-dialog-actions">
-              <button type="button" className="finish-dialog-cancel" onClick={() => setFinishPrompt(false)}>Cancel</button>
-              <button type="button" className="finish-dialog-confirm" onClick={confirmFinish}>Finish Lesson</button>
-            </div>
-            <label className="finish-dialog-dismiss">
-              Don’t show this again
-              <input
-                type="checkbox"
-                checked={finishDismiss}
-                onChange={(event) => setFinishDismiss(event.target.checked)}
-              />
-            </label>
-          </div>
-        </div>
-      ) : null}
 
       {demoSettings ? (
         <DemoSettings

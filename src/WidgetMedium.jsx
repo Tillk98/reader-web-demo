@@ -77,9 +77,14 @@ function placeCard(anchor, boundary, width, height) {
   };
 }
 
-function TagRow() {
+function TagRow({ onSelectPhrase }) {
   return (
     <div className="widget-medium-tags">
+      <button type="button" className="widget-action" onClick={onSelectPhrase}>
+        <Brackets size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
+        <span>Select Phrase</span>
+      </button>
+      <span className="widget-medium-tags-divider" aria-hidden="true" />
       <button type="button" className="widget-medium-add-tag" aria-label="Add tag">
         <Tags size={18} strokeWidth={1.5} absoluteStrokeWidth />
       </button>
@@ -226,7 +231,7 @@ export default function WidgetMedium({
                   </div>
                 ))}
               </div>
-              <TagRow />
+              <TagRow onSelectPhrase={onSelectPhrase} />
               <div className="widget-dictionaries">
                 <button type="button" className="widget-dictionary-open" aria-label="Dictionaries">
                   <BookA size={18} strokeWidth={1.5} absoluteStrokeWidth />
@@ -257,28 +262,20 @@ export default function WidgetMedium({
                 </button>
               </div>
             </div>
-            <TagRow />
+            <TagRow onSelectPhrase={onSelectPhrase} />
           </>
         )}
 
-        {phraseError ? null : (
+        {phraseError || !isNew ? null : (
         <div className="widget-medium-actions">
           <div className="widget-medium-scroll" {...actionsDrag}>
-            {isNew ? (
-              <>
-                <button type="button" className="widget-action" onClick={() => { onStatus("Ignored"); onClose(); }}>
-                  <EyeOff size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
-                  <span>Ignore</span>
-                </button>
-                <button type="button" className="widget-action" onClick={() => { onStatus("Known"); onClose(); }}>
-                  <Check size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
-                  <span>Known</span>
-                </button>
-              </>
-            ) : null}
-            <button type="button" className="widget-action" onClick={onSelectPhrase}>
-              <Brackets size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
-              <span>Select Phrase</span>
+            <button type="button" className="widget-action" onClick={() => { onStatus("Ignored"); onClose(); }}>
+              <EyeOff size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
+              <span>Ignore</span>
+            </button>
+            <button type="button" className="widget-action" onClick={() => { onStatus("Known"); onClose(); }}>
+              <Check size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
+              <span>Known</span>
             </button>
           </div>
         </div>

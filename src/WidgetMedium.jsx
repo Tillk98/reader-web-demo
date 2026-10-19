@@ -103,6 +103,7 @@ export default function WidgetMedium({
   anchorId,
   boundaryRef,
   status,
+  selectStatus = true,
   meaning,
   suggestions = [],
   isNew = false,
@@ -278,7 +279,7 @@ export default function WidgetMedium({
               <StatusButton
                 key={item}
                 status={item}
-                state={item === status ? "focus" : "default"}
+                state={selectStatus && item === status ? "focus" : "default"}
                 onClick={() => onStatus(item)}
               />
             ))}

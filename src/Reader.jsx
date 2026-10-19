@@ -2275,6 +2275,7 @@ export default function Reader() {
         ? activeToken.meanings
         : (activeToken.meaning ? [activeToken.meaning] : meaningsFor(activeToken.value)))
       : [];
+  const selectStatus = activeIsNew || largeMeanings.length > 0;
   const largeSuggestions = pendingPhrase
     ? pendingPhrase.suggestions
     : (activeToken ? meaningsFor(activeToken.value).slice(0, 3) : []);
@@ -2733,6 +2734,7 @@ export default function Reader() {
                 anchorId={`${active.paragraphIndex}-${active.tokenIndex}`}
                 boundaryRef={textRef}
                 status={activeStatus}
+                selectStatus={selectStatus}
                 meaning={activeMeaning}
                 mode={active.mode}
                 hideChevron={sidePanel}
@@ -2750,6 +2752,7 @@ export default function Reader() {
                 anchorId={`${active.paragraphIndex}-${active.tokenIndex}`}
                 boundaryRef={textRef}
                 status={activeStatus}
+                selectStatus={selectStatus}
                 meaning={activeMeaning}
                 suggestions={activeSuggestions}
                 isNew={activeIsNew}
@@ -2794,6 +2797,7 @@ export default function Reader() {
               sentenceWords={largeSentenceWords}
               pastEncounters={largePastEncounters}
               status={activeStatus}
+              selectStatus={selectStatus}
               onStatus={handleStatusChange}
               onChooseMeaning={chooseMeaning}
               onUpdateMeanings={updateMeanings}
@@ -2860,6 +2864,7 @@ export default function Reader() {
               sentenceWords={largeSentenceWords}
               pastEncounters={largePastEncounters}
               status={activeStatus}
+              selectStatus={selectStatus}
               onStatus={handleStatusChange}
               onChooseMeaning={chooseMeaning}
               onUpdateMeanings={updateMeanings}

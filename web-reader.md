@@ -72,7 +72,7 @@ Centered in the lesson column, 400×600 (shrinks if the column is shorter). Not 
 - Meaning dividers are inset from the left, in line with the text, and run to the right edge.
 - Tags are not in the term header. They sit under the meanings. On a word that is not a LingQ they sit between the meanings and the dictionaries.
 - **New** variant (unsaved valid phrase): up to 3 suggested meanings with a plus, tags between the meanings and the dictionary row.
-- A saved word with no meanings left shows up to two suggested meanings in that card, with an Add meaning row under them. Choosing a suggestion shows Added, then saves it on the word. Saving a custom meaning from that row closes the widget.
+- A saved word with no meanings left shows up to two suggested meanings in that card, with an Add meaning row under them. Choosing a suggestion shows Added, then saves it on the word. Saving a custom meaning from that row closes the widget. With no saved meaning, the status bar has nothing selected.
 - Saving a meaning creates a LingQ 1 and **keeps the widget open**, switching it to the saved form.
 - Footer status bar updates the word or saved phrase and leaves the widget open.
 - Click outside or Escape closes it.

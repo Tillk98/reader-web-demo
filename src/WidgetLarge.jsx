@@ -424,6 +424,7 @@ export default function WidgetLarge({
   sentenceWords = [],
   pastEncounters = [],
   status,
+  selectStatus = true,
   onStatus,
   onChooseMeaning,
   onUpdateMeanings = () => {},
@@ -687,7 +688,7 @@ export default function WidgetLarge({
               <StatusButton
                 key={item}
                 status={item}
-                state={item === status ? "focus" : "default"}
+                state={selectStatus && item === status ? "focus" : "default"}
                 onClick={() => onStatus(item)}
               />
             ))}

@@ -26,6 +26,7 @@ export default function WidgetSmall({
   anchorId,
   boundaryRef,
   status,
+  selectStatus = true,
   meaning,
   mode,
   onMode,
@@ -129,7 +130,7 @@ export default function WidgetSmall({
       {mode === "meaning" ? (
         <StatusButton
           status={status}
-          state="focus"
+          state={selectStatus ? "focus" : "default"}
           flipping
           onClick={() => transition(() => onMode("status"))}
         />
@@ -138,7 +139,7 @@ export default function WidgetSmall({
           <StatusButton
             key={item}
             status={item}
-            state={item === status ? "focus" : "default"}
+            state={selectStatus && item === status ? "focus" : "default"}
             flipping={item === status}
             onClick={() => {
               if (item !== status) onStatus(item);

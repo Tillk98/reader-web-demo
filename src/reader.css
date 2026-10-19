@@ -3875,6 +3875,11 @@ button:focus-visible {
     display: none;
   }
 
+  .reader-footer:not(.is-player-open) {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
   .reader-footer:not(.is-player-open):has(.audio-player) {
     grid-template-columns: minmax(0, 1fr);
   }

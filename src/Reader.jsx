@@ -2670,6 +2670,7 @@ export default function Reader() {
                 onTranslate={openTranslate}
                 onClose={() => setActive(null)}
                 onOpenLarge={openLarge}
+                hideChevron={sidePanel}
               />
             ) : null}
           </article>

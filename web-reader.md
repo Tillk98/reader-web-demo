@@ -49,7 +49,7 @@ Anchored 8px above the word, inside the text column. Flips below if it would lea
 
 Long-press card, also kept inside the text column.
 
-**LingQ** (saved word or saved phrase): meaning with an inert play button, chevron, then one row with Select Phrase, a 30px divider, and the tags. The full status bar sits along the bottom. Ignore and Known are not repeated as buttons while that bar is showing.
+**LingQ** (saved word or saved phrase): meaning with an inert play button, chevron, then one row with Select Phrase, a 30px divider, and the tags. The full status bar sits along the bottom. Ignore and Known are not repeated as buttons while that bar is showing. The chevron is hidden while the side panel is open.
 
 **New** (unsaved valid phrase): white header “Suggested Meanings” at 14px regular, chevron, up to 2 glosses with a plus and the same inset dividers, then the tags row, then the dictionary row. The full status bar sits along the bottom. A blue word is already a LingQ before this card opens, so this state stays in the code for an unsaved phrase.
 
@@ -57,7 +57,7 @@ Long-press card, also kept inside the text column.
 - Tag and dictionary rows scroll by swipe or click-and-drag. A drag does not fire the button.
 - Select Phrase sits on the tags row in both states, before a 30px divider.
 - The status bar is on both the LingQ and new-word cards. Choosing a status on a saved word updates it and leaves the widget open. Choosing a status on an unsaved phrase cancels it: nothing is saved and no snackbar appears.
-- Forward chevron opens the large widget.
+- Forward chevron opens the large widget. While the side panel is open, that chevron is hidden.
 - **Select Phrase** starts phrase selection.
 
 ## Large widget
@@ -134,7 +134,7 @@ The button is full width: fill `#F4FCEF`, 1px stroke and label `#42A564`, radius
 
 ## Site header and lesson chrome
 
-The site header has no extra fill and no bottom border. Below 767px the language pill (flag and word count) hides. The streak pill stays. The lesson header has 12px of padding on top and 16px on the bottom. The bottom bar has 24px of padding on top and 16px on the bottom. There is no extra gap between the site header and the lesson header, between the lesson header and the lesson text, or between the lesson text and the bottom bar. The lesson header keeps that layout whether or not video is showing.
+The site header has no extra fill and no bottom border. Below 767px the language pill (flag and word count) hides. The streak pill stays. The lesson header has 12px of padding on top and 16px on the bottom. The bottom bar has 24px of padding on top and 16px on the bottom. Left and right padding is 32px, and 16px below 767px. There is no extra gap between the site header and the lesson header, between the lesson header and the lesson text, or between the lesson text and the bottom bar. The lesson header keeps that layout whether or not video is showing.
 
 - **Exit** sits on the far left of the lesson header, opposite the Aa, ellipsis, and panel buttons. Same 45px icon button, radius 6, 24px icon. Lucide log-out, flipped so the arrow points left. Inset 12px. It leaves the lesson and returns to where that lesson was opened.
 - The lesson progress bar matches the lesson text: 620px max, the same left edge, and the same width when that fits. It keeps the same clearance from the buttons on the right as it keeps from the exit button, and shortens from the right when the text would run underneath them. The track is `#F8F9FA`. The fill stays green. It stays in the lesson header whether or not video is showing. The video begins under that header.

@@ -113,6 +113,7 @@ export default function WidgetMedium({
   onTranslate,
   onClose,
   onOpenLarge,
+  hideChevron = false,
 }) {
   const cardRef = useRef(null);
   const dictionaryDrag = useDragScroll();
@@ -124,7 +125,7 @@ export default function WidgetMedium({
     const anchor = boundary?.querySelector(`[data-word-id="${anchorId}"]`);
     if (!boundary || !card || !anchor) return;
     setCardPos(placeCard(anchor, boundary, card.offsetWidth, card.offsetHeight));
-  }, [anchorId, boundaryRef, meaning, isNew, suggestions, phraseError, status]);
+  }, [anchorId, boundaryRef, meaning, isNew, suggestions, phraseError, status, hideChevron]);
 
   useEffect(() => {
     const boundary = boundaryRef.current;
@@ -203,11 +204,13 @@ export default function WidgetMedium({
           <>
             <div className="widget-medium-header is-suggested">
               <p className="widget-medium-suggested-label">Suggested Meanings</p>
-              <div className="widget-medium-tools">
-                <button type="button" className="widget-medium-chevron" aria-label="More details" onClick={onOpenLarge}>
-                  <ChevronRight size={16} strokeWidth={1.33} absoluteStrokeWidth />
-                </button>
-              </div>
+              {hideChevron ? null : (
+                <div className="widget-medium-tools">
+                  <button type="button" className="widget-medium-chevron" aria-label="More details" onClick={onOpenLarge}>
+                    <ChevronRight size={16} strokeWidth={1.33} absoluteStrokeWidth />
+                  </button>
+                </div>
+              )}
             </div>
             <div className="widget-medium-content">
               <div className="widget-suggested">
@@ -257,11 +260,13 @@ export default function WidgetMedium({
                 </button>
                 <p className="widget-medium-meaning">{meaning}</p>
               </div>
-              <div className="widget-medium-tools">
-                <button type="button" className="widget-medium-chevron" aria-label="More details" onClick={onOpenLarge}>
-                  <ChevronRight size={16} strokeWidth={1.33} absoluteStrokeWidth />
-                </button>
-              </div>
+              {hideChevron ? null : (
+                <div className="widget-medium-tools">
+                  <button type="button" className="widget-medium-chevron" aria-label="More details" onClick={onOpenLarge}>
+                    <ChevronRight size={16} strokeWidth={1.33} absoluteStrokeWidth />
+                  </button>
+                </div>
+              )}
             </div>
             <TagRow onSelectPhrase={onSelectPhrase} />
           </>

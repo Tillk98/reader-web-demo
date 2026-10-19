@@ -1873,6 +1873,7 @@ export default function Reader() {
         end: active.phrase.end,
         text: active.phrase.text,
         meaning,
+        meanings: [meaning],
         status: "New",
         kind: "lingq",
         level: 1,
@@ -1900,11 +1901,46 @@ export default function Reader() {
       if (pIndex !== paragraphIndex) return paragraph;
       return paragraph.map((item, tIndex) => {
         if (tIndex !== tokenIndex || item.type !== "word") return item;
-        return { ...item, kind: "lingq", level: 1, status: "New", meaning };
+        return { ...item, kind: "lingq", level: 1, status: "New", meaning, meanings: [meaning] };
       });
     }));
     showSnackbar("New", () => restoreToken(paragraphIndex, tokenIndex, previous));
     if (!keepOpen) setActive(null);
+  }
+
+  function updateMeanings(list) {
+    if (!active) return;
+    const meanings = list.map((item) => item.trim()).filter(Boolean);
+    const meaning = meanings.join(" ; ");
+    if (active.phrase?.savedId) {
+      const phraseId = active.phrase.savedId;
+      setSavedPhrases((current) => current.map((item) => (
+        item.id === phraseId ? { ...item, meaning, meanings } : item
+      )));
+      setActive((current) => (
+        current?.phrase?.savedId === phraseId
+          ? { ...current, phrase: { ...current.phrase, meaning, meanings } }
+          : current
+      ));
+      return;
+    }
+    if (active.phrase && !active.phrase.savedId) {
+      if (meanings.length) chooseMeaning(meanings[0]);
+      return;
+    }
+    const { paragraphIndex, tokenIndex } = active;
+    const token = lesson[paragraphIndex]?.[tokenIndex];
+    if (!token || token.type !== "word") return;
+    const creating = token.kind === "new" && meanings.length > 0;
+    setLesson((current) => current.map((paragraph, pIndex) => {
+      if (pIndex !== paragraphIndex) return paragraph;
+      return paragraph.map((item, tIndex) => {
+        if (tIndex !== tokenIndex || item.type !== "word") return item;
+        return creating
+          ? { ...item, kind: "lingq", level: 1, status: "New", meaning, meanings }
+          : { ...item, meaning, meanings };
+      });
+    }));
   }
 
   function handleStatusChange(status) {
@@ -2232,11 +2268,13 @@ export default function Reader() {
     ? pendingPhrase.suggestions
     : (activeToken ? meaningsFor(activeToken.value).slice(0, 2) : []);
   const largeTerm = (savedOpen || pendingPhrase)?.text || activeToken?.value || "";
-  const largeMeanings = savedOpen?.meaning
-    ? [savedOpen.meaning]
-    : activeToken?.meaning
-      ? [activeToken.meaning]
-      : (activeToken ? meaningsFor(activeToken.value) : []);
+  const largeMeanings = savedOpen
+    ? (Array.isArray(savedOpen.meanings) ? savedOpen.meanings : (savedOpen.meaning ? [savedOpen.meaning] : []))
+    : activeToken
+      ? (Array.isArray(activeToken.meanings)
+        ? activeToken.meanings
+        : (activeToken.meaning ? [activeToken.meaning] : meaningsFor(activeToken.value)))
+      : [];
   const largeSuggestions = pendingPhrase
     ? pendingPhrase.suggestions
     : (activeToken ? meaningsFor(activeToken.value).slice(0, 3) : []);
@@ -2758,6 +2796,7 @@ export default function Reader() {
               status={activeStatus}
               onStatus={handleStatusChange}
               onChooseMeaning={chooseMeaning}
+              onUpdateMeanings={updateMeanings}
               onClose={() => setActive(null)}
               docked={false}
               onTogglePanel={toggleSidePanel}
@@ -2823,6 +2862,7 @@ export default function Reader() {
               status={activeStatus}
               onStatus={handleStatusChange}
               onChooseMeaning={chooseMeaning}
+              onUpdateMeanings={updateMeanings}
               onClose={() => setActive(null)}
               docked
               compact={lynxOpen}

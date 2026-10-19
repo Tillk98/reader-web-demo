@@ -64,7 +64,7 @@ Long-press card, also kept inside the text column.
 
 Centered in the lesson column, 400×600 (shrinks if the column is shorter). Not anchored to the word.
 
-- Shows the term, meanings, the full sentence, and its English translation. Original sentence is 16px medium, not italic, and clamps to 2 lines. Translation is 16px regular and does not clamp. The sentence card is at least 128px tall. German transliteration is hidden.
+- Shows the term, meanings, the full sentence, and its English translation. Original sentence is 16px regular, not italic, and clamps to 2 lines. Translation is 14px regular and does not clamp. The sentence card is at least 128px tall. German transliteration is hidden.
 - Notes text is 16px regular, matching the meaning and sentence text. The notes icon stays a plain notebook until the Lynx-marked icon is available.
 - Header and footer are white. Each section (Meanings, Sentence, Notes) keeps its header outside a `#F8F9FA` card, radius 12, with 12px padding on the left and right.
 - Section labels are 14px regular, `#49525B`, 18px line height. Icons and chevrons are 16px. Lucide strokes are 1.33. The Sentence icon is the custom image at 16px.
@@ -72,14 +72,15 @@ Centered in the lesson column, 400×600 (shrinks if the column is shorter). Not 
 - Meaning dividers are inset from the left, in line with the text, and run to the right edge.
 - Tags are not in the term header. They sit under the meanings. On a word that is not a LingQ they sit between the meanings and the dictionaries.
 - **New** variant (unsaved valid phrase): up to 3 suggested meanings with a plus, tags between the meanings and the dictionary row.
+- A saved word with no meanings left shows up to two suggested meanings in that card, with an Add meaning row under them. Choosing a suggestion shows Added, then saves it on the word. Saving a custom meaning from that row closes the widget.
 - Saving a meaning creates a LingQ 1 and **keeps the widget open**, switching it to the saved form.
 - Footer status bar updates the word or saved phrase and leaves the widget open.
 - Click outside or Escape closes it.
 - The floating card has no side-panel button. That button exists only on the docked panel. Docking is how the popup becomes the side panel.
-- The Meanings chevron opens the meanings page: saved meanings (with the same dividers), an Add Meaning row, tags, then the dictionary row, then Suggested Meanings with a locale flag and a report button. Back returns to the default page.
-- The Sentence chevron opens the sentence page: the current sentence, a horizontal row of the words in that sentence, and Past Encounters. Original sentences on this page, including past encounters, use the same 16px medium style and are not truncated. A saved word lists up to three other lesson sentences that contain it. A new word, or a word with no earlier sentence, shows the first-encounter note. Back returns to the default page.
+- The Meanings chevron opens the meanings page: saved meanings (with the same dividers), an Add meaning row, tags, then the dictionary row, then Suggested Meanings with a locale flag and a report button. Each suggestion shows the English flag and a blue plus. Hover fills that plus. Clicking anywhere on the row shows Added, then the meaning joins the saved list above. Back returns to the default page. The Add meaning row keeps the grey card when it is the only row. A saved meaning shows the English flag. Hovering it reveals remove. Clicking it edits the text. The check or Enter saves it: the check slides left and the row briefly reads Saved. Remove slides the X left and briefly reads Removed, then the meaning is gone. The Add meaning plus stays blue, and the label turns blue on hover. Clicking it starts a blank meaning. The same edit states are on the default page’s saved meanings.
+- The Sentence chevron opens the sentence page: the current sentence, a horizontal row of the words in that sentence, and Past Encounters. Original sentences on this page, including past encounters, use the same 16px regular style and are not truncated. Translations are 14px regular. A saved word lists up to three other lesson sentences that contain it. A new word, or a word with no earlier sentence, shows the first-encounter note. Back returns to the default page.
 - The dictionary icon opens the Dictionaries page: Preferred lists the current dictionaries, All Resources lists more with a plus, and the English flag sits on that heading. Section labels stay 14px regular. The status bar is hidden on this page. Back returns to the page the icon was on. Adding a resource is visual only.
-- Play, copy, generate, notes, tag editing, dictionary chips, Add Meaning, and the report button are visual only. Saving a suggested meaning still works.
+- Play, copy, generate, notes, tag editing, dictionary chips, and the report button are visual only. Saving a suggested meaning still works. Editing, adding, and removing saved meanings works.
 
 ## Select phrase
 
@@ -321,4 +322,4 @@ The Ask Lynx circle in the bottom bar opens the chat. The click highlight is blu
 
 ## Still inert
 
-Header pills (coins, streak, language count), copy, generate, notes, tag editing, dictionary chips, adding a dictionary resource, Add Meaning, the meanings-page report button, and the audio menu’s speed, timer, theme, settings, and help rows. Settings in the lesson menu does nothing. Demo settings opens the placeholder dialog. Auto-Advance and Loop Audio remember their toggles for the session only. Split view and theater mode change the video layout when the lesson has video. Theater mode’s moving underline loops on the same frozen line for the demo and is not synced to playback. Finish Lesson shows a short note that this goes to the lesson complete page. Manage Vocabulary only closes its menu. Vocabulary search submit, row audio, and the Course, Lesson, and Tags rows do nothing.
+Header pills (coins, streak, language count), copy, generate, notes, tag editing, dictionary chips, adding a dictionary resource, the meanings-page report button, and the audio menu’s speed, timer, theme, settings, and help rows. Settings in the lesson menu does nothing. Demo settings opens the placeholder dialog. Auto-Advance and Loop Audio remember their toggles for the session only. Split view and theater mode change the video layout when the lesson has video. Theater mode’s moving underline loops on the same frozen line for the demo and is not synced to playback. Finish Lesson shows a short note that this goes to the lesson complete page. Manage Vocabulary only closes its menu. Vocabulary search submit, row audio, and the Course, Lesson, and Tags rows do nothing.

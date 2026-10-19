@@ -5147,6 +5147,38 @@ button:focus-visible {
   border-radius: 8px;
 }
 
+.widget-suggested-add {
+  gap: 0;
+  transition: padding 220ms ease, gap 220ms ease, background-color 180ms ease, border-radius 220ms ease;
+}
+
+.widget-suggested-add svg {
+  flex-shrink: 0;
+}
+
+.widget-large-meaning.is-suggestion:not(.is-added) {
+  cursor: pointer;
+}
+
+.widget-large-meaning.is-suggestion:not(.is-added):hover {
+  background: #f8f9fa;
+}
+
+.widget-large-meaning.is-suggestion:not(.is-added):hover .widget-suggested-add {
+  background: #f1f7fe;
+}
+
+.widget-large-meaning.is-suggestion.is-added {
+  background: #f1f7fe;
+}
+
+.widget-large .widget-suggested-add.is-revealed {
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: default;
+}
+
 .widget-large-tag-scroll {
   display: flex;
   flex: 1;
@@ -5252,6 +5284,7 @@ button:focus-visible {
   gap: 10px;
   min-height: 54px;
   padding: 10px 12px;
+  transition: background-color 220ms ease;
 }
 
 .widget-large-meaning + .widget-large-meaning::before {
@@ -5279,6 +5312,117 @@ button:focus-visible {
   font-weight: 400;
 }
 
+.widget-large-meaning p[role],
+.widget-large-meaning.is-idle,
+.widget-large-meaning p {
+  cursor: default;
+}
+
+.widget-large-meaning:not(.is-saved):not(.is-removed):not(.is-active):not(.is-edit) p {
+  cursor: pointer;
+}
+
+.widget-large-meaning.is-edit {
+  box-shadow: inset 0 0 0 1px #f1f3f4;
+}
+
+.widget-large-meaning.is-active,
+.widget-large-meaning.is-saved,
+.widget-large-meaning.is-removed {
+  min-height: 48px;
+}
+
+.widget-large-meaning.is-saved {
+  background: #f1f7fe;
+}
+
+.widget-large-meaning.is-removed {
+  background: #fef2f2;
+}
+
+.widget-large-meaning-field {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  color: var(--fg-default);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.widget-large-meaning-field:focus {
+  outline: none;
+}
+
+.widget-large-meaning-badge {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0;
+  padding: 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-default);
+  cursor: pointer;
+  transition: padding 220ms ease, gap 220ms ease, color 180ms ease, border-radius 220ms ease;
+}
+
+.widget-large-meaning-badge svg {
+  flex-shrink: 0;
+}
+
+.widget-large-meaning-badge.is-remove {
+  display: none;
+}
+
+.widget-large-meaning:hover .widget-large-meaning-badge.is-remove,
+.widget-large-meaning:focus-within .widget-large-meaning-badge.is-remove {
+  display: flex;
+}
+
+.widget-large-meaning-badge.is-revealed {
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: default;
+}
+
+.widget-large-meaning-badge.is-revealed.is-saved {
+  color: var(--fg-secondary);
+}
+
+.widget-large-meaning-badge.is-revealed.is-removed {
+  color: #dd2525;
+}
+
+.widget-large-meaning-badge-label {
+  display: grid;
+  grid-template-columns: 0fr;
+  opacity: 0;
+  transition: grid-template-columns 220ms ease, opacity 160ms ease;
+}
+
+.widget-large-meaning-badge-label > span {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.widget-large-meaning-badge.is-revealed .widget-large-meaning-badge-label,
+.widget-suggested-add.is-revealed .widget-large-meaning-badge-label {
+  grid-template-columns: 1fr;
+  opacity: 1;
+}
+
 .widget-large-sentence {
   display: flex;
   flex-direction: column;
@@ -5292,7 +5436,7 @@ button:focus-visible {
 .widget-large-sentence-original {
   display: -webkit-box;
   overflow: hidden;
-  font-weight: 500;
+  font-weight: 400;
   font-style: normal;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -5305,7 +5449,9 @@ button:focus-visible {
 }
 
 .widget-large-sentence-translation {
+  font-size: 14px;
   font-weight: 400;
+  line-height: 18px;
 }
 
 .widget-large-sentence-actions {
@@ -5376,7 +5522,10 @@ button:focus-visible {
 }
 
 .widget-large-add-meaning {
+  gap: 10px;
   width: 100%;
+  height: 54px;
+  padding: 0 12px;
   border: 0;
   background: transparent;
   color: var(--fg-default);
@@ -5388,11 +5537,46 @@ button:focus-visible {
   cursor: pointer;
 }
 
+.widget-large-add-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 9px;
+  border-radius: 8px;
+  color: var(--fg-secondary);
+}
+
+.widget-large-add-meaning:hover {
+  background: #f8f9fa;
+}
+
+.widget-large-add-meaning:hover .widget-large-add-icon {
+  background: #f1f7fe;
+  color: var(--fg-secondary);
+}
+
+.widget-large-add-meaning:hover span:last-child {
+  color: var(--fg-secondary);
+}
+
 .widget-large-suggest-tools {
   display: flex;
   flex-shrink: 0;
   align-items: center;
   gap: 12px;
+}
+
+.widget-large-meaning .widget-large-locale {
+  transition: width 220ms ease, opacity 160ms ease, margin-left 220ms ease;
+}
+
+.widget-large-meaning.is-revealed.is-saved .widget-large-locale,
+.widget-large-meaning.is-revealed.is-removed .widget-large-locale {
+  width: 0;
+  min-width: 0;
+  margin-left: -10px;
+  opacity: 0;
 }
 
 .widget-large-locale {

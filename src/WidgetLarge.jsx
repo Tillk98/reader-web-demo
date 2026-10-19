@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { Children, useEffect, useRef, useState } from "react";
 import {
   BookA,
+  Check,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -13,6 +14,7 @@ import {
   Tags,
   TextSearch,
   Volume2,
+  X,
 } from "lucide-react";
 import flagIcon from "../assets/language_flag_icon.png";
 import localeFlag from "../assets/flag-en.svg";
@@ -96,6 +98,275 @@ function DictionaryList({ names, addable = false }) {
   );
 }
 
+function resizeField(field) {
+  field.style.height = "auto";
+  field.style.height = `${field.scrollHeight}px`;
+}
+
+function MeaningRow({ meaning, onSave, onRemove, autoFocus = false }) {
+  const fieldRef = useRef(null);
+  const [phase, setPhase] = useState(autoFocus ? "edit" : "idle");
+  const [draft, setDraft] = useState(meaning);
+  const [focused, setFocused] = useState(autoFocus);
+  const [revealed, setRevealed] = useState(false);
+  const onRemoveRef = useRef(onRemove);
+  onRemoveRef.current = onRemove;
+
+  useEffect(() => {
+    if (phase === "idle") setDraft(meaning);
+  }, [meaning, phase]);
+
+  useEffect(() => {
+    if (phase !== "edit") return undefined;
+    const field = fieldRef.current;
+    if (!field) return undefined;
+    resizeField(field);
+    field.focus();
+    return undefined;
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== "saved" && phase !== "removed") {
+      setRevealed(false);
+      return undefined;
+    }
+    let frame = 0;
+    const first = window.requestAnimationFrame(() => {
+      frame = window.requestAnimationFrame(() => setRevealed(true));
+    });
+    const done = window.setTimeout(() => {
+      if (phase === "removed") onRemoveRef.current();
+      else setPhase("idle");
+    }, 1000);
+    return () => {
+      window.cancelAnimationFrame(first);
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(done);
+    };
+  }, [phase]);
+
+  function beginEdit() {
+    setDraft(meaning);
+    setFocused(true);
+    setPhase("edit");
+  }
+
+  function save() {
+    const next = draft.trim();
+    if (!next || next === meaning) {
+      if (!meaning) onRemove();
+      else setPhase("idle");
+      return;
+    }
+    onSave(next);
+    setPhase("saved");
+  }
+
+  const editing = phase === "edit";
+  const active = editing && focused;
+  const confirming = phase === "saved" || phase === "removed";
+  const showBadge = active || phase === "idle" || confirming;
+  const className = [
+    "widget-large-meaning",
+    phase === "saved" ? "is-saved" : "",
+    phase === "removed" ? "is-removed" : "",
+    active ? "is-active" : "",
+    editing && !active ? "is-edit" : "",
+    revealed ? "is-revealed" : "",
+  ].filter(Boolean).join(" ");
+
+  return (
+    <div className={className}>
+      {editing ? (
+        <textarea
+          ref={fieldRef}
+          className="widget-large-meaning-field"
+          value={draft}
+          rows={1}
+          aria-label="Edit meaning"
+          onChange={(event) => {
+            setDraft(event.target.value);
+            resizeField(event.target);
+          }}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              save();
+            }
+            if (event.key === "Escape") {
+              event.preventDefault();
+              if (!meaning) onRemove();
+              else setPhase("idle");
+            }
+          }}
+        />
+      ) : (
+        <p onClick={phase === "idle" ? beginEdit : undefined}>{draft || meaning}</p>
+      )}
+      {showBadge ? (
+        <button
+          type="button"
+          className={[
+            "widget-large-meaning-badge",
+            phase === "idle" ? "is-remove" : "",
+            confirming ? "is-status" : "",
+            phase === "saved" ? "is-saved" : "",
+            phase === "removed" ? "is-removed" : "",
+            revealed ? "is-revealed" : "",
+          ].filter(Boolean).join(" ")}
+          aria-label={phase === "idle" ? "Remove meaning" : active ? "Save meaning" : undefined}
+          tabIndex={confirming ? -1 : 0}
+          onMouseDown={active ? (event) => event.preventDefault() : undefined}
+          onClick={phase === "idle" ? () => setPhase("removed") : active ? save : undefined}
+        >
+          {active || phase === "saved" ? (
+            <Check size={16} strokeWidth={1.33} absoluteStrokeWidth />
+          ) : (
+            <X size={16} strokeWidth={1.33} absoluteStrokeWidth />
+          )}
+          <span className="widget-large-meaning-badge-label">
+            <span>{phase === "saved" ? "Saved" : phase === "removed" ? "Removed" : ""}</span>
+          </span>
+        </button>
+      ) : null}
+      {phase === "idle" || (editing && !active) || phase === "removed" ? (
+        <img className="widget-large-locale" src={localeFlag} alt="" width={22} height={16} />
+      ) : null}
+    </div>
+  );
+}
+
+function MeaningList({ meanings, onChange, allowAdd = false }) {
+  const idRef = useRef(0);
+  const [rows, setRows] = useState(() => meanings.map((text) => ({ id: idRef.current++, text })));
+  const signature = meanings.join("\u0000");
+  const applied = useRef(signature);
+  const meaningsRef = useRef(meanings);
+  meaningsRef.current = meanings;
+
+  useEffect(() => {
+    if (applied.current === signature) return;
+    applied.current = signature;
+    setRows(meaningsRef.current.map((text) => ({ id: idRef.current++, text })));
+  }, [signature]);
+
+  function commit(next) {
+    const persisted = next.filter((row) => row.text.trim());
+    applied.current = persisted.map((row) => row.text).join("\u0000");
+    setRows(next);
+    onChange(persisted.map((row) => row.text));
+  }
+
+  const drafting = rows.some((row) => row.pending);
+
+  return (
+    <div className={`widget-large-meanings${rows.length || allowAdd ? "" : " is-plain"}`}>
+      {rows.map((row) => (
+        <MeaningRow
+          key={row.id}
+          meaning={row.text}
+          autoFocus={Boolean(row.pending)}
+          onSave={(text) => commit(rows.map((item) => (
+            item.id === row.id ? { ...item, text, pending: false } : item
+          )))}
+          onRemove={() => commit(rows.filter((item) => item.id !== row.id))}
+        />
+      ))}
+      {allowAdd && !drafting ? (
+        <button
+          type="button"
+          className="widget-large-meaning widget-large-add-meaning"
+          onClick={() => setRows((current) => [...current, { id: idRef.current++, text: "", pending: true }])}
+        >
+          <span className="widget-large-add-icon" aria-hidden="true">
+            <Plus size={16} strokeWidth={1.33} absoluteStrokeWidth />
+          </span>
+          <span>Add meaning</span>
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function SuggestedRow({ meaning, onAdd }) {
+  const [added, setAdded] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const onAddRef = useRef(onAdd);
+  onAddRef.current = onAdd;
+
+  useEffect(() => {
+    if (!added) return undefined;
+    let frame = 0;
+    const first = window.requestAnimationFrame(() => {
+      frame = window.requestAnimationFrame(() => setRevealed(true));
+    });
+    const done = window.setTimeout(() => onAddRef.current(meaning), 1000);
+    return () => {
+      window.cancelAnimationFrame(first);
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(done);
+    };
+  }, [added, meaning]);
+
+  function add() {
+    if (!added) setAdded(true);
+  }
+
+  return (
+    <div
+      className={`widget-large-meaning is-suggestion${added ? " is-added" : ""}${revealed ? " is-revealed" : ""}`}
+      role="button"
+      tabIndex={added ? -1 : 0}
+      aria-label={added ? undefined : `Save ${meaning}`}
+      onClick={add}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          add();
+        }
+      }}
+    >
+      <p>{meaning}</p>
+      <span className={`widget-suggested-add${revealed ? " is-revealed" : ""}`}>
+        <Plus size={16} strokeWidth={1.33} absoluteStrokeWidth />
+        <span className="widget-large-meaning-badge-label">
+          <span>{added ? "Added" : ""}</span>
+        </span>
+      </span>
+      <img className="widget-large-locale" src={localeFlag} alt="" width={22} height={16} />
+    </div>
+  );
+}
+
+function SuggestedList({ meanings, saved = [], onAdd, children = null }) {
+  const [done, setDone] = useState([]);
+  const signature = meanings.join("\u0000");
+
+  useEffect(() => {
+    setDone([]);
+  }, [signature]);
+
+  const visible = meanings.filter((meaning) => !(done.includes(meaning) && saved.includes(meaning)));
+
+  function finish(meaning) {
+    onAdd(meaning);
+    setDone((current) => (current.includes(meaning) ? current : [...current, meaning]));
+  }
+
+  if (!visible.length && !Children.count(children)) return null;
+
+  return (
+    <div className="widget-large-meanings">
+      {visible.map((meaning) => (
+        <SuggestedRow key={meaning} meaning={meaning} onAdd={finish} />
+      ))}
+      {children}
+    </div>
+  );
+}
+
 function SentenceCard({ sentence, translation, full = false }) {
   return (
     <div className={`widget-large-sentence${full ? " is-full" : ""}`}>
@@ -155,6 +426,7 @@ export default function WidgetLarge({
   status,
   onStatus,
   onChooseMeaning,
+  onUpdateMeanings = () => {},
   onClose,
   docked = false,
   compact = false,
@@ -163,9 +435,11 @@ export default function WidgetLarge({
   const cardRef = useRef(null);
   const [page, setPage] = useState("default");
   const [dictionaryFrom, setDictionaryFrom] = useState("default");
+  const [addingMeaning, setAddingMeaning] = useState(false);
 
   useEffect(() => {
     setPage("default");
+    setAddingMeaning(false);
   }, [term]);
 
   useEffect(() => {
@@ -178,6 +452,7 @@ export default function WidgetLarge({
 
     function onKeyDown(event) {
       if (event.key !== "Escape") return;
+      if (event.target.closest?.(".widget-large-meaning-field")) return;
       if (page === "dictionaries") {
         setPage(dictionaryFrom);
         return;
@@ -199,7 +474,17 @@ export default function WidgetLarge({
 
   const savedMeanings = isNew ? [] : meanings;
   const suggestedMeanings = (glossary.length ? glossary : suggestions).slice(0, 5);
-  const shownMeanings = isNew ? suggestions.slice(0, 3) : meanings;
+  const emptySuggestions = (glossary.length ? glossary : suggestions).slice(0, 2);
+  const savedRef = useRef(savedMeanings);
+  savedRef.current = savedMeanings;
+
+  function addSuggestion(meaning) {
+    const current = savedRef.current;
+    if (current.includes(meaning)) return;
+    const next = [...current, meaning];
+    savedRef.current = next;
+    onUpdateMeanings(next);
+  }
 
   function openDictionaries(from) {
     setDictionaryFrom(from);
@@ -254,19 +539,7 @@ export default function WidgetLarge({
                   label="Meanings"
                   onBack={() => setPage("default")}
                 />
-                <div className={`widget-large-meanings${savedMeanings.length ? "" : " is-plain"}`}>
-                  {savedMeanings.map((meaning, index) => (
-                    <div key={`${meaning}-${index}`} className="widget-large-meaning">
-                      <p>{meaning}</p>
-                    </div>
-                  ))}
-                  <button type="button" className="widget-large-meaning widget-large-add-meaning">
-                    <span className="widget-suggested-add" aria-hidden="true">
-                      <Plus size={16} strokeWidth={1.33} absoluteStrokeWidth />
-                    </span>
-                    <span>Add Meaning</span>
-                  </button>
-                </div>
+                <MeaningList meanings={savedMeanings} onChange={onUpdateMeanings} allowAdd />
                 <TagRow />
                 <DictionaryRow onOpen={() => openDictionaries("meanings")} />
               </section>
@@ -282,21 +555,7 @@ export default function WidgetLarge({
                     </button>
                   </div>
                 </div>
-                <div className="widget-large-meanings">
-                  {suggestedMeanings.map((meaning, index) => (
-                    <div key={`${meaning}-${index}`} className="widget-large-meaning">
-                      <p>{meaning}</p>
-                      <button
-                        type="button"
-                        className="widget-suggested-add"
-                        aria-label={`Save ${meaning}`}
-                        onClick={() => onChooseMeaning(meaning)}
-                      >
-                        <Plus size={16} strokeWidth={1.33} absoluteStrokeWidth />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <SuggestedList meanings={suggestedMeanings} saved={savedMeanings} onAdd={addSuggestion} />
               </section>
             </>
           ) : null}
@@ -364,23 +623,31 @@ export default function WidgetLarge({
                   label="Meanings"
                   onOpen={() => setPage("meanings")}
                 />
-                <div className="widget-large-meanings">
-                  {shownMeanings.map((meaning, index) => (
-                    <div key={`${meaning}-${index}`} className="widget-large-meaning">
-                      <p>{meaning}</p>
-                      {isNew ? (
-                        <button
-                          type="button"
-                          className="widget-suggested-add"
-                          aria-label={`Save ${meaning}`}
-                          onClick={() => onChooseMeaning(meaning)}
-                        >
+                {!isNew && meanings.length > 0 ? (
+                  <MeaningList meanings={meanings} onChange={onUpdateMeanings} />
+                ) : (
+                  <SuggestedList meanings={isNew ? suggestions.slice(0, 3) : emptySuggestions} saved={savedMeanings} onAdd={addSuggestion}>
+                    {!isNew && addingMeaning ? (
+                      <MeaningRow
+                        meaning=""
+                        autoFocus
+                        onSave={(text) => {
+                          onUpdateMeanings([text]);
+                          onClose();
+                        }}
+                        onRemove={() => setAddingMeaning(false)}
+                      />
+                    ) : null}
+                    {!isNew && !addingMeaning ? (
+                      <button type="button" className="widget-large-meaning widget-large-add-meaning" onClick={() => setAddingMeaning(true)}>
+                        <span className="widget-large-add-icon" aria-hidden="true">
                           <Plus size={16} strokeWidth={1.33} absoluteStrokeWidth />
-                        </button>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
+                        </span>
+                        <span>Add meaning</span>
+                      </button>
+                    ) : null}
+                  </SuggestedList>
+                )}
                 <TagRow />
                 {isNew ? <DictionaryRow onOpen={() => openDictionaries("default")} /> : null}
               </section>

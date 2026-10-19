@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowUpRight, BookA, Brackets, Check, ChevronRight, EyeOff, Languages, Plus, Tags, Volume2 } from "lucide-react";
+import { ArrowUpRight, BookA, Brackets, ChevronRight, Languages, Plus, Tags, Volume2 } from "lucide-react";
 import flagIcon from "../assets/language_flag_icon.png";
 import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
 
@@ -85,13 +85,15 @@ function TagRow({ onSelectPhrase }) {
         <span>Select Phrase</span>
       </button>
       <span className="widget-medium-tags-divider" aria-hidden="true" />
-      <button type="button" className="widget-medium-add-tag" aria-label="Add tag">
-        <Tags size={18} strokeWidth={1.5} absoluteStrokeWidth />
-      </button>
-      <div className="widget-medium-scroll">
-        {TAGS.map((tag) => (
-          <span key={tag} className="widget-tag">{tag}</span>
-        ))}
+      <div className="widget-medium-tag-group">
+        <button type="button" className="widget-medium-add-tag" aria-label="Add tag">
+          <Tags size={16} strokeWidth={1.5} absoluteStrokeWidth />
+        </button>
+        <div className="widget-medium-scroll">
+          {TAGS.map((tag) => (
+            <span key={tag} className="widget-tag">{tag}</span>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -113,7 +115,6 @@ export default function WidgetMedium({
   onOpenLarge,
 }) {
   const cardRef = useRef(null);
-  const actionsDrag = useDragScroll();
   const dictionaryDrag = useDragScroll();
   const [cardPos, setCardPos] = useState(null);
 
@@ -204,7 +205,7 @@ export default function WidgetMedium({
               <p className="widget-medium-suggested-label">Suggested Meanings</p>
               <div className="widget-medium-tools">
                 <button type="button" className="widget-medium-chevron" aria-label="More details" onClick={onOpenLarge}>
-                  <ChevronRight size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                  <ChevronRight size={16} strokeWidth={1.33} absoluteStrokeWidth />
                 </button>
               </div>
             </div>
@@ -234,7 +235,7 @@ export default function WidgetMedium({
               <TagRow onSelectPhrase={onSelectPhrase} />
               <div className="widget-dictionaries">
                 <button type="button" className="widget-dictionary-open" aria-label="Dictionaries">
-                  <BookA size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                  <BookA size={16} strokeWidth={1.5} absoluteStrokeWidth />
                 </button>
                 <div className="widget-medium-scroll" {...dictionaryDrag}>
                   {DICTIONARIES.map((name) => (
@@ -252,13 +253,13 @@ export default function WidgetMedium({
             <div className="widget-medium-header">
               <div className="widget-medium-meaning-group">
                 <button type="button" className="widget-medium-audio" aria-label="Play audio">
-                  <Volume2 size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                  <Volume2 size={16} strokeWidth={1.5} absoluteStrokeWidth />
                 </button>
                 <p className="widget-medium-meaning">{meaning}</p>
               </div>
               <div className="widget-medium-tools">
                 <button type="button" className="widget-medium-chevron" aria-label="More details" onClick={onOpenLarge}>
-                  <ChevronRight size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                  <ChevronRight size={16} strokeWidth={1.33} absoluteStrokeWidth />
                 </button>
               </div>
             </div>
@@ -266,21 +267,7 @@ export default function WidgetMedium({
           </>
         )}
 
-        {phraseError || !isNew ? null : (
-        <div className="widget-medium-actions">
-          <div className="widget-medium-scroll" {...actionsDrag}>
-            <button type="button" className="widget-action" onClick={() => { onStatus("Ignored"); onClose(); }}>
-              <EyeOff size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
-              <span>Ignore</span>
-            </button>
-            <button type="button" className="widget-action" onClick={() => { onStatus("Known"); onClose(); }}>
-              <Check size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
-              <span>Known</span>
-            </button>
-          </div>
-        </div>
-        )}
-        {!phraseError && !isNew ? (
+        {!phraseError ? (
           <div className="widget-medium-status-bar">
             {WORD_BAR_STATUSES.map((item) => (
               <StatusButton

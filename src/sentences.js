@@ -18,7 +18,7 @@ const TRANSLATIONS = [
   "It is possible, yeah, but as I said, I wouldn't necessarily recommend it.",
 ];
 
-function sentenceContext(tokens, tokenIndex) {
+function sentenceBounds(tokens, tokenIndex) {
   let start = 0;
   for (let index = tokenIndex - 1; index >= 0; index -= 1) {
     if (tokens[index].type === "text" && /[.!?]/.test(tokens[index].value)) {
@@ -35,7 +35,34 @@ function sentenceContext(tokens, tokenIndex) {
     }
   }
 
+  return { start, end };
+}
+
+function sentenceContext(tokens, tokenIndex) {
+  const { start, end } = sentenceBounds(tokens, tokenIndex);
   return tokens.slice(start, end + 1).map((token) => token.value).join("").replace(/\s+/g, " ").trim();
+}
+
+export function sentenceWords(lesson, paragraphIndex, tokenIndex) {
+  const tokens = lesson[paragraphIndex];
+  const { start, end } = sentenceBounds(tokens, tokenIndex);
+  return tokens.slice(start, end + 1).filter((token) => token.type === "word");
+}
+
+export function pastSentences(lesson, paragraphIndex, term) {
+  const needle = term.trim().toLowerCase();
+  if (!needle) return [];
+  const found = [];
+  lesson.forEach((tokens, index) => {
+    if (index === paragraphIndex || found.length >= 3) return;
+    const text = tokens.map((token) => token.value).join("");
+    if (!text.toLowerCase().includes(needle)) return;
+    const wordIndex = tokens.findIndex((token) => token.type === "word" && needle.split(/\s+/).includes(token.value.toLowerCase()));
+    const at = wordIndex >= 0 ? wordIndex : tokens.findIndex((token) => token.type === "word");
+    if (at < 0) return;
+    found.push(sentenceFor(lesson, index, at));
+  });
+  return found;
 }
 
 export function sentenceFor(lesson, paragraphIndex, tokenIndex) {

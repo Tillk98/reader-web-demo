@@ -54,7 +54,7 @@ import LynxChat from "./LynxChat.jsx";
 import ReviewPanel, { reviewTermsFrom } from "./ReviewPanel.jsx";
 import { formatMeanings, meaningsFor } from "./meanings.js";
 import { describePhrase, phraseCovers } from "./phrases.js";
-import { sentenceFor } from "./sentences.js";
+import { pastSentences, sentenceFor, sentenceWords } from "./sentences.js";
 import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
 import logo from "../assets/LingQLogo_Light.png";
 import streakIcon from "../assets/streak_icon.png";
@@ -2194,6 +2194,19 @@ export default function Reader() {
   const sentence = sentencePoint
     ? sentenceFor(lesson, sentencePoint.paragraphIndex, sentencePoint.tokenIndex)
     : { text: "", translation: "" };
+  const largeSentenceWords = sentencePoint
+    ? sentenceWords(lesson, sentencePoint.paragraphIndex, sentencePoint.tokenIndex).map((token) => ({
+      term: token.value,
+      meaning: token.meaning || formatMeanings(token.value),
+      status: token.kind === "new" ? "Blue" : token.kind === "ignored" ? "Ignored" : (token.status || "Known"),
+    }))
+    : [];
+  const largePastEncounters = sentencePoint && !activeIsNew
+    ? pastSentences(lesson, sentencePoint.paragraphIndex, largeTerm)
+    : [];
+  const largeGlossary = pendingPhrase
+    ? pendingPhrase.suggestions
+    : (activeToken ? meaningsFor(activeToken.value) : []);
 
   function markAt(paragraphIndex, tokenIndex) {
     const saved = savedPhrases.find((phrase) => phraseCovers(phrase, paragraphIndex, tokenIndex));
@@ -2683,9 +2696,12 @@ export default function Reader() {
               term={largeTerm}
               meanings={largeMeanings}
               suggestions={largeSuggestions}
+              glossary={largeGlossary}
               isNew={activeIsNew}
               sentence={sentence.text}
               sentenceTranslation={sentence.translation}
+              sentenceWords={largeSentenceWords}
+              pastEncounters={largePastEncounters}
               status={activeStatus}
               onStatus={handleStatusChange}
               onChooseMeaning={chooseMeaning}
@@ -2745,9 +2761,12 @@ export default function Reader() {
               term={largeTerm}
               meanings={largeMeanings}
               suggestions={largeSuggestions}
+              glossary={largeGlossary}
               isNew={activeIsNew}
               sentence={sentence.text}
               sentenceTranslation={sentence.translation}
+              sentenceWords={largeSentenceWords}
+              pastEncounters={largePastEncounters}
               status={activeStatus}
               onStatus={handleStatusChange}
               onChooseMeaning={chooseMeaning}

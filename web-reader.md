@@ -51,13 +51,12 @@ Long-press card, also kept inside the text column.
 
 **LingQ** (saved word or saved phrase): meaning with an inert play button, chevron, then one row with Select Phrase, a 30px divider, and the tags. The full status bar sits along the bottom. Ignore and Known are not repeated as buttons while that bar is showing.
 
-**New** (unsaved valid phrase): header “Suggested Meanings”, up to 2 glosses with a plus, tags, dictionary row (Google Translate, Linguee, DeepL, WörterBuch). No status chip. A blue word is already a LingQ before this card opens.
+**New** (unsaved valid phrase): white header “Suggested Meanings” at 14px regular, chevron, up to 2 glosses with a plus and the same inset dividers, then the tags row, then the dictionary row. The full status bar sits along the bottom. A blue word is already a LingQ before this card opens, so this state stays in the code for an unsaved phrase.
 
-- Tag and dictionary rows match. Each is a white leading icon button, then chips (radius 4). Tags are `#F8F9FA`. Dictionary chips are `#FBFCFD`. Labels are 12px regular, `#49525B`. The large widget uses the same rows. Both are visual only.
-- Actions row scrolls by swipe or click-and-drag. A drag does not fire the button.
-- **Ignore** and **Known** appear only when the status bar is hidden, on an unsaved phrase. They stay on their own row under the content, update status, and close the widget.
+- Tag and dictionary chips match: radius 4, `#F8F9FA`, 12px regular, `#49525B`. The add-tag button is a 16px icon with 9px padding, 4px from the chips. The dictionary button is the same size on a white fill. Dictionaries stay below the tags. Meaning rows use the same inset divider as the large widget. Both rows are visual only.
+- Tag and dictionary rows scroll by swipe or click-and-drag. A drag does not fire the button.
 - Select Phrase sits on the tags row in both states, before a 30px divider.
-- The status bar is visible by default, under the tags row. Choosing a status updates the word and leaves the widget open.
+- The status bar is on both the LingQ and new-word cards. Choosing a status on a saved word updates it and leaves the widget open. Choosing a status on an unsaved phrase cancels it: nothing is saved and no snackbar appears.
 - Forward chevron opens the large widget.
 - **Select Phrase** starts phrase selection.
 
@@ -65,7 +64,8 @@ Long-press card, also kept inside the text column.
 
 Centered in the lesson column, 400×600 (shrinks if the column is shorter). Not anchored to the word.
 
-- Shows the term, meanings, the full sentence, and its English translation. Original sentence is regular and italic, and clamps to 2 lines. Translation is not italic and does not clamp. German transliteration is hidden.
+- Shows the term, meanings, the full sentence, and its English translation. Original sentence is 16px medium, not italic, and clamps to 2 lines. Translation is 16px regular and does not clamp. The sentence card is at least 128px tall. German transliteration is hidden.
+- Notes text is 16px regular, matching the meaning and sentence text. The notes icon stays a plain notebook until the Lynx-marked icon is available.
 - Header and footer are white. Each section (Meanings, Sentence, Notes) keeps its header outside a `#F8F9FA` card, radius 12, with 12px padding on the left and right.
 - Section labels are 14px regular, `#49525B`, 18px line height. Icons and chevrons are 16px. Lucide strokes are 1.33. The Sentence icon is the custom image at 16px.
 - The reader's default grey buttons, including these section chevrons, are `#F8F9FA`. Borders and the meaning dividers are `#F1F3F4`.
@@ -76,7 +76,10 @@ Centered in the lesson column, 400×600 (shrinks if the column is shorter). Not 
 - Footer status bar updates the word or saved phrase and leaves the widget open.
 - Click outside or Escape closes it.
 - The floating card has no side-panel button. That button exists only on the docked panel. Docking is how the popup becomes the side panel.
-- Play, copy, generate, notes, tag editing, dictionary links, and section chevrons are visual only.
+- The Meanings chevron opens the meanings page: saved meanings (with the same dividers), an Add Meaning row, tags, then the dictionary row, then Suggested Meanings with a locale flag and a report button. Back returns to the default page.
+- The Sentence chevron opens the sentence page: the current sentence, a horizontal row of the words in that sentence, and Past Encounters. Original sentences on this page, including past encounters, use the same 16px medium style and are not truncated. A saved word lists up to three other lesson sentences that contain it. A new word, or a word with no earlier sentence, shows the first-encounter note. Back returns to the default page.
+- The dictionary icon opens the Dictionaries page: Preferred lists the current dictionaries, All Resources lists more with a plus, and the English flag sits on that heading. Section labels stay 14px regular. The status bar is hidden on this page. Back returns to the page the icon was on. Adding a resource is visual only.
+- Play, copy, generate, notes, tag editing, dictionary chips, Add Meaning, and the report button are visual only. Saving a suggested meaning still works.
 
 ## Select phrase
 
@@ -85,7 +88,7 @@ Centered in the lesson column, 400×600 (shrinks if the column is shorter). Not 
 3. A phrase is valid when it is 2–9 words, in one paragraph, with no `.` `!` `?` strictly between the ends. Trailing punctuation after the last word is part of the phrase text.
 4. **Valid:** span highlights as a new word, and the medium widget opens in the new-word state with two suggested meanings. Saving one creates a LingQ 1 phrase, highlights the span as that LingQ, and closes the widget (unless the large widget is open, in which case it stays open in the saved form).
 5. **Invalid** (over 9 words, a sentence break, or a cross-paragraph span): grey highlight and an error card where the medium widget would be. The card shows the phrase text, **Cancel**, and **Google Translate** (`sl=de`, `tl=en`).
-6. Click away, **Ignore**, or **Known** on an unsaved phrase cancels it. Nothing is saved and no snackbar appears.
+6. Click away, or any status on an unsaved phrase, cancels it. Nothing is saved and no snackbar appears.
 7. Click a saved phrase to open the small widget. Long-press opens the medium widget. Status changes apply to the phrase.
 
 Known phrase meanings come from a small glossary. Anything else falls back to word-by-word glosses.
@@ -316,4 +319,4 @@ The Ask Lynx circle in the bottom bar opens the chat. The click highlight is blu
 
 ## Still inert
 
-Header pills (coins, streak, language count), copy, generate, notes, tag editing, dictionary links inside the widgets, section chevrons, and the audio menu’s speed, timer, theme, settings, and help rows. Settings in the lesson menu does nothing. Demo settings opens the placeholder dialog. Auto-Advance and Loop Audio remember their toggles for the session only. Split view and theater mode change the video layout when the lesson has video. Theater mode’s moving underline loops on the same frozen line for the demo and is not synced to playback. Finish Lesson shows a short note that this goes to the lesson complete page. Manage Vocabulary only closes its menu. Vocabulary search submit, row audio, and the Course, Lesson, and Tags rows do nothing.
+Header pills (coins, streak, language count), copy, generate, notes, tag editing, dictionary chips, adding a dictionary resource, Add Meaning, the meanings-page report button, and the audio menu’s speed, timer, theme, settings, and help rows. Settings in the lesson menu does nothing. Demo settings opens the placeholder dialog. Auto-Advance and Loop Audio remember their toggles for the session only. Split view and theater mode change the video layout when the lesson has video. Theater mode’s moving underline loops on the same frozen line for the demo and is not synced to playback. Finish Lesson shows a short note that this goes to the lesson complete page. Manage Vocabulary only closes its menu. Vocabulary search submit, row audio, and the Course, Lesson, and Tags rows do nothing.

@@ -95,7 +95,9 @@ Known phrase meanings come from a small glossary. Anything else falls back to wo
 
 ## Status snackbar
 
-Shown at the bottom center of the lesson text (same slot as the phrase hint) after every real status change:
+Off for now, in every view. Status changes still save. The snackbar and its undo do not appear.
+
+Shown at the bottom center of the lesson text (same slot as the phrase hint) after every real status change, when it is turned back on:
 
 - Clicking or long-pressing a blue word into a LingQ
 - Saving a suggested meaning (word or phrase)
@@ -114,8 +116,8 @@ Page, sentence, and scroll. The mode control sits in the center of the bottom ba
 
 In the player the control is a white pill, 40px tall, radius 999, no shadow, with 10px of padding on either side and 8px between the marks. It shows the mode icon and the up-down chevron, both 20px, and not the mode name. The icon is `--fg-default` (`#0a0a0a`). The chevron stays `--fg-muted`. That control is in the expanded player at every width, and in the collapsed player only below 767px.
 
-- **Page:** the lesson text fills the space between the lesson header and the bottom bar. Overflow is hidden. A page ends on the last line that fits, so a paragraph can continue on the next page. Left and right controls change page. The controls stay vertically centered on the text.
-- **Sentence:** one sentence, with its translation when Show Translations is on. Left and right controls change sentence. Entering sentence mode from page starts at the first sentence. When the play choice is video, that also opens the video paused. With no video, the sentence block is centered in the text area. With video stacked above the text, it starts at the top.
+- **Page:** the lesson text fills the space between the lesson header and the bottom bar. Overflow is hidden. A page ends on the last line that fits, so a paragraph can continue on the next page. Left and right controls change page. The controls stay vertically centered on the text. Below 767px those controls leave the layout, the text keeps the 12px screen inset, and a horizontal swipe changes page.
+- **Sentence:** one sentence, with its translation when Show Translations is on. Left and right controls change sentence. Entering sentence mode from page starts at the first sentence. When the play choice is video, that also opens the video paused. With no video, the sentence block is centered in the text area. With video stacked above the text, it starts at the top. Below 767px the controls leave the layout, the text keeps the 12px screen inset, and a horizontal swipe changes sentence.
 - **Scroll:** the full lesson scrolls. Entering scroll mode from page opens the video paused when the play choice is video. Page controls are hidden, but above 767px they still occupy their 52px columns so the text stays aligned with page and sentence mode. Below 767px those columns leave the layout. The text keeps the 12px screen inset and uses the rest of the width. Switching between sentence and scroll keeps the video and the player as they are, including when the player has been closed.
 
 Switching to page mode from scroll or sentence while the video is showing asks “Video will be stopped.” Cancel stays put. Continue stops playback, closes the player, and switches to page.
@@ -137,9 +139,9 @@ The button is full width: fill `#F4FCEF`, 1px stroke and label `#42A564`, radius
 The site header has no extra fill and no bottom border. Below 767px the language pill (flag and word count) hides. The streak pill stays. The lesson header has 12px of padding on top and 16px on the bottom. The bottom bar has 24px of padding on top and 16px on the bottom. Left and right padding is 32px, and 16px below 767px. There is no extra gap between the site header and the lesson header, between the lesson header and the lesson text, or between the lesson text and the bottom bar. The lesson header keeps that layout whether or not video is showing.
 
 - **Exit** sits on the far left of the lesson header, opposite the Aa, ellipsis, and panel buttons. Same 45px icon button, radius 6, 24px icon. Lucide log-out, flipped so the arrow points left. Inset 12px. It leaves the lesson and returns to where that lesson was opened.
-- The lesson progress bar matches the lesson text: 620px max, the same left edge, and the same width when that fits. It keeps the same clearance from the buttons on the right as it keeps from the exit button, and shortens from the right when the text would run underneath them. The track is `#F8F9FA`. The fill stays green. It stays in the lesson header whether or not video is showing. The video begins under that header.
+- The lesson title and the course name both truncate with an ellipsis. The lesson progress bar matches the lesson text: 620px max, the same left edge, and the same width when that fits. Below 767px the bar sits between the exit button and the header actions, with 12px of clearance on each side. It keeps the same clearance from the buttons on the right as it keeps from the exit button, and shortens from the right when the text would run underneath them. The track is `#F8F9FA`. The fill stays green. It stays in the lesson header whether or not video is showing. The video begins under that header.
 - Below 1024px the side-panel button in the lesson header hides, and an open side panel closes. The progress bar then clears only the Aa and ellipsis buttons.
-- Page and sentence controls are the full tall hit target, inset 12px from the screen edges. Hover and pressed fills are `#F8F9FA`.
+- Page and sentence controls are the full tall hit target, inset 12px from the screen edges. Hover and pressed fills are `#F8F9FA`. Below 767px they are hidden, and the text uses that space while staying 12px from the screen edges.
 - The **Aa** button opens the theme menu. The **ellipsis** in the lesson header is vertical, the same mark as in the player, and opens the lesson menu. Both are described under Menus.
 - Scroll mode fades the lesson text at the top and bottom. Words under the fade stay clickable. At the top of the scroll, the first line is not faded. The last line can scroll clear of the bottom fade. Menus opened from the bottom bar paint above that fade.
 - With video open in sentence mode, the same top fade sits above the sentence.
@@ -284,7 +286,7 @@ Default filter: All terms, SRS Due off, statuses New, Recognized, and Familiar. 
 - Words and Phrases split the list by saved phrase. SRS Due on shows nothing. This demo has no due dates.
 - Search narrows the rows only. Contains matches the term or the meaning. Starts With and Ends With match the term. Source Text Containing matches the term. Meaning Containing matches the meaning. The match control hides once the field has text, and its chevron points up while the menu is open.
 - Sort: Importance and Creation Date keep list order. Status runs Blue, New, Recognized, Familiar, Learned, Known, Ignored. A–Z and Z–A use German sort.
-- A row’s status chip opens the vertical status menu and writes that status onto the phrase, or onto every lesson copy of the word. The usual snackbar appears. Choosing the current status does nothing. Row audio does nothing.
+- A row’s status chip opens the vertical status menu and writes that status onto the phrase, or onto every lesson copy of the word. The snackbar is off for now. Choosing the current status does nothing. Row audio does nothing.
 - The Review button uses the same count as the header: “Review 25 Terms”, “Review 5 Words”, “Review 1 Phrase”. It starts the same default review as the bottom-bar vocabulary button.
 - Course, Lesson, and Tags do not open. The search submit does nothing.
 

@@ -1673,8 +1673,8 @@ export default function Reader() {
     transition(() => setLynxOpen(false));
   }
 
-  function showSnackbar(status, undo) {
-    setSnackbar({ id: Date.now(), status, undo });
+  function showSnackbar() {
+    // Status snackbar is off for now.
   }
 
   function undoSnackbar() {
@@ -2076,6 +2076,58 @@ export default function Reader() {
     }
   }
 
+  function onLessonPointerDown(event) {
+    if (!mobile || theater || (mode !== "page" && mode !== "sentence")) return;
+    if (event.button !== 0) return;
+    if (event.target.closest?.("button, a, input, textarea, .sentence-terms, .widget-small, .widget-medium, .widget-large, .status-snackbar, .review-card, .phrase-error")) return;
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let axis = null;
+    let swiped = false;
+
+    function cleanup() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    }
+
+    function onMove(moveEvent) {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      if (!axis) {
+        if (Math.abs(dx) < 12 && Math.abs(dy) < 12) return;
+        if (Math.abs(dy) > Math.abs(dx)) {
+          cleanup();
+          return;
+        }
+        axis = "x";
+      }
+      if (Math.abs(dx) >= 48) swiped = true;
+    }
+
+    function onUp(upEvent) {
+      cleanup();
+      if (!swiped) return;
+      pressRef.current.suppressClick = true;
+      const dx = upEvent.clientX - startX;
+      if (dx <= -48) {
+        if (mode === "sentence") setSentenceIndex((index) => Math.min(lesson.length - 1, index + 1));
+        if (mode === "page") setPageIndex((index) => Math.min((pageStarts?.length ?? 1) - 1, index + 1));
+      } else if (dx >= 48) {
+        if (mode === "sentence") setSentenceIndex((index) => Math.max(0, index - 1));
+        if (mode === "page") setPageIndex((index) => Math.max(0, index - 1));
+      }
+      window.setTimeout(() => {
+        pressRef.current.suppressClick = false;
+      }, 0);
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  }
+
   function openLarge() {
     setActive((current) => (current ? { ...current, size: "large", statusMenu: false } : current));
   }
@@ -2420,7 +2472,7 @@ export default function Reader() {
           </div>
         </div>
 
-        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${showVideo ? " has-video" : ""}${showVideo && sideBySide && !theater ? " is-side" : ""}${showComplete && mode === "sentence" ? " is-complete" : ""}`}>
+        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${showVideo ? " has-video" : ""}${showVideo && sideBySide && !theater ? " is-side" : ""}${showComplete && mode === "sentence" ? " is-complete" : ""}`} onPointerDown={onLessonPointerDown}>
           <div className="page-control">
             <button
               type="button"

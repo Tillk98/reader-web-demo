@@ -144,13 +144,16 @@ img {
 }
 
 .lesson-titles p {
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
   font-size: 14px;
   font-weight: 400;
   line-height: 18px;
   letter-spacing: 0;
   color: var(--fg-muted);
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .status-pills {
@@ -3871,8 +3874,15 @@ button:focus-visible {
     position: sticky;
   }
 
-  .lesson-area.is-scroll .page-control {
+  .lesson-area > .page-control {
     display: none;
+  }
+
+  .reader-chrome .progress {
+    --text: 100%;
+    --edge-gap: 12px;
+    margin-left: calc(var(--control-size) + var(--edge-gap));
+    width: max(0px, calc(100% - var(--control-size) - var(--actions) - var(--edge-gap) * 2));
   }
 
   .reader-footer:not(.is-player-open) {

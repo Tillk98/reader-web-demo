@@ -71,6 +71,7 @@ import theaterChannel from "../assets/theater-channel.jpg";
 import theaterSuggested from "../assets/theater-suggested.jpg";
 import youtubeWordmark from "../assets/youtube-wordmark.png";
 import lynxIcon from "../assets/lynx_icon_light.png";
+import lynxIconOnDark from "../assets/lynx-icon-on-dark.png";
 import replayIcon from "../assets/replay_10.svg";
 import skipBackIcon from "../assets/skip_back_5.svg";
 import skipForwardIcon from "../assets/skip_forward_5.svg";
@@ -3041,7 +3042,7 @@ export default function Reader() {
                   {modeMenu && !theater ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
                 </span>
                 <button type="button" className="audio-bar-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
-                  <img src={lynxIcon} alt="" width={20} height={20} />
+                  <img src={theater ? lynxIconOnDark : lynxIcon} alt="" width={20} height={20} />
                 </button>
                 <span className="audio-bar-divider audio-bar-tools-divider" aria-hidden="true" />
                 <button type="button" className="audio-bar-control audio-bar-collapse" aria-label="Collapse player" onClick={collapsePlayer}>

@@ -3580,6 +3580,69 @@ html.split-motion::view-transition-new(split-text) {
   background: #f8f9fa;
 }
 
+.reader.is-theater .reader-footer,
+.reader.is-theater .audio-bar {
+  border-top-color: #49525b;
+  background: #1e2328;
+}
+
+.reader.is-theater .audio-bar-progress {
+  background: #262b30;
+}
+
+.reader.is-theater .audio-bar-float-times {
+  color: #d1d6d9;
+}
+
+.reader.is-theater .audio-bar-control,
+.reader.is-theater .audio-bar-speed,
+.reader.is-theater .audio-bar-lynx,
+.reader.is-theater .audio-bar-pause,
+.reader.is-theater .audio-bar-mode {
+  background: transparent;
+  color: #fff;
+  box-shadow: none;
+}
+
+.reader.is-theater .audio-bar-pause,
+.reader.is-theater .audio-bar-actions,
+.reader.is-theater .audio-bar-time {
+  background: #262b30;
+}
+
+.reader.is-theater .audio-bar-time {
+  color: #d1d6d9;
+}
+
+.reader.is-theater .audio-bar-speed,
+.reader.is-theater .audio-bar-mode,
+.reader.is-theater .audio-bar-mode > :first-child {
+  color: #fff;
+}
+
+.reader.is-theater .audio-bar-divider {
+  background: #49525b;
+}
+
+.reader.is-theater .audio-bar-control img,
+.reader.is-theater .audio-bar-mode img {
+  filter: brightness(0) invert(1);
+}
+
+.reader.is-theater .audio-bar-control:hover,
+.reader.is-theater .audio-bar-pause:hover,
+.reader.is-theater .audio-bar-speed:hover,
+.reader.is-theater .audio-bar-mode:hover:not(:disabled),
+.reader.is-theater .audio-bar-lynx:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.reader.is-theater .audio-bar-theater.is-on,
+.reader.is-theater .audio-bar-theater.is-on:hover {
+  background: #f1f7fe;
+  color: #2e75cd;
+}
+
 .mode-anchor.is-disabled {
   cursor: default;
 }
@@ -4304,6 +4367,28 @@ button:focus-visible {
 
   .audio-bar-timeline.is-scrubbing .audio-bar-float-times {
     opacity: 1;
+  }
+
+  .reader.is-theater .audio-bar-actions-core {
+    background: #262b30;
+  }
+
+  .reader.is-theater .audio-bar-secondary .audio-bar-theater,
+  .reader.is-theater .audio-bar-secondary .player-menu-anchor .audio-bar-control {
+    background: transparent;
+    color: #fff;
+  }
+
+  .reader.is-theater .audio-bar-secondary .audio-bar-theater.is-on,
+  .reader.is-theater .audio-bar-secondary .audio-bar-theater.is-on:hover {
+    background: #f1f7fe;
+    color: #2e75cd;
+  }
+
+  .reader.is-theater .audio-bar-secondary .audio-bar-theater:hover:not(.is-on),
+  .reader.is-theater .audio-bar-secondary .player-menu-anchor .audio-bar-control:hover,
+  .reader.is-theater .audio-bar-pause:hover {
+    background: rgba(255, 255, 255, 0.08);
   }
 }
 

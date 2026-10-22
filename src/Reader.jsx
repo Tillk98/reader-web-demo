@@ -11,6 +11,7 @@ import {
   CaseSensitive,
   ChartColumn,
   ChevronDown,
+  Clock,
   Columns2,
   FileText,
   ChevronLeft,
@@ -38,6 +39,7 @@ import {
   Printer,
   Repeat2,
   RefreshCw,
+  Reply,
   Settings,
   SquarePen,
   StepForward,
@@ -64,6 +66,10 @@ import pageModeIcon from "../assets/pagemode_icon_light.png";
 import sentenceModeIcon from "../assets/sentencemode_icon_light.png";
 import videoDefault from "../assets/YouTube_VideoPlayer_Default.png";
 import videoActive from "../assets/YouTube_VideoPlayer_UIActive.png";
+import theaterVideo from "../assets/theater-video.jpg";
+import theaterChannel from "../assets/theater-channel.jpg";
+import theaterSuggested from "../assets/theater-suggested.jpg";
+import youtubeWordmark from "../assets/youtube-wordmark.png";
 import lynxIcon from "../assets/lynx_icon_light.png";
 import replayIcon from "../assets/replay_10.svg";
 import skipBackIcon from "../assets/skip_back_5.svg";
@@ -1237,7 +1243,7 @@ export default function Reader() {
     const family = sample ? getComputedStyle(sample).fontFamily : "DM Sans, sans-serif";
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    if (ctx) ctx.font = `400 ${size}px ${family}`;
+    if (ctx) ctx.font = `500 ${size}px ${family}`;
     return ctx;
   }
 
@@ -1325,7 +1331,10 @@ export default function Reader() {
 
   function toggleTheater() {
     if (theater) {
-      runTheater(() => setTheater(false));
+      runTheater(() => {
+        setPlayerMenu(false);
+        setTheater(false);
+      });
       return;
     }
     const line = captureTheaterLine();
@@ -1348,7 +1357,24 @@ export default function Reader() {
       const caption = node.querySelector(".theater-caption");
       const measure = node.querySelector(".theater-measure");
       const pieces = measure ? [...measure.querySelectorAll("[data-token-index]")] : [];
-      const maxWidth = caption?.clientWidth || 0;
+      const line = node.querySelector(".theater-line:not(.theater-measure)");
+      const box = line ? getComputedStyle(line) : null;
+      const padX = box ? (parseFloat(box.paddingLeft) || 0) + (parseFloat(box.paddingRight) || 0) : 0;
+      const frame = node.closest(".page-column")?.querySelector(".lesson-video");
+      if (caption && frame) {
+        const frameBox = frame.getBoundingClientRect();
+        const captionWidth = Math.max(160, Math.min(645, frameBox.width - 32));
+        const nextWidth = `${Math.round(captionWidth)}px`;
+        if (caption.style.width !== nextWidth) caption.style.width = nextWidth;
+        const rowTop = Math.min(
+          ...[...frame.querySelectorAll(".yt-tools, .yt-end")].map((el) => el.getBoundingClientRect().top),
+        );
+        const padBottom = parseFloat(getComputedStyle(node).paddingBottom) || 0;
+        const lift = Number.isFinite(rowTop) ? frameBox.bottom - rowTop + 16 : 81;
+        const nextMargin = `${Math.round(Math.max(0, lift - padBottom))}px`;
+        if (caption.style.marginBottom !== nextMargin) caption.style.marginBottom = nextMargin;
+      }
+      const maxWidth = Math.max(0, (caption?.clientWidth || 0) - padX);
       if (!maxWidth || !pieces.length) return;
       const origin = pieces[0].getBoundingClientRect().left;
       let end = theaterLine.start;
@@ -1366,7 +1392,16 @@ export default function Reader() {
     fit();
     const observer = new ResizeObserver(fit);
     observer.observe(node);
-    return () => observer.disconnect();
+    const frameEl = node.closest(".page-column")?.querySelector(".lesson-video");
+    if (frameEl) observer.observe(frameEl);
+    window.addEventListener("resize", fit);
+    const image = frameEl?.querySelector("img");
+    if (image && !image.complete) image.addEventListener("load", fit, { once: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", fit);
+      image?.removeEventListener("load", fit);
+    };
   }, [theater, theaterLine, lesson]);
 
   function completeLesson() {
@@ -2529,8 +2564,39 @@ export default function Reader() {
           <div className="page-column">
           {showVideo ? (
             <div className={`lesson-video${playing ? "" : " is-paused"}`}>
-              <img src={videoDefault} alt="" />
-              <img className="is-active" src={videoActive} alt="" />
+              {theater ? (
+                <>
+                  <div className="theater-picture">
+                    <img className="theater-still" src={theaterVideo} alt="" />
+                    <button type="button" className="yt-play" aria-label="Play" onClick={() => setPlayback(true)}>
+                      <Play size={36} strokeWidth={2.5} absoluteStrokeWidth />
+                    </button>
+                  </div>
+                  <div className="yt-header">
+                    <img className="yt-channel" src={theaterChannel} alt="" />
+                    <div className="yt-meta">
+                      <p className="yt-title">Mehrere Sprachen auf einmal lernen?! Wie lange jeden Tag lernen?</p>
+                      <p className="yt-channel-name">Polyglot Akademie – Sprachen Lernen</p>
+                    </div>
+                  </div>
+                  <div className="yt-tools" aria-hidden="true">
+                    <Reply className="yt-share" size={24} strokeWidth={1.75} absoluteStrokeWidth />
+                    <Clock size={24} strokeWidth={1.75} absoluteStrokeWidth />
+                  </div>
+                  <div className="yt-end" aria-hidden="true">
+                    <div className="yt-suggest">
+                      <p>Weitere Videos</p>
+                      <img src={theaterSuggested} alt="" />
+                    </div>
+                    <img className="yt-logo" src={youtubeWordmark} alt="" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <img src={videoDefault} alt="" />
+                  <img className="is-active" src={videoActive} alt="" />
+                </>
+              )}
             </div>
           ) : null}
           <article className="page-text" lang="de" ref={textRef}>
@@ -2541,7 +2607,6 @@ export default function Reader() {
                 </p>
                 <p className="theater-line">
                   {renderSlice(theaterLine.paragraphIndex, theaterLine.start, theaterView?.end ?? theaterLine.end)}
-                  <span className="theater-scan" aria-hidden="true" />
                 </p>
                 {showTranslation && theaterView?.translation ? <p className="theater-translation">{theaterView.translation}</p> : null}
               </div>
@@ -2767,7 +2832,7 @@ export default function Reader() {
               />
             ) : null}
           </article>
-          {mode === "scroll" ? <div className="scroll-text-fade" aria-hidden="true" /> : null}
+          {!theater && mode === "scroll" ? <div className="scroll-text-fade" aria-hidden="true" /> : null}
           {showComplete ? (
             <div className={`complete-lesson${mode === "sentence" ? " is-float" : ""}`}>
               <div className="complete-lesson-anchor">

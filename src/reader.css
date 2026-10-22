@@ -1118,44 +1118,244 @@ button.reader-menu-lesson:hover {
 }
 
 .reader.is-theater .reader-header,
+.reader.is-theater .reader-chrome,
 .reader.is-theater .page-control,
 .reader.is-theater .video-text-fade,
+.reader.is-theater .scroll-text-fade,
 .reader.is-theater .status-snackbar {
   display: none;
 }
 
+.reader.is-theater .reader-content,
+.reader.is-theater .reader-stage,
+.reader.is-theater .reader-stage-main,
+.reader.is-theater .lesson-area {
+  background: #000;
+}
+
+.reader.is-theater .lesson-area {
+  align-items: stretch;
+  padding: 0;
+}
+
 .reader.is-theater .lesson-area.has-video .page-column {
-  justify-content: center;
-  gap: 24px;
+  position: relative;
+  justify-content: stretch;
+  gap: 0;
+  width: 100%;
   max-width: none;
   min-width: 0;
-  padding: 16px 0;
+  height: 100%;
+  padding: 0;
 }
 
 .reader.is-theater .lesson-video {
-  width: min(960px, 100%, calc(min(54vh, 540px) * 560 / 315));
-  max-height: min(54vh, 540px);
-  height: auto;
-  background: transparent;
+  container-name: theater;
+  container-type: size;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  aspect-ratio: auto;
+  margin: 0;
+  border-radius: 0;
+  background: #000;
+}
+
+.theater-picture {
+  position: relative;
+  width: min(100cqw, calc(100cqh * 16 / 9));
+  max-height: 100cqh;
+  aspect-ratio: 16 / 9;
+}
+
+.theater-picture .theater-still {
+  object-fit: cover;
+}
+
+.yt-header {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.yt-channel {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.yt-meta {
+  min-width: 0;
+}
+
+.yt-title,
+.yt-channel-name {
+  margin: 0;
+  overflow: hidden;
+  color: #fff;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.yt-title {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.yt-channel-name {
+  margin-top: 2px;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.yt-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.lesson-video.is-paused .yt-play {
+  display: flex;
+}
+
+.yt-play:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.yt-tools,
+.yt-end {
+  position: absolute;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.yt-tools {
+  left: 12px;
+  gap: 24px;
+  height: 40px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+}
+
+.yt-share {
+  transform: scaleX(-1);
+}
+
+.yt-end {
+  right: 12px;
+  left: 128px;
+  justify-content: flex-end;
+  gap: 16px;
+  min-width: 0;
+}
+
+.yt-suggest {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 53px;
+  min-width: 0;
+  padding: 6px 12px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.yt-suggest p {
+  margin: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.yt-suggest img {
+  position: static;
+  width: 70px;
+  height: 39px;
+  border: 1px solid #fff;
+  border-radius: 9px;
+  object-fit: cover;
+}
+
+.yt-logo {
+  position: static;
+  flex-shrink: 0;
+  width: auto;
+  height: 16px;
+  object-fit: contain;
 }
 
 .reader.is-theater .lesson-area.has-video .page-text {
-  flex: 0 0 auto;
-  width: min(620px, 100%);
-  max-width: 100%;
-  height: auto;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: auto;
+  max-width: none;
+  height: 100%;
   min-width: 0;
   min-height: 0;
-  margin-top: 0;
+  margin: 0;
   padding: 0;
   overflow: visible;
+  background: transparent;
+  pointer-events: none;
+}
+
+.reader.is-theater .widget-small,
+.reader.is-theater .widget-medium {
+  pointer-events: auto;
 }
 
 .theater-caption {
+  --caption-pad-x: 16px;
   position: relative;
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: min(645px, 100%);
   max-width: 100%;
   text-align: center;
+  pointer-events: auto;
 }
 
 .page-text p.theater-line.theater-measure {
@@ -1172,46 +1372,65 @@ button.reader-menu-lesson:hover {
 
 .page-text p.theater-line {
   position: relative;
-  display: inline-block;
+  display: block;
+  box-sizing: border-box;
+  width: max-content;
   max-width: 100%;
   margin: 0;
-  padding-bottom: 10px;
+  padding: 16px;
   overflow: hidden;
   white-space: nowrap;
-  vertical-align: top;
+  text-align: center;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 24px;
 }
 
-.theater-scan {
-  --scan: 0.42;
-  position: absolute;
-  left: 0;
-  bottom: 2px;
-  width: calc(var(--scan) * 100%);
-  height: 2px;
-  background: linear-gradient(90deg, var(--bg-page) 0%, #2e75cd 50%, var(--bg-page) 100%);
-  animation: theater-scan 3.2s linear infinite;
+.page-text p.theater-line .word {
+  border-color: transparent;
+  background: transparent;
+  color: #fff;
+  box-shadow: none;
 }
 
-@keyframes theater-scan {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(calc(100% / var(--scan))); }
+.page-text p.theater-line .phrase-range {
+  background: transparent;
+  box-shadow: none;
+}
+
+.page-text p.theater-line .word-new {
+  padding: 5px 4px;
+  margin: -5px 1px;
+  border-radius: 6px;
+  background: rgba(41, 70, 112, 0.25);
+  color: #2e75cd;
+}
+
+.page-text p.theater-line .word-lingq-1,
+.page-text p.theater-line .word-lingq-2,
+.page-text p.theater-line .word-lingq-3 {
+  padding: 5px 4px;
+  margin: -5px 1px;
+  border-radius: 6px;
+  background: rgba(255, 202, 1, 0.25);
+  color: #ffca01;
 }
 
 .page-text p.theater-translation {
-  margin: 6px 0 0;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.75);
   font-size: 16px;
-  font-weight: 400;
+  font-weight: 500;
   line-height: 20px;
-  color: var(--fg-muted);
-  max-height: 40px;
-  overflow: hidden;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .theater-scan {
-    width: 100%;
-    animation: none;
-  }
+  color: #fff;
 }
 
 html.theater-motion .reader-header {
@@ -1619,6 +1838,34 @@ html.split-motion::view-transition-new(split-text) {
   display: block;
   width: 100%;
   height: 100%;
+  object-fit: contain;
+}
+
+.lesson-video .yt-channel,
+.lesson-video .yt-suggest img,
+.lesson-video .yt-logo {
+  position: static;
+  inset: auto;
+  object-fit: cover;
+}
+
+.lesson-video .yt-channel {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+.lesson-video .yt-suggest img {
+  flex-shrink: 0;
+  width: 70px;
+  height: 39px;
+  border: 1px solid #fff;
+  border-radius: 9px;
+}
+
+.lesson-video .yt-logo {
+  width: auto;
+  height: 16px;
   object-fit: contain;
 }
 
@@ -3846,11 +4093,6 @@ button:focus-visible {
     align-items: center;
     gap: 0;
     max-width: 982px;
-  }
-
-  .reader.is-theater .lesson-video {
-    width: min(960px, 100%, calc(min(36vh, 280px) * 560 / 315));
-    max-height: min(36vh, 280px);
   }
 
   .lesson-area.has-video.is-side .lesson-video {

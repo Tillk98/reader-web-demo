@@ -1053,7 +1053,6 @@ export default function Reader() {
   const [loopAudio, setLoopAudio] = useState(false);
   const [theme, setTheme] = useState("light");
   const [fontStyle, setFontStyle] = useState("Rubik Original");
-  const [pageModePrompt, setPageModePrompt] = useState(false);
   const [completeHint, setCompleteHint] = useState(false);
   const completeHintTimer = useRef(null);
   const [sidePanel, setSidePanel] = useState(false);
@@ -1154,13 +1153,12 @@ export default function Reader() {
   function openPlayer() {
     setPlayerShown(true);
     setPlayerOpen(true);
-    if (lessonHasVideo && media === "video" && mode === "page") setMode("scroll");
     setModeMenu(false);
   }
 
   function applyMode(next) {
     if (next === "sentence") setSentenceIndex(1);
-    const openingVideo = lessonHasVideo && media === "video" && next !== "page" && mode === "page";
+    const openingVideo = lessonHasVideo && media === "video" && next !== "page" && mode === "page" && !playerShown;
     transition(() => {
       setMode(next);
       if (!openingVideo) return;
@@ -1198,21 +1196,13 @@ export default function Reader() {
   function chooseMode(next) {
     setModeMenu(false);
     if (lessonHasVideo && media === "video" && next === "page" && mode !== "page" && playerShown) {
-      setPageModePrompt(true);
+      runSplit(() => {
+        setSideBySide(true);
+        setMode("page");
+      });
       return;
     }
     applyMode(next);
-  }
-
-  function confirmPageMode() {
-    setPageModePrompt(false);
-    transition(() => {
-      setPlayerOpen(false);
-      setPlayerShown(false);
-      setPlaying(false);
-      setTheater(false);
-      setMode("page");
-    });
   }
 
   function dismissPlayer() {
@@ -1515,15 +1505,6 @@ export default function Reader() {
     };
   }, [playMenu]);
 
-  useEffect(() => {
-    if (!pageModePrompt) return undefined;
-    function onKeyDown(event) {
-      if (event.key === "Escape") setPageModePrompt(false);
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [pageModePrompt]);
-
   useLayoutEffect(() => {
     const footer = footerRef.current;
     if (!footer) return undefined;
@@ -1687,7 +1668,7 @@ export default function Reader() {
     if (!playerShown) return undefined;
     function onKeyDown(event) {
       if (event.key !== "Escape") return;
-      if (modeMenu || reviewMenu || playerMenu || playMenu || chromeMenu || demoSettings || pageModePrompt || phrasePick || active || termMenu || reviewCard || reviewOpen || lynxOpen) return;
+      if (modeMenu || reviewMenu || playerMenu || playMenu || chromeMenu || demoSettings || phrasePick || active || termMenu || reviewCard || reviewOpen || lynxOpen) return;
       if (theater) {
         runTheater(() => setTheater(false));
         return;
@@ -1696,7 +1677,7 @@ export default function Reader() {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [playerShown, theater, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, pageModePrompt, phrasePick, active, termMenu, reviewCard, reviewOpen, lynxOpen]);
+  }, [playerShown, theater, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, phrasePick, active, termMenu, reviewCard, reviewOpen, lynxOpen]);
 
   function openLynx() {
     transition(() => {
@@ -2290,7 +2271,7 @@ export default function Reader() {
   }, [phrasePick]);
 
   const activeToken = active ? lesson[active.paragraphIndex][active.tokenIndex] : null;
-  const showVideo = lessonHasVideo && media === "video" && playerShown && (theater || mode !== "page");
+  const showVideo = lessonHasVideo && media === "video" && playerShown;
   const savedOpen = active?.phrase?.savedId
     ? savedPhrases.find((phrase) => phrase.id === active.phrase.savedId)
     : null;
@@ -3202,27 +3183,6 @@ export default function Reader() {
           onLessonType={chooseLessonType}
           onClose={() => setDemoSettings(false)}
         />
-      ) : null}
-
-      {pageModePrompt ? (
-        <div className="mode-dialog-backdrop" onClick={() => setPageModePrompt(false)}>
-          <div
-            className="mode-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="page-mode-dialog-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mode-dialog-copy">
-              <p id="page-mode-dialog-title">Video will be stopped.</p>
-              <p>Switching to page mode will stop the video playing.</p>
-            </div>
-            <div className="mode-dialog-actions">
-              <button type="button" className="mode-dialog-cancel" onClick={() => setPageModePrompt(false)}>Cancel</button>
-              <button type="button" className="mode-dialog-confirm" onClick={confirmPageMode}>Continue to Page Mode</button>
-            </div>
-          </div>
-        </div>
       ) : null}
 
       {reviewCard ? <div className="review-scrim" aria-hidden="true" /> : null}

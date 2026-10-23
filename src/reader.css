@@ -720,7 +720,7 @@ button.reader-menu-lesson:hover {
 }
 
 .theme-size input {
-  --size: 25%;
+  --size: 22.222%;
   flex: 1;
   height: 16px;
   margin: 0;
@@ -1086,10 +1086,10 @@ button.reader-menu-lesson:hover {
 }
 
 .page-text p {
-  margin: 0 0 36px;
-  font-size: 18px;
+  margin: 0 0 var(--lesson-line, 36px);
+  font-size: var(--lesson-size, 18px);
   font-weight: 400;
-  line-height: 36px;
+  line-height: var(--lesson-line, 36px);
   letter-spacing: 0;
 }
 
@@ -1384,9 +1384,9 @@ button.reader-menu-lesson:hover {
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.75);
   color: #fff;
-  font-size: 20px;
+  font-size: var(--lesson-size, 18px);
   font-weight: 500;
-  line-height: 24px;
+  line-height: calc(var(--lesson-size, 18px) * 1.2);
 }
 
 .page-text p.theater-line .word {
@@ -1427,9 +1427,9 @@ button.reader-menu-lesson:hover {
   padding: 8px 16px;
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.75);
-  font-size: 16px;
+  font-size: var(--translation-size, 16px);
   font-weight: 500;
-  line-height: 20px;
+  line-height: var(--translation-line, 20px);
   color: #fff;
 }
 
@@ -1631,9 +1631,9 @@ html.split-motion::view-transition-new(split-text) {
 .lesson-area.is-sentence .page-text {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: safe center;
   overflow: auto;
-  padding-bottom: 32px;
+  padding-bottom: 64px;
 }
 
 .lesson-area.is-sentence.has-video .page-column {
@@ -1651,7 +1651,7 @@ html.split-motion::view-transition-new(split-text) {
 
 .lesson-area.is-sentence.has-video.is-side .page-text {
   justify-content: safe center;
-  padding-bottom: 0;
+  padding-bottom: 64px;
 }
 
 .lesson-area.is-sentence.is-complete .page-text,
@@ -1696,7 +1696,7 @@ html.split-motion::view-transition-new(split-text) {
 .sentence-translation {
   margin: 0;
   width: 100%;
-  font-size: 20px;
+  font-size: var(--lesson-size, 18px);
 }
 
 .page-text p.sentence-original,
@@ -1706,14 +1706,14 @@ html.split-motion::view-transition-new(split-text) {
 
 .sentence-original {
   font-weight: 500;
-  line-height: 40px;
+  line-height: var(--lesson-line, 36px);
 }
 
 .page-text p.sentence-translation {
-  font-size: 16px;
+  font-size: var(--translation-size, 16px);
   font-weight: 400;
   font-style: normal;
-  line-height: 20px;
+  line-height: var(--translation-line, 20px);
   color: var(--fg-muted);
 }
 
@@ -1766,34 +1766,54 @@ html.split-motion::view-transition-new(split-text) {
 }
 
 .sentence-terms {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 16px;
+  align-items: start;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  padding: 4px 12px;
-  overflow-x: auto;
+  padding: 0;
+  overflow: visible;
 }
 
 .term-card {
   display: flex;
-  flex-shrink: 0;
   align-items: center;
   gap: 12px;
-  min-width: 100px;
-  padding: 8px 12px;
-  border: 0.5px solid var(--border);
-  border-radius: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 12px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
   background: var(--bg-page);
   cursor: pointer;
 }
 
+.sentence-terms .term-card:nth-last-child(-n + 2) {
+  padding-bottom: 8px;
+  border-bottom: 0;
+}
+
+@media (max-width: 767px) {
+  .sentence-terms {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sentence-terms .term-card:nth-last-child(2) {
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
 .term-card-text {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0;
-  max-width: 275px;
+  min-width: 0;
 }
 
 .term-card-term,
@@ -1806,9 +1826,14 @@ html.split-motion::view-transition-new(split-text) {
 }
 
 .term-card-term {
-  font-size: 16px;
+  font-size: var(--term-size, 16px);
   font-weight: 400;
-  line-height: 20px;
+  line-height: var(--term-line, 20px);
+}
+
+.term-card-meaning {
+  font-size: var(--meaning-size, 14px);
+  line-height: var(--meaning-line, 18px);
 }
 
 .term-card.is-pulsing {
@@ -4096,7 +4121,7 @@ button:focus-visible {
 
   .lesson-area.is-sentence.has-video.is-side .page-text {
     justify-content: flex-start;
-    padding-bottom: 32px;
+    padding-bottom: 64px;
   }
 
   .lesson-area.is-sentence.has-video.is-side .video-text-fade {

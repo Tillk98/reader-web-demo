@@ -757,7 +757,24 @@ function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio,
   return menu;
 }
 
-function ThemeMenu({ theme, onTheme, font, onFont, onClose }) {
+const TEXT_SIZES = [14, 16, 18, 20, 22, 24, 26, 28, 30, 36];
+const DEFAULT_TEXT_LEVEL = TEXT_SIZES.indexOf(18);
+
+function textSizeStepsBelow(level, steps) {
+  const index = level - steps;
+  if (index >= 0) return TEXT_SIZES[index];
+  return TEXT_SIZES[0] + index * 2;
+}
+
+function translationSizeFor(level) {
+  return textSizeStepsBelow(level, 1);
+}
+
+function listTextSize(level, stepsBelow, min, max) {
+  return Math.min(max, Math.max(min, textSizeStepsBelow(level, stepsBelow)));
+}
+
+function ThemeMenu({ theme, onTheme, font, onFont, textSize, onTextSize, onClose }) {
   const mobile = useIsMobile();
   const menu = (
     <div className={`theme-menu${mobile ? " is-sheet" : ""}`} role="menu">
@@ -789,14 +806,16 @@ function ThemeMenu({ theme, onTheme, font, onFont, onClose }) {
           <input
             type="range"
             min="0"
-            max="4"
-            defaultValue="1"
+            max={TEXT_SIZES.length - 1}
+            step="1"
+            value={textSize}
             aria-label="Text size"
-            onInput={(event) => {
-              const input = event.currentTarget;
-              const span = Number(input.max) - Number(input.min);
-              input.style.setProperty("--size", `${((input.valueAsNumber - Number(input.min)) / span) * 100}%`);
-            }}
+            aria-valuemin={TEXT_SIZES[0]}
+            aria-valuemax={TEXT_SIZES[TEXT_SIZES.length - 1]}
+            aria-valuenow={TEXT_SIZES[textSize]}
+            aria-valuetext={`${TEXT_SIZES[textSize]} pixels`}
+            style={{ "--size": `${(textSize / (TEXT_SIZES.length - 1)) * 100}%` }}
+            onChange={(event) => onTextSize(event.currentTarget.valueAsNumber)}
           />
           <span>A</span>
         </div>
@@ -1053,6 +1072,7 @@ export default function Reader() {
   const [loopAudio, setLoopAudio] = useState(false);
   const [theme, setTheme] = useState("light");
   const [fontStyle, setFontStyle] = useState("Rubik Original");
+  const [textSize, setTextSize] = useState(DEFAULT_TEXT_LEVEL);
   const [completeHint, setCompleteHint] = useState(false);
   const completeHintTimer = useRef(null);
   const [sidePanel, setSidePanel] = useState(false);
@@ -1075,6 +1095,11 @@ export default function Reader() {
     modeRef.current = mode;
     if (pageStarts !== null) setPageStarts(null);
     if (pageIndex !== 0) setPageIndex(0);
+  }
+  const textSizeRef = useRef(textSize);
+  if (textSizeRef.current !== textSize) {
+    textSizeRef.current = textSize;
+    if (pageStarts !== null) setPageStarts(null);
   }
 
   useLayoutEffect(() => {
@@ -1109,7 +1134,7 @@ export default function Reader() {
     }
     setPageStarts(starts);
     setPageIndex((index) => Math.min(index, Math.max(0, starts.length - 1)));
-  }, [mode, lesson, pageStarts]);
+  }, [mode, lesson, pageStarts, textSize]);
 
   useEffect(() => {
     if (mode !== "page") return undefined;
@@ -1175,13 +1200,16 @@ export default function Reader() {
 
   useLayoutEffect(() => {
     if (!termPulse || mode !== "sentence") return undefined;
-    const scroller = termsRef.current;
-    const tile = scroller?.querySelector(`[data-term-key="${termPulse.key}"]`);
+    const scroller = textRef.current;
+    const tile = termsRef.current?.querySelector(`[data-term-key="${termPulse.key}"]`);
     if (!scroller || !tile) return undefined;
-    const pad = parseFloat(getComputedStyle(scroller).paddingLeft) || 0;
-    const left = tile.getBoundingClientRect().left - scroller.getBoundingClientRect().left + scroller.scrollLeft - pad;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    scroller.scrollTo({ left: Math.max(0, left), behavior: reduce ? "auto" : "smooth" });
+    const tileBox = tile.getBoundingClientRect();
+    const scrollBox = scroller.getBoundingClientRect();
+    if (tileBox.top < scrollBox.top + 8 || tileBox.bottom > scrollBox.bottom - 8) {
+      const top = tileBox.top - scrollBox.top + scroller.scrollTop - 16;
+      scroller.scrollTo({ top: Math.max(0, top), behavior: reduce ? "auto" : "smooth" });
+    }
     tile.classList.remove("is-pulsing");
     void tile.offsetWidth;
     tile.classList.add("is-pulsing");
@@ -1239,7 +1267,7 @@ export default function Reader() {
   }
 
   function fitTranslation(text, maxWidth) {
-    const ctx = measureContext(16);
+    const ctx = measureContext(translationSizeFor(textSize));
     if (!ctx) return text;
     const words = text.split(/\s+/).filter(Boolean);
     const lines = [];
@@ -1393,7 +1421,7 @@ export default function Reader() {
       window.removeEventListener("resize", fit);
       image?.removeEventListener("load", fit);
     };
-  }, [theater, theaterLine, lesson]);
+  }, [theater, theaterLine, lesson, textSize]);
 
   function completeLesson() {
     setCompleteHint(true);
@@ -2432,7 +2460,19 @@ export default function Reader() {
   const showComplete = !theater && (atPageEnd || atSentenceEnd);
 
   return (
-    <div className={`reader${theater ? " is-theater" : ""}`}>
+    <div
+      className={`reader${theater ? " is-theater" : ""}`}
+      style={{
+        "--lesson-size": `${TEXT_SIZES[textSize]}px`,
+        "--lesson-line": `${TEXT_SIZES[textSize] * 2}px`,
+        "--translation-size": `${translationSizeFor(textSize)}px`,
+        "--translation-line": `${translationSizeFor(textSize) * 1.25}px`,
+        "--term-size": `${listTextSize(textSize, 1, 16, 24)}px`,
+        "--term-line": `${listTextSize(textSize, 1, 16, 24) * 1.25}px`,
+        "--meaning-size": `${listTextSize(textSize, 2, 14, 24)}px`,
+        "--meaning-line": `${(listTextSize(textSize, 2, 14, 24) * 18) / 14}px`,
+      }}
+    >
       <header className="reader-header">
         <div className="logo-slot">
           <button type="button" className="logo-button" aria-label="LingQ">
@@ -2496,7 +2536,7 @@ export default function Reader() {
                 <CaseSensitive size={24} strokeWidth={1.5} absoluteStrokeWidth />
               </button>
               {chromeMenu === "theme" ? (
-                <ThemeMenu theme={theme} onTheme={setTheme} font={fontStyle} onFont={setFontStyle} onClose={() => setChromeMenu(null)} />
+                <ThemeMenu theme={theme} onTheme={setTheme} font={fontStyle} onFont={setFontStyle} textSize={textSize} onTextSize={setTextSize} onClose={() => setChromeMenu(null)} />
               ) : null}
             </span>
             <span className="chrome-menu-anchor">

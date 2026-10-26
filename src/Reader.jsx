@@ -25,6 +25,7 @@ import {
   EllipsisVertical,
   FlaskConical,
   Gauge,
+  Keyboard,
   Languages,
   List,
   ListPlus,
@@ -488,33 +489,45 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, onOpenD
     ));
   }
 
-  function row(id, label, icon, { onClick, trailing, danger, sub, plain, keepOpen } = {}) {
+  function row(id, label, icon, { onClick, trailing, danger, sub, plain, keepOpen, href } = {}) {
     const open = !mobile && openSub === id;
+    const className = `reader-menu-item${danger ? " is-destructive" : ""}${open ? " is-open" : ""}${plain ? " is-plain" : ""}`;
+    const content = (
+      <>
+        {icon || null}
+        <span>{label}</span>
+        {trailing?.type === "toggle" ? (
+          <span className={`menu-toggle${trailing.on ? " is-on" : ""}`} aria-hidden="true"><span /></span>
+        ) : null}
+        {trailing?.type === "chevron" ? menuChevron(ChevronRight) : null}
+      </>
+    );
     return (
       <div key={id} className={`reader-menu-row${sub ? " reader-menu-submenu-anchor" : ""}${open ? " is-open" : ""}`} data-sub={sub ? id : undefined}>
-        <button
-          type="button"
-          className={`reader-menu-item${danger ? " is-destructive" : ""}${open ? " is-open" : ""}${plain ? " is-plain" : ""}`}
-          role={trailing?.type === "toggle" ? "menuitemcheckbox" : "menuitem"}
-          aria-checked={trailing?.type === "toggle" ? showTranslation : undefined}
-          aria-haspopup={sub ? "menu" : undefined}
-          aria-expanded={sub && !mobile ? open : undefined}
-          onClick={() => {
-            if (sub) {
-              chooseSubmenu(id);
-              return;
-            }
-            onClick?.();
-            if (!keepOpen && mobile) onClose();
-          }}
-        >
-          {icon || null}
-          <span>{label}</span>
-          {trailing?.type === "toggle" ? (
-            <span className={`menu-toggle${trailing.on ? " is-on" : ""}`} aria-hidden="true"><span /></span>
-          ) : null}
-          {trailing?.type === "chevron" ? menuChevron(ChevronRight) : null}
-        </button>
+        {href ? (
+          <a className={className} role="menuitem" href={href} target="_blank" rel="noopener noreferrer" onClick={onClose}>
+            {content}
+          </a>
+        ) : (
+          <button
+            type="button"
+            className={className}
+            role={trailing?.type === "toggle" ? "menuitemcheckbox" : "menuitem"}
+            aria-checked={trailing?.type === "toggle" ? showTranslation : undefined}
+            aria-haspopup={sub ? "menu" : undefined}
+            aria-expanded={sub && !mobile ? open : undefined}
+            onClick={() => {
+              if (sub) {
+                chooseSubmenu(id);
+                return;
+              }
+              onClick?.();
+              if (!keepOpen && mobile) onClose();
+            }}
+          >
+            {content}
+          </button>
+        )}
         {sub && open ? (
           <div className="reader-submenu" role="menu" aria-label={label}>
             <div className="reader-menu-group">{sub}</div>
@@ -548,7 +561,9 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, onOpenD
   const helpItems = [
     row("quick-start", "Quick Start Guide", menuGlyph(Timer)),
     row("grammar-guide", "Grammar Guide", menuGlyph(BookCheck)),
-    row("chat-lynx", "Chat with Lynx", <img src={lynxIcon} alt="" width={16} height={16} />, { onClick: onOpenLynx }),
+    row("keyboard-shortcuts", "Keyboard Shortcuts", menuGlyph(Keyboard)),
+    row("knowledge-base", "Knowledge Base", <img src={lingqIcon} alt="" width={16} height={16} />, { href: "https://forum.lingq.com/c/knowledge-base/299" }),
+    row("chat-lynx", "Ask Lynx AI", <img src={lynxIcon} alt="" width={16} height={16} />, { onClick: onOpenLynx }),
   ];
 
   const groups = [

@@ -18,7 +18,6 @@ import {
   CircleHelp,
   CirclePlus,
   CircleCheck,
-  ChevronsUpDown,
   Contrast,
   Download,
   EllipsisVertical,
@@ -282,7 +281,11 @@ function useIsMobile() {
     const query = window.matchMedia("(max-width: 767px)");
     const onChange = () => setMobile(query.matches);
     query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
+    window.addEventListener("resize", onChange);
+    return () => {
+      query.removeEventListener("change", onChange);
+      window.removeEventListener("resize", onChange);
+    };
   }, []);
   return mobile;
 }
@@ -1062,8 +1065,33 @@ function AudioTimeline({ time, duration, scrubbing, onScrub, onScrubbing }) {
   );
 }
 
+const PLAYBACK_DROP_ORDER = ["loop", "speed", "timer", "theater"];
+
+function fitPlaybackActions(row, hasVideo) {
+  if (!row || getComputedStyle(row).display === "none") return null;
+  const leading = row.querySelector(".audio-bar-leading");
+  const trailing = row.querySelector(".audio-bar-trailing");
+  if (!leading || !trailing) return null;
+  const buttons = PLAYBACK_DROP_ORDER
+    .filter((id) => id !== "theater" || hasVideo)
+    .map((id) => row.querySelector(`[data-playback="${id}"]`))
+    .filter(Boolean);
+  buttons.forEach((button) => {
+    button.hidden = false;
+  });
+  const hidden = [];
+  for (const button of buttons) {
+    const gap = row.clientWidth - leading.offsetWidth - trailing.offsetWidth;
+    if (gap >= 16) break;
+    button.hidden = true;
+    hidden.push(button.dataset.playback);
+  }
+  return hidden;
+}
+
 export default function Reader() {
   const textRef = useRef(null);
+  const theaterScopeRef = useRef(null);
   const theaterMotion = useRef(0);
   const termsRef = useRef(null);
   const footerRef = useRef(null);
@@ -1091,6 +1119,56 @@ export default function Reader() {
   const [modeMenu, setModeMenu] = useState(false);
   const [chromeMenu, setChromeMenu] = useState(null);
   const [playerMenu, setPlayerMenu] = useState(false);
+  const desktopPlayerRef = useRef(null);
+  const playbackFitTheater = useRef(theater);
+  const [droppedPlayback, setDroppedPlayback] = useState([]);
+
+  useLayoutEffect(() => {
+    const row = desktopPlayerRef.current;
+    if (!row) return undefined;
+
+    const reading = row.querySelector(".audio-bar-reading");
+    const theaterChanged = playbackFitTheater.current !== theater;
+    playbackFitTheater.current = theater;
+    let holding = theaterChanged && !!reading;
+    const fit = () => {
+      if (holding) return;
+      const hidden = fitPlaybackActions(row, lessonHasVideo);
+      if (!hidden) return;
+      setDroppedPlayback((current) => (
+        current.length === hidden.length && current.every((id, index) => id === hidden[index])
+          ? current
+          : hidden
+      ));
+    };
+
+    let timer = 0;
+    const release = () => {
+      if (!holding) return;
+      holding = false;
+      window.clearTimeout(timer);
+      fit();
+    };
+    const onReadingEnd = (event) => {
+      if (event.target !== reading || event.propertyName !== "width") return;
+      release();
+    };
+    if (holding) {
+      reading.addEventListener("transitionend", onReadingEnd);
+      timer = window.setTimeout(release, 420);
+    } else {
+      fit();
+    }
+    const observer = new ResizeObserver(fit);
+    observer.observe(row);
+    window.addEventListener("resize", fit);
+    return () => {
+      window.clearTimeout(timer);
+      reading?.removeEventListener("transitionend", onReadingEnd);
+      observer.disconnect();
+      window.removeEventListener("resize", fit);
+    };
+  }, [playerOpen, lessonHasVideo, theater]);
   const [audioTime, setAudioTime] = useState(3 * 60 + 30);
   const [scrubbing, setScrubbing] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
@@ -1202,12 +1280,6 @@ export default function Reader() {
     };
   }, [mode, lesson, playerOpen, playerShown]);
 
-  function openPlayer() {
-    setPlayerShown(true);
-    setPlayerOpen(true);
-    setModeMenu(false);
-  }
-
   function applyMode(next) {
     if (next === "sentence") setSentenceIndex(1);
     const openingVideo = lessonHasVideo && media === "video" && next !== "page" && mode === "page" && !playerShown;
@@ -1215,7 +1287,7 @@ export default function Reader() {
       setMode(next);
       if (!openingVideo) return;
       setPlayerShown(true);
-      setPlayerOpen(false);
+      setPlayerOpen(!mobile);
       setPlaying(false);
     });
   }
@@ -1266,7 +1338,17 @@ export default function Reader() {
     });
   }
 
+  function openPlayer() {
+    setPlayerShown(true);
+    setPlayerOpen(true);
+    setModeMenu(false);
+  }
+
   function collapsePlayer() {
+    if (!mobile) {
+      dismissPlayer();
+      return;
+    }
     if (!theater) {
       setPlayerOpen(false);
       return;
@@ -1381,6 +1463,7 @@ export default function Reader() {
       setTheaterLine(line);
       setPlayerMenu(false);
       setModeMenu(false);
+      setReviewMenu(false);
       setMedia("video");
       setPlayerShown(true);
       setPlayerOpen(true);
@@ -1454,7 +1537,7 @@ export default function Reader() {
   useEffect(() => {
     if (!reviewMenu) return undefined;
     function onPointerDown(event) {
-      if (event.target.closest?.(".vocab-menu") || event.target.closest?.(".vocab-split-menu")) return;
+      if (event.target.closest?.(".vocab-menu") || event.target.closest?.(".vocab-button") || event.target.closest?.(".vocab-split-menu")) return;
       setReviewMenu(false);
     }
     function onKeyDown(event) {
@@ -1553,99 +1636,24 @@ export default function Reader() {
     };
   }, [playMenu]);
 
-  useLayoutEffect(() => {
-    const footer = footerRef.current;
-    if (!footer) return undefined;
-
-    const place = () => {
-      const player = footer.querySelector(":scope > .audio-player");
-      const nav = footer.querySelector(":scope > .floating-nav");
-      const clear = () => {
-        footer.style.removeProperty("--nav-shift");
-        footer.style.removeProperty("--player-max");
-      };
-      if (!player || !nav || getComputedStyle(nav).display === "none") {
-        clear();
-        return;
-      }
-
-      if (!player.dataset.naturalWidth) {
-        const applied = footer.style.getPropertyValue("--player-max");
-        footer.style.setProperty("--player-max", "none");
-        player.dataset.naturalWidth = String(player.getBoundingClientRect().width);
-        if (applied) footer.style.setProperty("--player-max", applied);
-        else footer.style.removeProperty("--player-max");
-      }
-
-      const natural = Number(player.dataset.naturalWidth);
-      const footerBox = footer.getBoundingClientRect();
-      const playerLeft = player.getBoundingClientRect().left;
-      const navWidth = nav.getBoundingClientRect().width;
-      const lynx = footer.querySelector(":scope > .lynx-control");
-      const rightEdge = lynx && getComputedStyle(lynx).display !== "none"
-        ? lynx.getBoundingClientRect().left
-        : footerBox.right - parseFloat(getComputedStyle(footer).paddingRight);
-      const centeredLeft = footerBox.left + (footerBox.width - navWidth) / 2;
-      const minNavLeft = playerLeft + natural + 16;
-      const maxNavLeft = rightEdge - 16 - navWidth;
-
-      let navLeft = centeredLeft;
-      let playerWidth = natural;
-      if (minNavLeft > centeredLeft + 0.5) {
-        if (minNavLeft <= maxNavLeft) {
-          navLeft = minNavLeft;
-        } else {
-          navLeft = Math.max(centeredLeft, maxNavLeft);
-          playerWidth = Math.min(natural, navLeft - 16 - playerLeft);
-        }
-      }
-
-      const shift = Math.max(0, Math.ceil(navLeft - centeredLeft - 0.5));
-      const shiftValue = shift ? `${shift}px` : "";
-      const maxValue = playerWidth < natural - 0.5 ? `${Math.floor(playerWidth)}px` : "";
-      if ((footer.style.getPropertyValue("--nav-shift") || "") !== shiftValue) {
-        if (shiftValue) footer.style.setProperty("--nav-shift", shiftValue);
-        else footer.style.removeProperty("--nav-shift");
-      }
-      if ((footer.style.getPropertyValue("--player-max") || "") !== maxValue) {
-        if (maxValue) footer.style.setProperty("--player-max", maxValue);
-        else footer.style.removeProperty("--player-max");
-      }
-    };
-
-    place();
-    const observer = new ResizeObserver(place);
-    observer.observe(footer);
-    const nav = footer.querySelector(":scope > .floating-nav");
-    const player = footer.querySelector(":scope > .audio-player");
-    const lynx = footer.querySelector(":scope > .lynx-control");
-    if (nav) observer.observe(nav);
-    if (player) observer.observe(player);
-    if (lynx) observer.observe(lynx);
-    return () => {
-      observer.disconnect();
-      footer.style.removeProperty("--nav-shift");
-      footer.style.removeProperty("--player-max");
-    };
-  }, [playing, playerShown, playerOpen, mode, lynxOpen]);
-
-  function runNamedMotion(className, counter, update) {
+  function runTheater(update) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!document.startViewTransition || reduced) {
+    const scope = theaterScopeRef.current;
+    if (reduced || !scope?.startViewTransition) {
       update();
       return;
     }
-    counter.current += 1;
-    document.documentElement.classList.add(className);
+    theaterMotion.current += 1;
+    document.documentElement.classList.add("theater-motion");
     const finish = () => {
-      counter.current -= 1;
-      if (counter.current <= 0) {
-        counter.current = 0;
-        document.documentElement.classList.remove(className);
+      theaterMotion.current -= 1;
+      if (theaterMotion.current <= 0) {
+        theaterMotion.current = 0;
+        document.documentElement.classList.remove("theater-motion");
       }
     };
     try {
-      const vt = document.startViewTransition(() => {
+      const vt = scope.startViewTransition(() => {
         flushSync(update);
       });
       vt.finished.then(finish, finish);
@@ -1653,10 +1661,6 @@ export default function Reader() {
       finish();
       update();
     }
-  }
-
-  function runTheater(update) {
-    runNamedMotion("theater-motion", theaterMotion, update);
   }
 
   function transition(update) {
@@ -1685,9 +1689,20 @@ export default function Reader() {
       setPlayMenu(false);
       setMedia(asVideo ? "video" : "audio");
       setPlayerShown(true);
+      setPlayerOpen(!mobile);
       setPlaying(true);
     });
   }
+
+  const mobileWidthRef = useRef(mobile);
+  useEffect(() => {
+    const enteredMobile = mobile && !mobileWidthRef.current;
+    const leftMobile = !mobile && mobileWidthRef.current;
+    mobileWidthRef.current = mobile;
+    if (!playerShown) return;
+    if (enteredMobile && !theater) setPlayerOpen(false);
+    if (leftMobile) setPlayerOpen(true);
+  }, [mobile, playerShown, theater]);
 
   function chooseLessonType(next) {
     if (next === lessonType) return;
@@ -2485,6 +2500,7 @@ export default function Reader() {
         "--meaning-line": `${(listTextSize(textSize, 2, 14, 24) * 18) / 14}px`,
       }}
     >
+      <div className="reader-body" ref={theaterScopeRef}>
       <header className="reader-header">
         <div className="logo-slot">
           <button type="button" className="logo-button" aria-label="LingQ">
@@ -2998,11 +3014,12 @@ export default function Reader() {
         ) : null}
         </div>
       </main>
+      </div>
 
       <footer ref={footerRef} className={`reader-footer${playerOpen ? " is-player-open" : ""}`}>
         {playerOpen ? (
           <div className="audio-bar" role="group" aria-label="Lesson audio">
-            <PlayerDragHandle label="Collapse player" onDragDown={collapsePlayer} />
+            <PlayerDragHandle label={mobile ? "Collapse player" : "Close player"} onDragDown={mobile ? collapsePlayer : dismissPlayer} />
             <AudioTimeline
               time={audioTime}
               duration={AUDIO_DURATION}
@@ -3010,7 +3027,91 @@ export default function Reader() {
               onScrub={setAudioTime}
               onScrubbing={setScrubbing}
             />
-            <div className="audio-bar-row">
+            <div className="audio-bar-row audio-bar-desktop" ref={desktopPlayerRef}>
+              <div className="audio-bar-leading">
+                <div className="audio-bar-transport">
+                  <button type="button" className="audio-bar-pause" aria-label={playing ? "Pause" : "Play"} onClick={() => setPlayback(!playing)}>
+                    {playing ? <Pause size={24} strokeWidth={1.5} absoluteStrokeWidth /> : <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />}
+                  </button>
+                  <button type="button" className="audio-bar-control audio-bar-back" aria-label="Back 5 seconds">
+                    <img src={skipBackIcon} alt="" width={20} height={20} />
+                  </button>
+                  <button type="button" className="audio-bar-control audio-bar-forward" aria-label="Forward 5 seconds">
+                    <img src={skipForwardIcon} alt="" width={20} height={20} />
+                  </button>
+                </div>
+                <span className="audio-bar-time">
+                  <span className="audio-bar-time-current">{formatAudioTime(audioTime)}</span>
+                  <span className="audio-bar-time-sep">/</span>
+                  <span className="audio-bar-time-rest">{formatAudioTime(AUDIO_DURATION)}</span>
+                </span>
+              </div>
+              <div className="audio-bar-trailing">
+                <div className="audio-bar-playback">
+                  <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} data-playback="loop" hidden={droppedPlayback.includes("loop")} aria-label="Loop audio" aria-pressed={loopAudio} onClick={() => setLoopAudio((on) => !on)}>
+                    <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                  </button>
+                  <button type="button" className="audio-bar-speed" data-playback="speed" hidden={droppedPlayback.includes("speed")} aria-label="Playback speed">1x</button>
+                  <button type="button" className="audio-bar-control audio-bar-timer" data-playback="timer" hidden={droppedPlayback.includes("timer")} aria-label="Timer">
+                    <Timer size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                  </button>
+                  {lessonHasVideo ? (
+                    <button type="button" className={`audio-bar-control audio-bar-theater${theater ? " is-on" : ""}`} data-playback="theater" hidden={droppedPlayback.includes("theater")} aria-label={theater ? "Exit theater mode" : "Theater mode"} aria-pressed={theater} onClick={toggleTheater}>
+                      {theater ? <Minimize size={20} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={20} strokeWidth={1.5} absoluteStrokeWidth />}
+                    </button>
+                  ) : null}
+                  <span className="player-menu-anchor">
+                    <button type="button" className="audio-bar-control" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
+                      <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                    {playerMenu ? (
+                      <PlayerOptionsMenu
+                        autoAdvance={autoAdvance}
+                        onAutoAdvance={() => setAutoAdvance((on) => !on)}
+                        loopAudio={loopAudio}
+                        onLoopAudio={() => setLoopAudio((on) => !on)}
+                        theater={theater}
+                        onTheater={toggleTheater}
+                        showLayout={lessonHasVideo && droppedPlayback.includes("theater")}
+                        onClose={() => setPlayerMenu(false)}
+                      />
+                    ) : null}
+                  </span>
+                </div>
+                <span className="audio-bar-divider" aria-hidden="true" />
+                <div className="audio-bar-nav">
+                  <div className={`audio-bar-reading${theater ? " is-hidden" : ""}`} inert={theater ? true : undefined}>
+                    <div className="audio-bar-reading-clip">
+                      <span className="mode-anchor">
+                        <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
+                          {modeIcon(mode, 24)}
+                        </button>
+                        {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
+                      </span>
+                      <span className="vocab-split audio-bar-vocab">
+                        <button type="button" className="vocab-button" aria-label="Vocabulary" aria-haspopup="menu" aria-expanded={reviewMenu} onClick={() => { setModeMenu(false); setReviewMenu((open) => !open); }}>
+                          <img src={reviewIcon} alt="" width={24} height={24} />
+                        </button>
+                        {reviewMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
+                      </span>
+                    </div>
+                  </div>
+                  <button type="button" className="audio-bar-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
+                    <span className="audio-bar-lynx-mark">
+                      <img className="is-light" src={lynxIcon} alt="" width={24} height={24} />
+                      <img className="is-dark" src={lynxIconOnDark} alt="" width={24} height={24} />
+                    </span>
+                  </button>
+                </div>
+                <span className="audio-bar-divider" aria-hidden="true" />
+                <div className="audio-bar-edge">
+                  <button type="button" className="audio-bar-control audio-bar-close" aria-label={lessonHasVideo && media === "video" ? "Dismiss video" : "Dismiss audio"} onClick={dismissPlayer}>
+                    <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="audio-bar-phone">
               <div className="audio-bar-transport">
                 <button type="button" className="audio-bar-control audio-bar-back" aria-label="Back 5 seconds">
                   <img src={skipBackIcon} alt="" width={20} height={20} />
@@ -3021,14 +3122,6 @@ export default function Reader() {
                 <button type="button" className="audio-bar-control audio-bar-forward" aria-label="Forward 5 seconds">
                   <img src={skipForwardIcon} alt="" width={20} height={20} />
                 </button>
-                <button type="button" className="audio-bar-control audio-bar-repeat" aria-label="Repeat">
-                  <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                </button>
-                <span className="audio-bar-time">
-                  <span className="audio-bar-time-current">{formatAudioTime(audioTime)}</span>
-                  <span className="audio-bar-time-sep">/</span>
-                  <span className="audio-bar-time-total">{formatAudioTime(AUDIO_DURATION)}</span>
-                </span>
               </div>
               <div className="audio-bar-secondary">
                 <div className="audio-bar-actions">
@@ -3061,32 +3154,16 @@ export default function Reader() {
                     ) : null}
                   </span>
                 </div>
-                <span className={`mode-anchor${theater ? " is-disabled" : ""}`}>
-                  <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} disabled={theater} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
-                    {modeIcon(mode, 20)}
-                    <ChevronsUpDown size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
-                  </button>
-                  {theater ? <span className="mode-theater-tip" role="tooltip">Exit theater view to switch modes</span> : null}
-                  {modeMenu && !theater ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
-                </span>
-                <button type="button" className="audio-bar-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
-                  <img src={theater ? lynxIconOnDark : lynxIcon} alt="" width={20} height={20} />
-                </button>
-                <span className="audio-bar-divider audio-bar-tools-divider" aria-hidden="true" />
-                <button type="button" className="audio-bar-control audio-bar-collapse" aria-label="Collapse player" onClick={collapsePlayer}>
-                  <ChevronDown size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                </button>
               </div>
             </div>
           </div>
-        ) : playerShown ? (
+        ) : mobile && playerShown ? (
           <div
             className="audio-player"
             role="group"
             aria-label="Lesson audio"
             onClick={(event) => {
-              if (event.target.closest("button, .player-menu")) return;
-              if (!window.matchMedia("(max-width: 767px)").matches) return;
+              if (event.target.closest("button, .player-menu, .mode-menu, .vocab-menu")) return;
               openPlayer();
             }}
           >
@@ -3101,15 +3178,17 @@ export default function Reader() {
                 </button>
               </div>
               <div className="audio-player-tools">
-                <button type="button" className="audio-player-icon audio-player-replay" aria-label="Replay 10 seconds">
-                  <img src={replayIcon} alt="" width={20} height={20} />
-                </button>
                 <span className="mode-anchor audio-player-mode">
                   <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
                     {modeIcon(mode, 20)}
-                    <ChevronsUpDown size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
                   </button>
                   {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
+                </span>
+                <span className="vocab-split audio-player-vocab">
+                  <button type="button" className="vocab-button" aria-label="Vocabulary" aria-haspopup="menu" aria-expanded={reviewMenu} onClick={() => { setModeMenu(false); setReviewMenu((open) => !open); }}>
+                    <img src={reviewIcon} alt="" width={20} height={20} />
+                  </button>
+                  {reviewMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
                 </span>
                 <button type="button" className="audio-player-icon audio-player-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
                   <img src={lynxIcon} alt="" width={20} height={20} />
@@ -3131,13 +3210,6 @@ export default function Reader() {
                     />
                   ) : null}
                 </span>
-                <span className="audio-player-divider" aria-hidden="true" />
-                <button type="button" className="audio-player-icon audio-player-expand" aria-label="Expand player" onClick={openPlayer}>
-                  <ChevronRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                </button>
-                <button type="button" className="audio-player-icon audio-player-close" aria-label={lessonHasVideo && media === "video" ? "Dismiss video" : "Dismiss audio"} onClick={dismissPlayer}>
-                  <X size={16} strokeWidth={1.5} absoluteStrokeWidth />
-                </button>
               </div>
             </div>
             <div className="audio-player-progress" aria-hidden="true">
@@ -3193,7 +3265,6 @@ export default function Reader() {
             <button type="button" className="mode-selector" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
               {modeIcon(mode)}
               <span>{MODES.find((item) => item.id === mode)?.label}</span>
-              <ChevronsUpDown size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
             </button>
             {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
           </span>

@@ -3420,7 +3420,6 @@ html.split-motion::view-transition-new(split-text) {
   padding-inline: 12px;
 }
 
-.audio-bar-actions .audio-bar-layout,
 .audio-bar-actions .audio-bar-theater,
 .audio-bar-actions .audio-bar-speed,
 .audio-bar-actions .player-menu-anchor {
@@ -3845,7 +3844,6 @@ html.split-motion::view-transition-new(split-text) {
   background: #f8f9fa;
 }
 
-.audio-bar-layout.is-on,
 .audio-bar-theater.is-on,
 .audio-bar-loop.is-on {
   background: #f1f7fe;
@@ -4089,11 +4087,6 @@ button:focus-visible {
 
   .lynx-sheet .review-panel-header {
     margin: 0 -12px 0;
-  }
-
-  .audio-bar-layout,
-  .player-menu-layout {
-    display: none;
   }
 
   .lesson-area.has-video.is-side {

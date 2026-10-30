@@ -12,7 +12,6 @@ import {
   ChartColumn,
   ChevronDown,
   Clock,
-  Columns2,
   FileText,
   ChevronLeft,
   ChevronRight,
@@ -286,6 +285,26 @@ function useIsMobile() {
     return () => query.removeEventListener("change", onChange);
   }, []);
   return mobile;
+}
+
+function useMinWidth(minWidth) {
+  const queryText = `(min-width: ${minWidth}px)`;
+  const [matches, setMatches] = useState(() => window.matchMedia(queryText).matches);
+  useEffect(() => {
+    const query = window.matchMedia(queryText);
+    const onChange = () => setMatches(query.matches);
+    query.addEventListener("change", onChange);
+    window.addEventListener("resize", onChange);
+    return () => {
+      query.removeEventListener("change", onChange);
+      window.removeEventListener("resize", onChange);
+    };
+  }, [queryText]);
+  return matches;
+}
+
+function useIsWide() {
+  return useMinWidth(1025);
 }
 
 function MenuRow({ icon, label, onClick, children, destructive }) {
@@ -712,7 +731,7 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, onOpenD
   return menu;
 }
 
-function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio, sideBySide, onSideBySide, theater, onTheater, showLayout, onClose }) {
+function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio, theater, onTheater, showLayout, onClose }) {
   const mobile = useIsMobile();
   const menu = (
     <div className={`reader-menu player-menu${mobile ? " is-sheet" : ""}`} role="menu">
@@ -739,13 +758,6 @@ function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio,
         <MenuRow icon={<Repeat2 size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Loop Audio" onClick={onLoopAudio}>
           <span className={`menu-toggle${loopAudio ? " is-on" : ""}`} aria-hidden="true"><span /></span>
         </MenuRow>
-        {showLayout ? (
-          <div className="player-menu-layout">
-            <MenuRow icon={<Columns2 size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Split view" onClick={onSideBySide}>
-              <span className={`menu-toggle${sideBySide ? " is-on" : ""}`} aria-hidden="true"><span /></span>
-            </MenuRow>
-          </div>
-        ) : null}
         {showLayout ? (
           <MenuRow icon={theater ? <Minimize size={16} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Theater mode" onClick={onTheater}>
             <span className={`menu-toggle${theater ? " is-on" : ""}`} aria-hidden="true"><span /></span>
@@ -1053,7 +1065,6 @@ function AudioTimeline({ time, duration, scrubbing, onScrub, onScrubbing }) {
 export default function Reader() {
   const textRef = useRef(null);
   const theaterMotion = useRef(0);
-  const splitMotion = useRef(0);
   const termsRef = useRef(null);
   const footerRef = useRef(null);
   const pressRef = useRef({ suppressClick: false });
@@ -1066,7 +1077,6 @@ export default function Reader() {
   const [playing, setPlaying] = useState(false);
   const [playerShown, setPlayerShown] = useState(false);
   const [playerOpen, setPlayerOpen] = useState(false);
-  const [sideBySide, setSideBySide] = useState(false);
   const [theater, setTheater] = useState(false);
   const [theaterLine, setTheaterLine] = useState(null);
   const [theaterView, setTheaterView] = useState(null);
@@ -1102,6 +1112,8 @@ export default function Reader() {
   const [pageStarts, setPageStarts] = useState(null);
   const [atScrollEnd, setAtScrollEnd] = useState(false);
   const mobile = useIsMobile();
+  const wide = useIsWide();
+  const roomy = useMinWidth(1400);
 
   const lessonRef = useRef(lesson);
   const modeRef = useRef(mode);
@@ -1238,13 +1250,6 @@ export default function Reader() {
 
   function chooseMode(next) {
     setModeMenu(false);
-    if (lessonHasVideo && media === "video" && next === "page" && mode !== "page" && playerShown) {
-      runSplit(() => {
-        setSideBySide(true);
-        setMode("page");
-      });
-      return;
-    }
     applyMode(next);
   }
 
@@ -1652,14 +1657,6 @@ export default function Reader() {
 
   function runTheater(update) {
     runNamedMotion("theater-motion", theaterMotion, update);
-  }
-
-  function runSplit(update) {
-    runNamedMotion("split-motion", splitMotion, update);
-  }
-
-  function toggleSplit() {
-    runSplit(() => setSideBySide((on) => !on));
   }
 
   function transition(update) {
@@ -2315,6 +2312,7 @@ export default function Reader() {
 
   const activeToken = active ? lesson[active.paragraphIndex][active.tokenIndex] : null;
   const showVideo = lessonHasVideo && media === "video" && playerShown;
+  const sideColumn = (sidePanel && activeToken) || (lynxOpen && !mobile) || (reviewOpen && !mobile);
   const savedOpen = active?.phrase?.savedId
     ? savedPhrases.find((phrase) => phrase.id === active.phrase.savedId)
     : null;
@@ -2583,7 +2581,7 @@ export default function Reader() {
           </div>
         </div>
 
-        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${showVideo ? " has-video" : ""}${showVideo && sideBySide && !theater ? " is-side" : ""}${showComplete && mode === "sentence" ? " is-complete" : ""}`} onPointerDown={onLessonPointerDown}>
+        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${showVideo ? " has-video" : ""}${showVideo && wide && (!sideColumn || roomy) && !theater ? " is-side" : ""}${showComplete && mode === "sentence" ? " is-complete" : ""}`} onPointerDown={onLessonPointerDown}>
           <div className="page-control">
             <button
               type="button"
@@ -2945,7 +2943,7 @@ export default function Reader() {
           ) : null}
         </div>
         </div>
-        {(sidePanel && activeToken) || (lynxOpen && !mobile) || (reviewOpen && !mobile) ? (
+        {sideColumn ? (
           <aside className={`side-panel${lynxOpen && !playerOpen ? " is-anchored" : ""}${lynxOpen && ((sidePanel && activeToken) || (reviewOpen && !mobile)) ? " is-split" : ""}`}>
             {reviewOpen && !mobile ? (
               <ReviewPanel
@@ -3035,11 +3033,6 @@ export default function Reader() {
               </div>
               <div className="audio-bar-secondary">
                 <div className="audio-bar-actions">
-                  {lessonHasVideo && !theater ? (
-                    <button type="button" className={`audio-bar-control audio-bar-layout${sideBySide ? " is-on" : ""}`} aria-label="Split view" aria-pressed={sideBySide} onClick={toggleSplit}>
-                      <Columns2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                    </button>
-                  ) : null}
                   {lessonHasVideo ? (
                     <button type="button" className={`audio-bar-control audio-bar-theater${theater ? " is-on" : ""}`} aria-label={theater ? "Exit theater mode" : "Theater mode"} aria-pressed={theater} onClick={toggleTheater}>
                       {theater ? <Minimize size={20} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={20} strokeWidth={1.5} absoluteStrokeWidth />}
@@ -3132,8 +3125,6 @@ export default function Reader() {
                       onAutoAdvance={() => setAutoAdvance((on) => !on)}
                       loopAudio={loopAudio}
                       onLoopAudio={() => setLoopAudio((on) => !on)}
-                      sideBySide={sideBySide}
-                      onSideBySide={toggleSplit}
                       showLayout={lessonHasVideo}
                       theater={theater}
                       onTheater={toggleTheater}

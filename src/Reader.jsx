@@ -1684,7 +1684,6 @@ export default function Reader() {
     transition(() => {
       setPlayMenu(false);
       setMedia(asVideo ? "video" : "audio");
-      if (asVideo && mode === "page") setMode("scroll");
       setPlayerShown(true);
       setPlaying(true);
     });

@@ -3255,6 +3255,9 @@ html.split-motion::view-transition-new(split-text) {
   flex-shrink: 0;
   align-items: center;
   gap: 8px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #f1f3f4;
 }
 
 .audio-bar-playback > [hidden] {
@@ -3552,8 +3555,12 @@ html.split-motion::view-transition-new(split-text) {
   pointer-events: none;
 }
 
-.audio-bar-reading:not(.is-hidden):has(.mode-menu, .vocab-menu) {
+.audio-bar-reading:not(.is-hidden):has(.mode-menu) {
   overflow: visible;
+}
+
+.audio-bar-nav > .audio-bar-vocab {
+  margin-right: 8px;
 }
 
 .audio-bar-reading-clip {
@@ -3624,7 +3631,8 @@ html.split-motion::view-transition-new(split-text) {
   box-shadow: none;
 }
 
-.reader.is-theater .audio-bar-pause {
+.reader.is-theater .audio-bar-pause,
+.reader.is-theater .audio-bar-playback {
   background: #262b30;
 }
 
@@ -3768,6 +3776,10 @@ html.split-motion::view-transition-new(split-text) {
   white-space: nowrap;
 }
 
+.mode-selector > svg:last-child {
+  color: var(--fg-muted);
+}
+
 .audio-player-vocab {
   flex-shrink: 0;
   padding: 0;
@@ -3827,13 +3839,6 @@ html.split-motion::view-transition-new(split-text) {
   width: 48px;
   height: 48px;
   padding: 0;
-}
-
-.vocab-split-divider {
-  width: 1px;
-  height: 34px;
-  flex-shrink: 0;
-  background: var(--border);
 }
 
 .vocab-split-menu {
@@ -3969,9 +3974,14 @@ html.split-motion::view-transition-new(split-text) {
 }
 
 .audio-bar-theater.is-on,
-.audio-bar-loop.is-on {
+.audio-bar-loop.is-on,
+.audio-bar-layout.is-on {
   background: #f1f7fe;
   color: #2e75cd;
+}
+
+.layout-icon {
+  transform: scaleY(-1);
 }
 
 .status-pill:hover {
@@ -4352,6 +4362,8 @@ button:focus-visible {
     height: 48px;
     padding: 4px 8px;
     gap: 8px;
+    border-radius: 999px;
+    background: #f8f9fa;
   }
 
   .audio-bar-actions-core .audio-bar-control:not(.is-on),
@@ -4407,6 +4419,10 @@ button:focus-visible {
 
   .audio-bar-timeline.is-scrubbing .audio-bar-float-times {
     opacity: 1;
+  }
+
+  .reader.is-theater .audio-bar-actions-core {
+    background: #262b30;
   }
 
   .reader.is-theater .audio-bar-pause {

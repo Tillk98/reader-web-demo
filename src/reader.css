@@ -5,6 +5,8 @@
   --fg-primary: #42a564;
   --fg-secondary: #2e75cd;
   --surface: #fbfcfd;
+  --bg-elevated: #f8f9fa;
+  --surface-default: #f1f3f4;
   --border: #f1f3f4;
   --progress: #42a564;
   --lingq-fill: #ffe895;
@@ -179,7 +181,7 @@ img {
   padding: 8px 16px;
   border: 0;
   border-radius: 6px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
   color: var(--fg-muted);
   cursor: pointer;
 }
@@ -325,7 +327,7 @@ img {
 
 .progress-track {
   width: 100%;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .progress-fill {
@@ -405,13 +407,13 @@ img {
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
   color: var(--fg-default);
   cursor: pointer;
 }
 
 .reader-menu-nav:hover:not(:disabled) {
-  background: #f1f3f4;
+  background: var(--surface-default);
 }
 
 .reader-menu-nav:disabled {
@@ -434,7 +436,7 @@ img {
   padding: 8px;
   border: 0;
   border-radius: 8px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
   color: inherit;
   font: inherit;
   text-align: left;
@@ -445,7 +447,7 @@ button.reader-menu-lesson {
 }
 
 button.reader-menu-lesson:hover {
-  background: #f1f3f4;
+  background: var(--surface-default);
 }
 
 .reader-menu-lesson img {
@@ -567,7 +569,7 @@ button.reader-menu-lesson:hover {
 .reader-menu-item:active,
 .reader-menu-item.is-open,
 .theme-fonts button:hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .reader-menu-item.is-back > span:first-of-type {
@@ -753,7 +755,7 @@ button.reader-menu-lesson:hover {
   height: 4px;
   border: 0;
   border-radius: 999px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .theme-size input::-moz-range-progress {
@@ -862,11 +864,11 @@ button.reader-menu-lesson:hover {
 }
 
 .page-button:hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .page-button:active {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .page-button:disabled,
@@ -1739,7 +1741,7 @@ html.split-motion::view-transition-new(split-text) {
   align-items: center;
   gap: 2px;
   border-radius: 6px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .sentence-play button,
@@ -1751,7 +1753,7 @@ html.split-motion::view-transition-new(split-text) {
   padding: 8px;
   border: 0;
   border-radius: 6px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
   color: var(--fg-default);
   cursor: pointer;
 }
@@ -2153,7 +2155,7 @@ html.split-motion::view-transition-new(split-text) {
   justify-content: center;
   padding: 6px;
   border-radius: 999px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
   color: var(--fg-default);
 }
 
@@ -2312,7 +2314,7 @@ html.split-motion::view-transition-new(split-text) {
 }
 
 .widget-chevron:hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .widget-medium {
@@ -2394,7 +2396,7 @@ html.split-motion::view-transition-new(split-text) {
   align-items: center;
   justify-content: center;
   border: 0;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
   color: var(--fg-default);
   cursor: pointer;
 }
@@ -2588,7 +2590,7 @@ html.split-motion::view-transition-new(split-text) {
 .widget-dictionary-open:hover,
 .widget-medium-add-tag:hover,
 .widget-large-add-tag:hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .widget-dictionaries .widget-medium-scroll {
@@ -2604,7 +2606,7 @@ html.split-motion::view-transition-new(split-text) {
   align-items: center;
   padding: 8px 12px;
   border-radius: 4px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
   color: var(--fg-muted);
   font-size: 12px;
   font-weight: 400;
@@ -2766,7 +2768,7 @@ html.split-motion::view-transition-new(split-text) {
 .status-button[data-state="focus"][data-status="Learned"],
 .status-button[data-status="Learned"]:hover {
   border-color: #6d7680;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
   color: #1e2328;
 }
 
@@ -2946,7 +2948,7 @@ html.split-motion::view-transition-new(split-text) {
 }
 
 .demo-settings-close:hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .demo-settings-note {
@@ -2975,7 +2977,7 @@ html.split-motion::view-transition-new(split-text) {
   display: flex;
   padding: 2px;
   border-radius: 999px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .demo-type button {
@@ -3093,7 +3095,7 @@ html.split-motion::view-transition-new(split-text) {
 }
 
 .play-split-menu button:hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .player-drag-handle {
@@ -3255,9 +3257,6 @@ html.split-motion::view-transition-new(split-text) {
   flex-shrink: 0;
   align-items: center;
   gap: 8px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: #f1f3f4;
 }
 
 .audio-bar-playback > [hidden] {
@@ -3316,7 +3315,7 @@ html.split-motion::view-transition-new(split-text) {
 .audio-bar-pause {
   width: 48px;
   height: 48px;
-  background: #f1f3f4;
+  background: var(--bg-elevated);
   box-shadow: none;
 }
 
@@ -3342,7 +3341,7 @@ html.split-motion::view-transition-new(split-text) {
   gap: 4px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: #f1f3f4;
+  background: var(--bg-elevated);
   color: var(--fg-muted);
   font-size: 14px;
   font-weight: 400;
@@ -3419,7 +3418,7 @@ html.split-motion::view-transition-new(split-text) {
 
 .audio-player-icon:hover,
 .audio-player-pause:hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .audio-player-icon img,
@@ -3462,7 +3461,7 @@ html.split-motion::view-transition-new(split-text) {
   bottom: 0;
   left: 0;
   height: 4px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .audio-player-progress span {
@@ -3604,7 +3603,14 @@ html.split-motion::view-transition-new(split-text) {
 .audio-bar-lynx:hover,
 .audio-bar-vocab .vocab-button:hover,
 .audio-bar-vocab .vocab-split-menu:hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
+}
+
+.audio-bar-pause:hover,
+.audio-bar-layout .audio-bar-control:hover:not(.is-on),
+.audio-bar-actions-core .audio-bar-control:hover:not(.is-on),
+.audio-bar-actions-core .audio-bar-speed:hover {
+  background: var(--surface-default);
 }
 
 .reader.is-theater .reader-footer,
@@ -3631,8 +3637,7 @@ html.split-motion::view-transition-new(split-text) {
   box-shadow: none;
 }
 
-.reader.is-theater .audio-bar-pause,
-.reader.is-theater .audio-bar-playback {
+.reader.is-theater .audio-bar-pause {
   background: #262b30;
 }
 
@@ -3970,22 +3975,34 @@ html.split-motion::view-transition-new(split-text) {
 .vocab-button:hover,
 .vocab-split-menu:hover,
 .lynx-button:hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
+}
+
+.audio-bar-layout {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  height: 40px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+}
+
+.audio-bar-layout .audio-bar-control {
+  width: 36px;
+  height: 36px;
 }
 
 .audio-bar-theater.is-on,
 .audio-bar-loop.is-on,
-.audio-bar-layout.is-on {
+.audio-bar-layout .audio-bar-control.is-on {
   background: #f1f7fe;
   color: #2e75cd;
 }
 
-.layout-icon {
-  transform: scaleY(-1);
-}
-
 .status-pill:hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 button:focus-visible {
@@ -4363,7 +4380,7 @@ button:focus-visible {
     padding: 4px 8px;
     gap: 8px;
     border-radius: 999px;
-    background: #f8f9fa;
+    background: var(--bg-elevated);
   }
 
   .audio-bar-actions-core .audio-bar-control:not(.is-on),
@@ -4399,7 +4416,7 @@ button:focus-visible {
   }
 
   .audio-bar-progress {
-    background: #f8f9fa;
+    background: var(--bg-elevated);
   }
 
   .audio-bar-timeline {
@@ -4539,7 +4556,7 @@ button:focus-visible {
 }
 
 .review-filter-clear:hover:not(:disabled) {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .review-filter-clear:disabled {
@@ -4937,7 +4954,7 @@ button:focus-visible {
 }
 
 .review-card-close:hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .review-filter {
@@ -5039,7 +5056,7 @@ button:focus-visible {
   display: flex;
   padding: 8px;
   border-radius: 6px;
-  background: #f1f3f4;
+  background: var(--bg-elevated);
 }
 
 .review-filter-segment button {
@@ -5218,7 +5235,7 @@ button:focus-visible {
 }
 
 .review-filter-cancel {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
   color: var(--fg-default);
 }
 
@@ -5395,7 +5412,7 @@ button:focus-visible {
 }
 
 .lynx-chat-actions button:first-child {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
   color: var(--fg-default);
 }
 
@@ -5546,7 +5563,7 @@ button:focus-visible {
 }
 
 .widget-large-meaning.is-suggestion:not(.is-added):hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .widget-large-meaning.is-suggestion:not(.is-added):hover .widget-suggested-add {
@@ -5645,7 +5662,7 @@ button:focus-visible {
   flex-shrink: 0;
   padding: 9px;
   border-radius: 8px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .widget-large-meanings {
@@ -5653,7 +5670,7 @@ button:focus-visible {
   flex-direction: column;
   overflow: hidden;
   border-radius: 12px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .widget-large-meanings.is-plain {
@@ -5815,7 +5832,7 @@ button:focus-visible {
   min-height: 128px;
   padding: 12px;
   border-radius: 12px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .widget-large-sentence-original {
@@ -5874,7 +5891,7 @@ button:focus-visible {
   padding: 12px;
   border: 0;
   border-radius: 12px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
   color: var(--fg-default);
   font: inherit;
   font-size: 16px;
@@ -5933,7 +5950,7 @@ button:focus-visible {
 }
 
 .widget-large-add-meaning:hover {
-  background: #f8f9fa;
+  background: var(--bg-elevated);
 }
 
 .widget-large-add-meaning:hover .widget-large-add-icon {
@@ -6056,7 +6073,7 @@ button:focus-visible {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #f8f9fa;
+  background: var(--bg-elevated);
   color: var(--fg-default);
 }
 

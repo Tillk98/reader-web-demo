@@ -9,6 +9,7 @@ import {
   BookOpen,
   BookOpenText,
   CaseSensitive,
+  Captions,
   ChartColumn,
   ChevronDown,
   Clock,
@@ -23,7 +24,9 @@ import {
   Download,
   EllipsisVertical,
   FlaskConical,
-  GalleryVerticalEnd,
+  Columns2,
+  Rows2,
+  LayoutPanelLeft,
   Gauge,
   Keyboard,
   Languages,
@@ -34,6 +37,7 @@ import {
   Maximize,
   Minimize,
   MousePointerClick,
+  PanelLeft,
   PanelRight,
   Pause,
   Play,
@@ -43,7 +47,6 @@ import {
   Reply,
   Settings,
   SquarePen,
-  StepForward,
   Timer,
   Undo2,
   WrapText,
@@ -736,7 +739,24 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, onOpenD
   return menu;
 }
 
-function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio, theater, onTheater, showLayout, layoutChanged, onChangeLayout, showChangeLayout, onClose }) {
+function PlayerOptionsMenu({
+  loopAudio,
+  onLoopAudio,
+  showLoop,
+  showSpeed,
+  showTimer,
+  theater,
+  onTheater,
+  showTheater,
+  layoutSideBySide,
+  onChangeLayout,
+  showLayout,
+  syncText,
+  onSyncText,
+  dockPopup,
+  onDockPopup,
+  onClose,
+}) {
   const mobile = useIsMobile();
   const menu = (
     <div className={`reader-menu player-menu${mobile ? " is-sheet" : ""}`} role="menu">
@@ -750,31 +770,41 @@ function PlayerOptionsMenu({ autoAdvance, onAutoAdvance, loopAudio, onLoopAudio,
           </span>
         </div>
       </div>
-      <div className="reader-menu-body">
-        <MenuRow icon={<StepForward size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Auto-Advance" onClick={onAutoAdvance}>
-          <span className={`menu-toggle${autoAdvance ? " is-on" : ""}`} aria-hidden="true"><span /></span>
-        </MenuRow>
-        <MenuRow icon={<Gauge size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Playback Speed">
-          <span className="reader-menu-meta">1.0x</span>
-        </MenuRow>
-        <MenuRow icon={<Timer size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Timer">
-          <span className="reader-menu-meta">None</span>
-        </MenuRow>
-        <MenuRow icon={<Repeat2 size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Loop Audio" onClick={onLoopAudio}>
-          <span className={`menu-toggle${loopAudio ? " is-on" : ""}`} aria-hidden="true"><span /></span>
-        </MenuRow>
-        {showChangeLayout ? (
-          <MenuRow icon={<GalleryVerticalEnd className="layout-icon" size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Video on top" onClick={onChangeLayout}>
-            <span className={`menu-toggle${layoutChanged ? " is-on" : ""}`} aria-hidden="true"><span /></span>
+      <div className="reader-menu-group">
+        {showSpeed ? (
+          <MenuRow icon={<Gauge size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Playback Speed">
+            <span className="reader-menu-meta">1x</span>
+          </MenuRow>
+        ) : null}
+        {showTimer ? (
+          <MenuRow icon={<Timer size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Timer">
+            <span className="reader-menu-meta">None</span>
+          </MenuRow>
+        ) : null}
+        {showLoop ? (
+          <MenuRow icon={<Repeat2 size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Loop Audio" onClick={onLoopAudio}>
+            <span className={`menu-toggle${loopAudio ? " is-on" : ""}`} aria-hidden="true"><span /></span>
           </MenuRow>
         ) : null}
         {showLayout ? (
+          <MenuRow icon={<LayoutPanelLeft size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Layout" onClick={() => onChangeLayout(!layoutSideBySide)}>
+            <span className="reader-menu-meta">{layoutSideBySide ? "Landscape" : "Vertical"}</span>
+          </MenuRow>
+        ) : null}
+        {showTheater ? (
           <MenuRow icon={theater ? <Minimize size={16} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Theater mode" onClick={onTheater}>
             <span className={`menu-toggle${theater ? " is-on" : ""}`} aria-hidden="true"><span /></span>
           </MenuRow>
         ) : null}
-        <div className="reader-menu-divider" />
-        <MenuRow icon={<CaseSensitive size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Theme" />
+        <MenuRow icon={<Captions size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Sync text with audio" onClick={onSyncText}>
+          <span className={`menu-toggle${syncText ? " is-on" : ""}`} aria-hidden="true"><span /></span>
+        </MenuRow>
+        <MenuRow icon={<PanelLeft size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Dock the word popup" onClick={onDockPopup}>
+          <span className={`menu-toggle${dockPopup ? " is-on" : ""}`} aria-hidden="true"><span /></span>
+        </MenuRow>
+      </div>
+      <div className="reader-menu-divider" />
+      <div className="reader-menu-group">
         <MenuRow icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Settings" />
         <MenuRow icon={<img src={lynxIcon} alt="" width={16} height={16} />} label="Help">
           <span className="reader-menu-meta">Chat with Lynx <ChevronRight className="reader-menu-chevron" size={12} strokeWidth={1.5} absoluteStrokeWidth /></span>
@@ -1113,7 +1143,7 @@ export default function Reader() {
   const [playerShown, setPlayerShown] = useState(false);
   const [playerOpen, setPlayerOpen] = useState(false);
   const [theater, setTheater] = useState(false);
-  const [split, setSplit] = useState(true);
+  const [split, setSplit] = useState(false);
   const [theaterLine, setTheaterLine] = useState(null);
   const [theaterView, setTheaterView] = useState(null);
   const [lessonType, setLessonType] = useState("video");
@@ -1180,8 +1210,9 @@ export default function Reader() {
   }, [playerOpen, lessonHasVideo, theater, wide]);
   const [audioTime, setAudioTime] = useState(3 * 60 + 30);
   const [scrubbing, setScrubbing] = useState(false);
-  const [autoAdvance, setAutoAdvance] = useState(false);
   const [loopAudio, setLoopAudio] = useState(false);
+  const [syncText, setSyncText] = useState(true);
+  const [dockPopup, setDockPopup] = useState(false);
   const [theme, setTheme] = useState("light");
   const [fontStyle, setFontStyle] = useState("Rubik Original");
   const [textSize, setTextSize] = useState(DEFAULT_TEXT_LEVEL);
@@ -1219,8 +1250,9 @@ export default function Reader() {
     if (mode !== "page" || pageStarts !== null || !textRef.current) return;
     const nodes = [...textRef.current.querySelectorAll("[data-page-paragraph]")];
     if (!nodes.length) return;
-    const limit = textRef.current.clientHeight;
-    if (!limit) return;
+    const box = getComputedStyle(textRef.current);
+    const limit = textRef.current.clientHeight - (parseFloat(box.paddingTop) || 0) - (parseFloat(box.paddingBottom) || 0);
+    if (limit <= 0) return;
     const lines = nodes.flatMap((node) => {
       const lineHeight = parseFloat(getComputedStyle(node).lineHeight) || node.offsetHeight;
       const count = Math.max(1, Math.round(node.offsetHeight / lineHeight));
@@ -1458,9 +1490,8 @@ export default function Reader() {
     return { paragraphIndex, start, end };
   }
 
-  function toggleSplit() {
-    setPlayerMenu(false);
-    setSplit((on) => !on);
+  function chooseLayout(sideBySide) {
+    setSplit(sideBySide);
   }
 
   function toggleTheater() {
@@ -2341,6 +2372,29 @@ export default function Reader() {
   const showVideo = lessonHasVideo && media === "video" && playerShown;
   const sideColumn = (sidePanel && activeToken) || (lynxOpen && !mobile) || (reviewOpen && !mobile);
   const sideBySide = split && wide && (!sideColumn || roomy);
+  const loopOnBar = mobile ? playerOpen : !droppedPlayback.includes("loop");
+  const speedOnBar = mobile ? playerOpen : !droppedPlayback.includes("speed");
+  const timerOnBar = mobile ? playerOpen : !droppedPlayback.includes("timer");
+  const theaterOnBar = lessonHasVideo && (mobile ? playerOpen : !droppedPlayback.includes("theater"));
+  const layoutOnBar = lessonHasVideo && wide && !mobile && !theater && !droppedPlayback.includes("layout");
+  const audioMenuProps = {
+    loopAudio,
+    onLoopAudio: () => setLoopAudio((on) => !on),
+    showLoop: !loopOnBar,
+    showSpeed: !speedOnBar,
+    showTimer: !timerOnBar,
+    theater,
+    onTheater: toggleTheater,
+    showTheater: lessonHasVideo && !theaterOnBar,
+    layoutSideBySide: split,
+    onChangeLayout: chooseLayout,
+    showLayout: lessonHasVideo && wide && !layoutOnBar,
+    syncText,
+    onSyncText: () => setSyncText((on) => !on),
+    dockPopup,
+    onDockPopup: () => setDockPopup((on) => !on),
+    onClose: () => setPlayerMenu(false),
+  };
   const savedOpen = active?.phrase?.savedId
     ? savedPhrases.find((phrase) => phrase.id === active.phrase.savedId)
     : null;
@@ -3069,34 +3123,27 @@ export default function Reader() {
                   <button type="button" className="audio-bar-control audio-bar-timer" data-playback="timer" hidden={droppedPlayback.includes("timer")} aria-label="Timer">
                     <Timer size={20} strokeWidth={1.5} absoluteStrokeWidth />
                   </button>
-                  {lessonHasVideo && !theater && wide ? (
-                    <button type="button" className={`audio-bar-control audio-bar-layout${!split ? " is-on" : ""}`} data-playback="layout" hidden={droppedPlayback.includes("layout")} aria-label="Video on top" aria-pressed={!split} onClick={toggleSplit}>
-                      <GalleryVerticalEnd className="layout-icon" size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                    </button>
-                  ) : null}
                   {lessonHasVideo ? (
                     <button type="button" className={`audio-bar-control audio-bar-theater${theater ? " is-on" : ""}`} data-playback="theater" hidden={droppedPlayback.includes("theater")} aria-label={theater ? "Exit theater mode" : "Theater mode"} aria-pressed={theater} onClick={toggleTheater}>
                       {theater ? <Minimize size={20} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={20} strokeWidth={1.5} absoluteStrokeWidth />}
                     </button>
+                  ) : null}
+                  {lessonHasVideo && !theater && wide ? (
+                    <div className="audio-bar-layout" data-playback="layout" role="group" aria-label="Layout" hidden={droppedPlayback.includes("layout")}>
+                      <button type="button" className={`audio-bar-control${!split ? " is-on" : ""}`} aria-label="Portrait" aria-pressed={!split} onClick={() => chooseLayout(false)}>
+                        <Rows2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                      <button type="button" className={`audio-bar-control${split ? " is-on" : ""}`} aria-label="Landscape" aria-pressed={split} onClick={() => chooseLayout(true)}>
+                        <Columns2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                    </div>
                   ) : null}
                   <span className="player-menu-anchor">
                     <button type="button" className="audio-bar-control" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
                       <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
                     {playerMenu ? (
-                      <PlayerOptionsMenu
-                        autoAdvance={autoAdvance}
-                        onAutoAdvance={() => setAutoAdvance((on) => !on)}
-                        loopAudio={loopAudio}
-                        onLoopAudio={() => setLoopAudio((on) => !on)}
-                        theater={theater}
-                        onTheater={toggleTheater}
-                        showLayout={lessonHasVideo && droppedPlayback.includes("theater")}
-                        layoutChanged={!split}
-                        onChangeLayout={toggleSplit}
-                        showChangeLayout={lessonHasVideo && !theater && wide && droppedPlayback.includes("layout")}
-                        onClose={() => setPlayerMenu(false)}
-                      />
+                      <PlayerOptionsMenu {...audioMenuProps} />
                     ) : null}
                   </span>
                 </div>
@@ -3166,13 +3213,7 @@ export default function Reader() {
                       <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
                     {playerMenu ? (
-                      <PlayerOptionsMenu
-                        autoAdvance={autoAdvance}
-                        onAutoAdvance={() => setAutoAdvance((on) => !on)}
-                        loopAudio={loopAudio}
-                        onLoopAudio={() => setLoopAudio((on) => !on)}
-                        onClose={() => setPlayerMenu(false)}
-                      />
+                      <PlayerOptionsMenu {...audioMenuProps} />
                     ) : null}
                   </span>
                 </div>
@@ -3220,16 +3261,7 @@ export default function Reader() {
                     <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
                   </button>
                   {playerMenu ? (
-                    <PlayerOptionsMenu
-                      autoAdvance={autoAdvance}
-                      onAutoAdvance={() => setAutoAdvance((on) => !on)}
-                      loopAudio={loopAudio}
-                      onLoopAudio={() => setLoopAudio((on) => !on)}
-                      showLayout={lessonHasVideo}
-                      theater={theater}
-                      onTheater={toggleTheater}
-                      onClose={() => setPlayerMenu(false)}
-                    />
+                    <PlayerOptionsMenu {...audioMenuProps} />
                   ) : null}
                 </span>
               </div>

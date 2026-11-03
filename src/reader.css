@@ -3257,6 +3257,9 @@ html.split-motion::view-transition-new(split-text) {
   flex-shrink: 0;
   align-items: center;
   gap: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
 }
 
 .audio-bar-playback > [hidden] {
@@ -3607,16 +3610,28 @@ html.split-motion::view-transition-new(split-text) {
 }
 
 .audio-bar-pause:hover,
-.audio-bar-layout .audio-bar-control:hover:not(.is-on),
 .audio-bar-actions-core .audio-bar-control:hover:not(.is-on),
 .audio-bar-actions-core .audio-bar-speed:hover {
   background: var(--surface-default);
+}
+
+.reader:not(.is-theater) .audio-bar-playback .audio-bar-control:hover:not(.is-on),
+.reader:not(.is-theater) .audio-bar-playback .audio-bar-speed:hover {
+  background: var(--surface-default);
+}
+
+.reader:not(.is-theater) .audio-bar-layout .audio-bar-control:hover:not(.is-on) {
+  background: var(--bg-page);
 }
 
 .reader.is-theater .reader-footer,
 .reader.is-theater .audio-bar {
   border-top-color: #49525b;
   background: #1e2328;
+}
+
+.reader.is-theater .audio-bar-playback {
+  background: #262b30;
 }
 
 .reader.is-theater .audio-bar-progress {
@@ -4009,7 +4024,7 @@ html.split-motion::view-transition-new(split-text) {
   height: 40px;
   padding: 2px;
   border-radius: 999px;
-  background: var(--bg-elevated);
+  background: var(--surface-default);
 }
 
 .audio-bar-layout .audio-bar-control {

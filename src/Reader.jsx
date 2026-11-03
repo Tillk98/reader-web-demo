@@ -68,8 +68,9 @@ import coinIcon from "../assets/coin_icon.png";
 import flagIcon from "../assets/language_flag_icon.png";
 import pageModeIcon from "../assets/pagemode_icon_light.png";
 import sentenceModeIcon from "../assets/sentencemode_icon_light.png";
-import videoDefault from "../assets/YouTube_VideoPlayer_Default.png";
-import videoActive from "../assets/YouTube_VideoPlayer_UIActive.png";
+import videoPausedUi from "../assets/video-paused-ui.png";
+import videoPlayingUi from "../assets/video-playing-ui.png";
+import videoPlaying from "../assets/video-playing.png";
 import theaterVideo from "../assets/theater-video.jpg";
 import theaterChannel from "../assets/theater-channel.jpg";
 import theaterSuggested from "../assets/theater-suggested.jpg";
@@ -1140,6 +1141,8 @@ export default function Reader() {
   const [savedPhrases, setSavedPhrases] = useState([]);
   const [snackbar, setSnackbar] = useState(null);
   const [playing, setPlaying] = useState(false);
+  const [videoHovered, setVideoHovered] = useState(false);
+  const [videoChrome, setVideoChrome] = useState(true);
   const [playerShown, setPlayerShown] = useState(false);
   const [playerOpen, setPlayerOpen] = useState(false);
   const [theater, setTheater] = useState(false);
@@ -1148,6 +1151,7 @@ export default function Reader() {
   const [theaterView, setTheaterView] = useState(null);
   const [lessonType, setLessonType] = useState("video");
   const [media, setMedia] = useState("video");
+  const [videoClosed, setVideoClosed] = useState(false);
   const [playMenu, setPlayMenu] = useState(false);
   const lessonHasVideo = lessonType !== "audio";
   const [demoSettings, setDemoSettings] = useState(false);
@@ -1322,13 +1326,8 @@ export default function Reader() {
 
   function applyMode(next) {
     if (next === "sentence") setSentenceIndex(1);
-    const openingVideo = lessonHasVideo && media === "video" && next !== "page" && mode === "page" && !playerShown;
     transition(() => {
       setMode(next);
-      if (!openingVideo) return;
-      setPlayerShown(true);
-      setPlayerOpen(!mobile);
-      setPlaying(false);
     });
   }
 
@@ -1374,6 +1373,7 @@ export default function Reader() {
       setPlayerShown(false);
       setPlaying(false);
       setTheater(false);
+      if (lessonHasVideo && media === "video") setVideoClosed(true);
       if (lessonType === "video") setMedia("video");
     });
   }
@@ -1727,11 +1727,33 @@ export default function Reader() {
     transition(() => setPlaying(next));
   }
 
+  function onVideoPress() {
+    if (playing) {
+      setPlayback(false);
+      return;
+    }
+    if (playerShown) {
+      setPlayback(true);
+      return;
+    }
+    startPlayback("video");
+  }
+
+  useEffect(() => {
+    if (!playing || videoHovered) {
+      setVideoChrome(true);
+      return undefined;
+    }
+    const id = window.setTimeout(() => setVideoChrome(false), 3000);
+    return () => window.clearTimeout(id);
+  }, [playing, videoHovered]);
+
   function startPlayback(kind) {
     const asVideo = kind !== "audio" && lessonHasVideo;
     transition(() => {
       setPlayMenu(false);
       setMedia(asVideo ? "video" : "audio");
+      if (asVideo) setVideoClosed(false);
       setPlayerShown(true);
       setPlayerOpen(!mobile);
       setPlaying(true);
@@ -1758,6 +1780,7 @@ export default function Reader() {
       setPlayerShown(false);
       setPlaying(false);
       setTheater(false);
+      setVideoClosed(false);
       setMedia(next === "audio" ? "audio" : "video");
     });
   }
@@ -2369,7 +2392,8 @@ export default function Reader() {
   }, [phrasePick]);
 
   const activeToken = active ? lesson[active.paragraphIndex][active.tokenIndex] : null;
-  const showVideo = lessonHasVideo && media === "video" && playerShown;
+  const showVideo = lessonHasVideo && media === "video" && !videoClosed;
+  const videoFrame = playing ? (videoChrome ? videoPlayingUi : videoPlaying) : videoPausedUi;
   const sideColumn = (sidePanel && activeToken) || (lynxOpen && !mobile) || (reviewOpen && !mobile);
   const sideBySide = split && wide && (!sideColumn || roomy);
   const loopOnBar = mobile ? playerOpen : !droppedPlayback.includes("loop");
@@ -2685,7 +2709,11 @@ export default function Reader() {
 
           <div className="page-column">
           {showVideo ? (
-            <div className={`lesson-video${playing ? "" : " is-paused"}`}>
+            <div
+              className={`lesson-video${playing ? "" : " is-paused"}`}
+              onMouseEnter={() => setVideoHovered(true)}
+              onMouseLeave={() => setVideoHovered(false)}
+            >
               {theater ? (
                 <>
                   <div className="theater-picture">
@@ -2715,8 +2743,8 @@ export default function Reader() {
                 </>
               ) : (
                 <>
-                  <img src={videoDefault} alt="" />
-                  <img className="is-active" src={videoActive} alt="" />
+                  <img src={videoFrame} alt="" />
+                  <button type="button" className="lesson-video-hit" aria-label={playing ? "Pause" : "Play"} onClick={onVideoPress} />
                 </>
               )}
             </div>

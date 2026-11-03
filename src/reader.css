@@ -1907,14 +1907,18 @@ html.split-motion::view-transition-new(split-text) {
   object-fit: contain;
 }
 
-.lesson-video img.is-active {
-  opacity: 0;
-  transition: opacity 120ms ease;
+.lesson-video > img {
+  object-fit: cover;
 }
 
-.lesson-video:hover img.is-active,
-.lesson-video.is-paused img.is-active {
-  opacity: 1;
+.lesson-video-hit {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
 .mode-anchor {

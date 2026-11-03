@@ -3116,6 +3116,16 @@ export default function Reader() {
               </div>
               <div className="audio-bar-trailing">
                 <div className="audio-bar-playback">
+                  {lessonHasVideo && !theater && wide ? (
+                    <div className="audio-bar-layout" data-playback="layout" role="group" aria-label="Layout" hidden={droppedPlayback.includes("layout")}>
+                      <button type="button" className={`audio-bar-control${!split ? " is-on" : ""}`} aria-label="Portrait" aria-pressed={!split} onClick={() => chooseLayout(false)}>
+                        <Rows2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                      <button type="button" className={`audio-bar-control${split ? " is-on" : ""}`} aria-label="Landscape" aria-pressed={split} onClick={() => chooseLayout(true)}>
+                        <Columns2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                    </div>
+                  ) : null}
                   <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} data-playback="loop" hidden={droppedPlayback.includes("loop")} aria-label="Loop audio" aria-pressed={loopAudio} onClick={() => setLoopAudio((on) => !on)}>
                     <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
                   </button>
@@ -3127,16 +3137,6 @@ export default function Reader() {
                     <button type="button" className={`audio-bar-control audio-bar-theater${theater ? " is-on" : ""}`} data-playback="theater" hidden={droppedPlayback.includes("theater")} aria-label={theater ? "Exit theater mode" : "Theater mode"} aria-pressed={theater} onClick={toggleTheater}>
                       {theater ? <Minimize size={20} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={20} strokeWidth={1.5} absoluteStrokeWidth />}
                     </button>
-                  ) : null}
-                  {lessonHasVideo && !theater && wide ? (
-                    <div className="audio-bar-layout" data-playback="layout" role="group" aria-label="Layout" hidden={droppedPlayback.includes("layout")}>
-                      <button type="button" className={`audio-bar-control${!split ? " is-on" : ""}`} aria-label="Portrait" aria-pressed={!split} onClick={() => chooseLayout(false)}>
-                        <Rows2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                      </button>
-                      <button type="button" className={`audio-bar-control${split ? " is-on" : ""}`} aria-label="Landscape" aria-pressed={split} onClick={() => chooseLayout(true)}>
-                        <Columns2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                      </button>
-                    </div>
                   ) : null}
                   <span className="player-menu-anchor">
                     <button type="button" className="audio-bar-control" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>

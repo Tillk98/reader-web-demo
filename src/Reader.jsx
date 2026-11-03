@@ -756,6 +756,7 @@ function PlayerOptionsMenu({
   onSyncText,
   dockPopup,
   onDockPopup,
+  onOpenLynx,
   onClose,
 }) {
   const mobile = useIsMobile();
@@ -807,9 +808,7 @@ function PlayerOptionsMenu({
       <div className="reader-menu-divider" />
       <div className="reader-menu-group">
         <MenuRow icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Settings" />
-        <MenuRow icon={<img src={lynxIcon} alt="" width={16} height={16} />} label="Help">
-          <span className="reader-menu-meta">Chat with Lynx <ChevronRight className="reader-menu-chevron" size={12} strokeWidth={1.5} absoluteStrokeWidth /></span>
-        </MenuRow>
+        <MenuRow icon={<img src={lynxIcon} alt="" width={16} height={16} />} label="Ask Lynx AI" onClick={onOpenLynx} />
       </div>
     </div>
   );
@@ -2394,6 +2393,10 @@ export default function Reader() {
     onSyncText: () => setSyncText((on) => !on),
     dockPopup,
     onDockPopup: () => setDockPopup((on) => !on),
+    onOpenLynx: () => {
+      setPlayerMenu(false);
+      openLynx();
+    },
     onClose: () => setPlayerMenu(false),
   };
   const savedOpen = active?.phrase?.savedId

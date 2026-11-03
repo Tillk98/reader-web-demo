@@ -4028,12 +4028,13 @@ html.split-motion::view-transition-new(split-text) {
   height: 40px;
   padding: 2px;
   border-radius: 999px;
-  background: var(--surface-default);
+  background: #e3e5e7;
 }
 
 .audio-bar-layout .audio-bar-control {
   width: 36px;
   height: 36px;
+  color: var(--fg-muted);
 }
 
 .audio-bar-theater.is-on,

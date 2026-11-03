@@ -233,7 +233,7 @@ Left: pause, then replay 10 seconds. Right: the reading mode icon, 20px, then vo
 
 ### Vocabulary button
 
-The vocabulary control in the players is the cards icon. Clicking it opens Review actions. It does not start a review on its own. While the player is open on desktop and tablet, that icon sits in the player, a 48px target. It stays there while theater mode is on. Below 767px the expanded player does not include it. The collapsed player does: a 20px cards icon in a 40px target, between the reading mode and Lynx.
+The vocabulary control in the players is the cards icon. Clicking it opens Review actions. It does not start a review on its own. While the player is open on desktop and tablet, that icon sits in the player, a 48px target. It stays there while theater mode is on, and switches to the white cards icon so the speech bubble stays visible on the dark bar. Below 767px the expanded player does not include it. The collapsed player does: a 20px cards icon in a 40px target, between the reading mode and Lynx.
 
 On the default bar, while the player is closed, vocabulary is a split button on both desktop and mobile. No fill and no border. No divider between the cards icon and the chevron. Horizontal padding 4px. The cards icon and the chevron sit in that one section.
 

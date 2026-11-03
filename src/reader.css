@@ -3661,9 +3661,32 @@ html.split-motion::view-transition-new(split-text) {
 }
 
 .reader.is-theater .audio-bar-control img,
-.reader.is-theater .audio-bar-mode img,
-.reader.is-theater .audio-bar-vocab img {
+.reader.is-theater .audio-bar-mode img {
   filter: brightness(0) invert(1);
+}
+
+.audio-bar-vocab-mark {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.audio-bar-vocab-mark img {
+  position: absolute;
+  inset: 0;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  transition: opacity 320ms ease;
+}
+
+.audio-bar-vocab-mark .is-dark,
+.reader.is-theater .audio-bar-vocab-mark .is-light {
+  opacity: 0;
+}
+
+.reader.is-theater .audio-bar-vocab-mark .is-dark {
+  opacity: 1;
 }
 
 .reader.is-theater .audio-bar-vocab .vocab-split-menu {

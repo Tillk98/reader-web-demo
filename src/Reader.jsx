@@ -80,6 +80,7 @@ import replayIcon from "../assets/replay_10.svg";
 import skipBackIcon from "../assets/skip_back_5.svg";
 import skipForwardIcon from "../assets/skip_forward_5.svg";
 import reviewIcon from "../assets/review_icon_light.png";
+import reviewIconOnDark from "../assets/review-icon-on-dark.png";
 import lingqIcon from "../assets/LingQ-Icon.png";
 import thumbnail from "../assets/lesson-thumbnail.jpg";
 
@@ -3161,7 +3162,10 @@ export default function Reader() {
                   </div>
                   <span className="vocab-split audio-bar-vocab">
                     <button type="button" className="vocab-button" aria-label="Vocabulary" aria-haspopup="menu" aria-expanded={reviewMenu} onClick={() => { setModeMenu(false); setReviewMenu((open) => !open); }}>
-                      <img src={reviewIcon} alt="" width={24} height={24} />
+                      <span className="audio-bar-vocab-mark">
+                        <img className="is-light" src={reviewIcon} alt="" width={24} height={24} />
+                        <img className="is-dark" src={reviewIconOnDark} alt="" width={24} height={24} />
+                      </span>
                     </button>
                     {reviewMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
                   </span>

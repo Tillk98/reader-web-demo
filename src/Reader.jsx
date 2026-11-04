@@ -13,6 +13,7 @@ import {
   ChartColumn,
   ChevronDown,
   Clock,
+  FileCheck,
   FileText,
   ChevronLeft,
   ChevronRight,
@@ -1236,6 +1237,7 @@ export default function Reader() {
   const [reviewMenu, setReviewMenu] = useState(false);
   const [reviewCardMenu, setReviewCardMenu] = useState(false);
   const [reviewCard, setReviewCard] = useState(null);
+  const [reviewListView, setReviewListView] = useState(false);
   const [showMini, setShowMini] = useState(false);
   const [termMenu, setTermMenu] = useState(null);
   const [termPulse, setTermPulse] = useState(null);
@@ -2332,17 +2334,38 @@ export default function Reader() {
     setActive((current) => (current ? { ...current, size: "large", statusMenu: false } : current));
   }
 
+  function closeReview() {
+    setReviewCardMenu(false);
+    setReviewCard(null);
+    setReviewListView(false);
+  }
+
+  function dockReviewList() {
+    setReviewMenu(false);
+    setReviewCardMenu(false);
+    setReviewCard(null);
+    setReviewListView(false);
+    setReviewOpen(true);
+    if (mobile) setLynxOpen(false);
+    else setSidePanel(true);
+  }
+
   function chooseReviewAction(action) {
     setReviewMenu(false);
     setReviewCardMenu(false);
     if (action === "list") {
-      setReviewCard(null);
+      if (reviewCard) {
+        setReviewListView(true);
+        return;
+      }
+      setReviewListView(false);
       setReviewOpen(true);
       if (mobile) setLynxOpen(false);
       else setSidePanel(true);
       return;
     }
     if (REVIEW_CARDS[action]) {
+      setReviewListView(false);
       setReviewCard(action);
       if (reviewOpen) collapseSidePanel();
     }
@@ -2350,7 +2373,7 @@ export default function Reader() {
 
   function startDefaultReview() {
     if (mode === "scroll") {
-      chooseReviewAction("list");
+      chooseReviewAction("lesson");
       return;
     }
     chooseReviewAction(mode === "sentence" ? "sentence" : "page");
@@ -3067,24 +3090,67 @@ export default function Reader() {
             </button>
           </div>
           {reviewCard ? (
-            <div className="review-card-layer" onClick={() => { setReviewCardMenu(false); setReviewCard(null); }}>
-              <div className="review-card" role="dialog" aria-modal="true" aria-labelledby="review-card-title" onClick={(event) => event.stopPropagation()}>
-                <button type="button" className="review-card-close" aria-label="Close review" onClick={() => { setReviewCardMenu(false); setReviewCard(null); }}>
-                  <X size={18} strokeWidth={1.5} absoluteStrokeWidth />
-                </button>
-                <div className="review-card-tools">
-                  <button type="button" className="review-card-list" aria-label="Vocabulary List" onClick={() => chooseReviewAction("list")}>
-                    <List size={18} strokeWidth={1.5} absoluteStrokeWidth />
-                    <span aria-hidden="true">Vocabulary List</span>
+            <div className="review-card-layer" onClick={closeReview}>
+              <div
+                className="review-card"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={reviewListView ? undefined : "review-card-title"}
+                aria-label={reviewListView ? "Vocabulary" : undefined}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="review-card-header">
+                  <button type="button" className="review-card-close" aria-label="Close review" onClick={closeReview}>
+                    <X size={18} strokeWidth={1.5} absoluteStrokeWidth />
                   </button>
-                  <span className="review-card-options">
-                    <button type="button" aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => setReviewCardMenu((open) => !open)}>
-                      <EllipsisVertical size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                  <div className="review-card-tabs" role="tablist" aria-label="Review display">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={reviewListView}
+                      aria-label="List"
+                      className={reviewListView ? "is-on" : ""}
+                      onClick={() => { setReviewCardMenu(false); setReviewListView(true); }}
+                    >
+                      <List size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                      <span>List</span>
                     </button>
-                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} showList={false} /> : null}
-                  </span>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={!reviewListView}
+                      aria-label="Review"
+                      className={reviewListView ? "" : "is-on"}
+                      onClick={() => { setReviewCardMenu(false); setReviewListView(false); }}
+                    >
+                      <FileCheck size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                      <span>Review</span>
+                    </button>
+                  </div>
+                  <div className="review-card-tools">
+                    {reviewListView && !mobile ? (
+                      <button type="button" className="review-card-dock" aria-label="Dock vocabulary list" onClick={dockReviewList}>
+                        <PanelRight size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                    ) : null}
+                    <span className="review-card-options">
+                      <button type="button" aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => setReviewCardMenu((open) => !open)}>
+                        <EllipsisVertical size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                      {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} showList={false} /> : null}
+                    </span>
+                  </div>
                 </div>
-                <p id="review-card-title">{REVIEW_CARDS[reviewCard]}</p>
+                {reviewListView ? (
+                  <ReviewPanel
+                    terms={reviewTermsFrom(lesson, savedPhrases)}
+                    onStatus={changeReviewStatus}
+                    onClose={closeReview}
+                    embedded
+                  />
+                ) : (
+                  <p id="review-card-title">{REVIEW_CARDS[reviewCard]}</p>
+                )}
               </div>
             </div>
           ) : null}
@@ -3097,7 +3163,7 @@ export default function Reader() {
                 terms={reviewTermsFrom(lesson, savedPhrases)}
                 onStatus={changeReviewStatus}
                 onClose={collapseSidePanel}
-                compact={lynxOpen}
+                onReview={startDefaultReview}
               />
             ) : sidePanel && activeToken ? (
             <WidgetLarge
@@ -3131,7 +3197,7 @@ export default function Reader() {
               terms={reviewTermsFrom(lesson, savedPhrases)}
               onStatus={changeReviewStatus}
               onClose={() => setReviewOpen(false)}
-              sheet
+              onReview={startDefaultReview}
             />
           </div>,
           document.body,
@@ -3416,7 +3482,7 @@ export default function Reader() {
         />
       ) : null}
 
-      {reviewCard ? <button type="button" className="review-scrim" aria-label="Close review" onClick={() => { setReviewCardMenu(false); setReviewCard(null); }} /> : null}
+      {reviewCard ? <button type="button" className="review-scrim" aria-label="Close review" onClick={closeReview} /> : null}
     </div>
   );
 }

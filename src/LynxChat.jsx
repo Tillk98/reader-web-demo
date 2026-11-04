@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUp, ChevronDown, CornerDownRight, Mic, X } from "lucide-react";
+import { ArrowUp, CornerDownRight, Mic, X } from "lucide-react";
 import lynxIcon from "../assets/lynx_icon_light.png";
 import thumbnail from "../assets/lesson-thumbnail.jpg";
 
@@ -37,7 +37,7 @@ export default function LynxChat({ onClose, sheet = false }) {
             <p>Lynx AI</p>
           </div>
           <button type="button" className="lynx-chat-close" aria-label="Close Lynx" onClick={onClose}>
-            <ChevronDown size={18} strokeWidth={1.5} absoluteStrokeWidth />
+            <X size={18} strokeWidth={1.5} absoluteStrokeWidth />
           </button>
         </header>
       )}

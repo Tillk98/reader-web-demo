@@ -448,7 +448,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet }
   );
 }
 
-export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet = false }) {
+export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet = false, compact = false }) {
   const matchButtonRef = useRef(null);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState(null);
@@ -522,13 +522,15 @@ export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet 
           sheet={sheet}
         />
       ) : null}
-      {page === "filters" ? null : (
+      {page === "filters" && !compact ? null : (
       <>
       <header className="review-panel-header">
         <div className="review-header-bar">
           <h2>Vocabulary</h2>
           <PanelClose sheet={sheet} onClose={onClose} />
         </div>
+        {compact ? null : (
+        <>
         <form className="review-search" onSubmit={(event) => event.preventDefault()}>
             <input
               type="search"
@@ -625,6 +627,8 @@ export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet 
           </div>
           <p>{termCountLabel(listed.length, (appliedFilters ?? defaultFilters()).terms)}</p>
         </div>
+        </>
+        )}
       </header>
       <div className="review-list">
         {visible.map((item, index) => (
@@ -662,12 +666,14 @@ export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet 
           onClose={() => setOpenId(null)}
         />
       ) : null}
+      {compact ? null : (
       <footer className="review-footer">
         <button type="button" className="review-start" onClick={onReview}>
           <img src={reviewIcon} alt="" width={16} height={16} />
           {reviewActionLabel(listed.length, (appliedFilters ?? defaultFilters()).terms)}
         </button>
       </footer>
+      )}
       </>
       )}
     </section>

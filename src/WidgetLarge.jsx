@@ -474,6 +474,7 @@ export default function WidgetLarge({
   }, [onClose, docked, page, dictionaryFrom]);
 
   const savedMeanings = isNew ? [] : meanings;
+  const firstMeaning = (!isNew && meanings.find(Boolean)) || suggestions[0] || "";
   const suggestedMeanings = (glossary.length ? glossary : suggestions).slice(0, 5);
   const emptySuggestions = (glossary.length ? glossary : suggestions).slice(0, 2);
   const savedRef = useRef(savedMeanings);
@@ -500,7 +501,7 @@ export default function WidgetLarge({
       aria-label={term}
       onPointerDown={(event) => event.stopPropagation()}
     >
-      {page === "dictionaries" ? (
+      {!compact && page === "dictionaries" ? (
         <header className="widget-large-header widget-large-dict-header">
           <button type="button" className="widget-large-heading-chevron" aria-label="Back" onClick={() => setPage(dictionaryFrom)}>
             <ChevronLeft size={16} strokeWidth={1.33} absoluteStrokeWidth />
@@ -530,6 +531,16 @@ export default function WidgetLarge({
         </header>
       )}
 
+      {compact ? (
+        <div className="widget-large-compact-meaning">
+          <div className="widget-large-meanings">
+            <div className="widget-large-meaning">
+              <p>{firstMeaning}</p>
+              <img className="widget-large-locale" src={localeFlag} alt="" width={22} height={16} />
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="widget-large-scroll">
         <div className="widget-large-body">
           {page === "meanings" ? (
@@ -680,8 +691,9 @@ export default function WidgetLarge({
         </div>
         <div className="widget-large-fade" aria-hidden="true" />
       </div>
+      )}
 
-      {page === "dictionaries" ? null : (
+      {compact || page !== "dictionaries" ? (
         <footer className="widget-large-footer">
           <div className="widget-large-status-bar">
             {WORD_BAR_STATUSES.map((item) => (
@@ -694,7 +706,7 @@ export default function WidgetLarge({
             ))}
           </div>
         </footer>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -26,7 +26,6 @@ import {
   FlaskConical,
   Columns2,
   Rows2,
-  LayoutPanelLeft,
   Gauge,
   Keyboard,
   Languages,
@@ -37,7 +36,6 @@ import {
   Maximize,
   Minimize,
   MousePointerClick,
-  PanelLeft,
   PanelRight,
   Pause,
   Play,
@@ -214,25 +212,26 @@ const REVIEW_ACTIONS = [
 
 function ReviewActionsMenu({ onChoose }) {
   return (
-    <div className="review-menu vocab-menu" role="menu">
-      {REVIEW_ACTIONS.map((item) => {
-        const Icon = item.icon;
-        return (
-          <div className="review-menu-item" key={item.id}>
-            <button type="button" role="menuitem" onClick={() => onChoose(item.id)}>
-              <Icon size={16} strokeWidth={1.5} absoluteStrokeWidth />
-              {item.label}
-            </button>
-          </div>
-        );
-      })}
-      <div className="vocab-menu-divider" />
-      <div className="review-menu-item">
-        <button type="button" role="menuitem" onClick={() => onChoose("manage")}>
-          <img src={lingqIcon} alt="" width={16} height={16} />
-          <span>Manage Vocabulary</span>
-          <ArrowUpRight size={14} strokeWidth={1.5} absoluteStrokeWidth />
-        </button>
+    <div className="reader-menu vocab-menu" role="menu">
+      <div className="reader-menu-group">
+        {REVIEW_ACTIONS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <MenuRow
+              key={item.id}
+              role="menuitem"
+              icon={<Icon size={16} strokeWidth={1.5} absoluteStrokeWidth />}
+              label={item.label}
+              onClick={() => onChoose(item.id)}
+            />
+          );
+        })}
+      </div>
+      <div className="reader-menu-divider" />
+      <div className="reader-menu-group">
+        <MenuRow role="menuitem" icon={<img src={lingqIcon} alt="" width={16} height={16} />} label="Manage Vocabulary" onClick={() => onChoose("manage")}>
+          <ArrowUpRight className="reader-menu-chevron" size={12} strokeWidth={1.5} absoluteStrokeWidth />
+        </MenuRow>
       </div>
     </div>
   );
@@ -240,20 +239,20 @@ function ReviewActionsMenu({ onChoose }) {
 
 function ModeMenu({ mode, onChoose }) {
   return (
-    <div className="mode-menu" role="menu">
-      {MODES.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          role="menuitemradio"
-          aria-checked={item.id === mode}
-          className={`mode-menu-item${item.id === mode ? " is-current" : ""}`}
-          onClick={() => onChoose(item.id)}
-        >
-          {modeIcon(item.id)}
-          <span>{item.label}</span>
-        </button>
-      ))}
+    <div className="mode-menu reader-menu" role="menu">
+      <div className="reader-menu-group">
+        {MODES.map((item) => (
+          <MenuRow
+            key={item.id}
+            role="menuitemradio"
+            checked={item.id === mode}
+            current={item.id === mode}
+            icon={modeIcon(item.id, 16)}
+            label={item.label}
+            onClick={() => onChoose(item.id)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -317,10 +316,16 @@ function useIsWide() {
   return useMinWidth(1025);
 }
 
-function MenuRow({ icon, label, onClick, children, destructive }) {
+function MenuRow({ icon, label, onClick, children, destructive, role, checked, current }) {
   return (
     <div className="reader-menu-row">
-      <button type="button" className={`reader-menu-item${destructive ? " is-destructive" : ""}`} onClick={onClick}>
+      <button
+        type="button"
+        role={role}
+        aria-checked={checked}
+        className={`reader-menu-item${destructive ? " is-destructive" : ""}${current ? " is-current" : ""}`}
+        onClick={onClick}
+      >
         {icon}
         <span>{label}</span>
         {children}
@@ -755,12 +760,11 @@ function PlayerOptionsMenu({
   showLayout,
   syncText,
   onSyncText,
-  dockPopup,
-  onDockPopup,
   onOpenLynx,
   onClose,
 }) {
   const mobile = useIsMobile();
+  const showView = showLayout || showTheater;
   const menu = (
     <div className={`reader-menu player-menu${mobile ? " is-sheet" : ""}`} role="menu">
       {mobile ? <PlayerDragHandle label="Close menu" onDragDown={onClose} /> : null}
@@ -789,25 +793,29 @@ function PlayerOptionsMenu({
             <span className={`menu-toggle${loopAudio ? " is-on" : ""}`} aria-hidden="true"><span /></span>
           </MenuRow>
         ) : null}
-        {showLayout ? (
-          <MenuRow icon={<LayoutPanelLeft size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Layout" onClick={() => onChangeLayout(!layoutSideBySide)}>
-            <span className="reader-menu-meta">{layoutSideBySide ? "Landscape" : "Vertical"}</span>
-          </MenuRow>
-        ) : null}
-        {showTheater ? (
-          <MenuRow icon={theater ? <Minimize size={16} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Theater mode" onClick={onTheater}>
-            <span className={`menu-toggle${theater ? " is-on" : ""}`} aria-hidden="true"><span /></span>
-          </MenuRow>
-        ) : null}
+      </div>
+      {showView ? (
+        <>
+          <div className="reader-menu-divider" />
+          <div className="reader-menu-group">
+            {showLayout ? (
+              <MenuRow icon={<Columns2 size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Layout" onClick={() => onChangeLayout(!layoutSideBySide)}>
+                <span className="reader-menu-meta">{layoutSideBySide ? "Landscape" : "Vertical"}</span>
+              </MenuRow>
+            ) : null}
+            {showTheater ? (
+              <MenuRow icon={theater ? <Minimize size={16} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Theater mode" onClick={onTheater}>
+                <span className={`menu-toggle${theater ? " is-on" : ""}`} aria-hidden="true"><span /></span>
+              </MenuRow>
+            ) : null}
+          </div>
+        </>
+      ) : null}
+      <div className="reader-menu-divider" />
+      <div className="reader-menu-group">
         <MenuRow icon={<Captions size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Sync text with audio" onClick={onSyncText}>
           <span className={`menu-toggle${syncText ? " is-on" : ""}`} aria-hidden="true"><span /></span>
         </MenuRow>
-        <MenuRow icon={<PanelLeft size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Dock the word popup" onClick={onDockPopup}>
-          <span className={`menu-toggle${dockPopup ? " is-on" : ""}`} aria-hidden="true"><span /></span>
-        </MenuRow>
-      </div>
-      <div className="reader-menu-divider" />
-      <div className="reader-menu-group">
         <MenuRow icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Settings" />
         <MenuRow icon={<img src={lynxIcon} alt="" width={16} height={16} />} label="Ask Lynx AI" onClick={onOpenLynx} />
       </div>
@@ -1216,7 +1224,6 @@ export default function Reader() {
   const [scrubbing, setScrubbing] = useState(false);
   const [loopAudio, setLoopAudio] = useState(false);
   const [syncText, setSyncText] = useState(true);
-  const [dockPopup, setDockPopup] = useState(false);
   const [theme, setTheme] = useState("light");
   const [fontStyle, setFontStyle] = useState("Rubik Original");
   const [textSize, setTextSize] = useState(DEFAULT_TEXT_LEVEL);
@@ -1226,6 +1233,7 @@ export default function Reader() {
   const [lynxOpen, setLynxOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewMenu, setReviewMenu] = useState(false);
+  const [reviewCardMenu, setReviewCardMenu] = useState(false);
   const [reviewCard, setReviewCard] = useState(null);
   const [showMini, setShowMini] = useState(false);
   const [termMenu, setTermMenu] = useState(null);
@@ -1594,6 +1602,23 @@ export default function Reader() {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [reviewMenu]);
+
+  useEffect(() => {
+    if (!reviewCardMenu) return undefined;
+    function onPointerDown(event) {
+      if (event.target.closest?.(".review-card-options")) return;
+      setReviewCardMenu(false);
+    }
+    function onKeyDown(event) {
+      if (event.key === "Escape") setReviewCardMenu(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [reviewCardMenu]);
 
   useEffect(() => {
     if (!modeMenu) return undefined;
@@ -2308,6 +2333,7 @@ export default function Reader() {
 
   function chooseReviewAction(action) {
     setReviewMenu(false);
+    setReviewCardMenu(false);
     if (action === "list") {
       setReviewCard(null);
       setReviewOpen(true);
@@ -2396,27 +2422,20 @@ export default function Reader() {
   const videoFrame = playing ? (videoChrome ? videoPlayingUi : videoPlaying) : videoPausedUi;
   const sideColumn = (sidePanel && activeToken) || (lynxOpen && !mobile) || (reviewOpen && !mobile);
   const sideBySide = split && wide && (!sideColumn || roomy);
-  const loopOnBar = mobile ? playerOpen : !droppedPlayback.includes("loop");
-  const speedOnBar = mobile ? playerOpen : !droppedPlayback.includes("speed");
-  const timerOnBar = mobile ? playerOpen : !droppedPlayback.includes("timer");
-  const theaterOnBar = lessonHasVideo && (mobile ? playerOpen : !droppedPlayback.includes("theater"));
-  const layoutOnBar = lessonHasVideo && wide && !mobile && !theater && !droppedPlayback.includes("layout");
   const audioMenuProps = {
     loopAudio,
     onLoopAudio: () => setLoopAudio((on) => !on),
-    showLoop: !loopOnBar,
-    showSpeed: !speedOnBar,
-    showTimer: !timerOnBar,
+    showLoop: true,
+    showSpeed: true,
+    showTimer: true,
     theater,
     onTheater: toggleTheater,
-    showTheater: lessonHasVideo && !theaterOnBar,
+    showTheater: lessonHasVideo,
     layoutSideBySide: split,
     onChangeLayout: chooseLayout,
-    showLayout: lessonHasVideo && wide && !layoutOnBar,
+    showLayout: lessonHasVideo && wide && !theater,
     syncText,
     onSyncText: () => setSyncText((on) => !on),
-    dockPopup,
-    onDockPopup: () => setDockPopup((on) => !on),
     onOpenLynx: () => {
       setPlayerMenu(false);
       openLynx();
@@ -3047,11 +3066,23 @@ export default function Reader() {
             </button>
           </div>
           {reviewCard ? (
-            <div className="review-card-layer">
-              <div className="review-card" role="dialog" aria-modal="true" aria-labelledby="review-card-title">
-                <button type="button" className="review-card-close" aria-label="Close review" onClick={() => setReviewCard(null)}>
-                  <X size={16} strokeWidth={1.5} absoluteStrokeWidth />
+            <div className="review-card-layer" onClick={() => { setReviewCardMenu(false); setReviewCard(null); }}>
+              <div className="review-card" role="dialog" aria-modal="true" aria-labelledby="review-card-title" onClick={(event) => event.stopPropagation()}>
+                <button type="button" className="review-card-close" aria-label="Close review" onClick={() => { setReviewCardMenu(false); setReviewCard(null); }}>
+                  <X size={18} strokeWidth={1.5} absoluteStrokeWidth />
                 </button>
+                <div className="review-card-tools">
+                  <button type="button" className="review-card-list" aria-label="Vocabulary List" onClick={() => chooseReviewAction("list")}>
+                    <List size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                    <span aria-hidden="true">Vocabulary List</span>
+                  </button>
+                  <span className="review-card-options">
+                    <button type="button" aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => setReviewCardMenu((open) => !open)}>
+                      <EllipsisVertical size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
+                  </span>
+                </div>
                 <p id="review-card-title">{REVIEW_CARDS[reviewCard]}</p>
               </div>
             </div>
@@ -3066,6 +3097,7 @@ export default function Reader() {
                 onStatus={changeReviewStatus}
                 onClose={collapseSidePanel}
                 onReview={startDefaultReview}
+                compact={lynxOpen}
               />
             ) : sidePanel && activeToken ? (
             <WidgetLarge
@@ -3148,16 +3180,6 @@ export default function Reader() {
               </div>
               <div className="audio-bar-trailing">
                 <div className="audio-bar-playback">
-                  {lessonHasVideo && !theater && wide ? (
-                    <div className="audio-bar-layout" data-playback="layout" role="group" aria-label="Layout" hidden={droppedPlayback.includes("layout")}>
-                      <button type="button" className={`audio-bar-control${!split ? " is-on" : ""}`} aria-label="Portrait" aria-pressed={!split} onClick={() => chooseLayout(false)}>
-                        <Rows2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                      </button>
-                      <button type="button" className={`audio-bar-control${split ? " is-on" : ""}`} aria-label="Landscape" aria-pressed={split} onClick={() => chooseLayout(true)}>
-                        <Columns2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                      </button>
-                    </div>
-                  ) : null}
                   <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} data-playback="loop" hidden={droppedPlayback.includes("loop")} aria-label="Loop audio" aria-pressed={loopAudio} onClick={() => setLoopAudio((on) => !on)}>
                     <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
                   </button>
@@ -3165,6 +3187,13 @@ export default function Reader() {
                   <button type="button" className="audio-bar-control audio-bar-timer" data-playback="timer" hidden={droppedPlayback.includes("timer")} aria-label="Timer">
                     <Timer size={20} strokeWidth={1.5} absoluteStrokeWidth />
                   </button>
+                </div>
+                <div className="audio-bar-tools">
+                  {lessonHasVideo && !theater && wide ? (
+                    <button type="button" className="audio-bar-control" data-playback="layout" hidden={droppedPlayback.includes("layout")} aria-label={split ? "Landscape" : "Portrait"} onClick={() => chooseLayout(!split)}>
+                      <Rows2 className={`audio-bar-layout-icon${split ? " is-landscape" : ""}`} size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                  ) : null}
                   {lessonHasVideo ? (
                     <button type="button" className={`audio-bar-control audio-bar-theater${theater ? " is-on" : ""}`} data-playback="theater" hidden={droppedPlayback.includes("theater")} aria-label={theater ? "Exit theater mode" : "Theater mode"} aria-pressed={theater} onClick={toggleTheater}>
                       {theater ? <Minimize size={20} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={20} strokeWidth={1.5} absoluteStrokeWidth />}
@@ -3192,13 +3221,12 @@ export default function Reader() {
                     </div>
                   </div>
                   <span className="vocab-split audio-bar-vocab">
-                    <button type="button" className="vocab-button" aria-label="Vocabulary" aria-haspopup="menu" aria-expanded={reviewMenu} onClick={() => { setModeMenu(false); setReviewMenu((open) => !open); }}>
+                    <button type="button" className="vocab-button" aria-label="Vocabulary" onClick={startDefaultReview}>
                       <span className="audio-bar-vocab-mark">
                         <img className="is-light" src={reviewIcon} alt="" width={24} height={24} />
                         <img className="is-dark" src={reviewIconOnDark} alt="" width={24} height={24} />
                       </span>
                     </button>
-                    {reviewMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
                   </span>
                   <button type="button" className="audio-bar-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
                     <span className="audio-bar-lynx-mark">
@@ -3283,10 +3311,9 @@ export default function Reader() {
                   {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
                 </span>
                 <span className="vocab-split audio-player-vocab">
-                  <button type="button" className="vocab-button" aria-label="Vocabulary" aria-haspopup="menu" aria-expanded={reviewMenu} onClick={() => { setModeMenu(false); setReviewMenu((open) => !open); }}>
+                  <button type="button" className="vocab-button" aria-label="Vocabulary" onClick={startDefaultReview}>
                     <img src={reviewIcon} alt="" width={20} height={20} />
                   </button>
-                  {reviewMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
                 </span>
                 <button type="button" className="audio-player-icon audio-player-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
                   <img src={lynxIcon} alt="" width={20} height={20} />
@@ -3390,7 +3417,7 @@ export default function Reader() {
         />
       ) : null}
 
-      {reviewCard ? <div className="review-scrim" aria-hidden="true" /> : null}
+      {reviewCard ? <button type="button" className="review-scrim" aria-label="Close review" onClick={() => { setReviewCardMenu(false); setReviewCard(null); }} /> : null}
     </div>
   );
 }

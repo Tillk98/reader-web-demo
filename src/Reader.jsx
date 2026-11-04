@@ -210,11 +210,12 @@ const REVIEW_ACTIONS = [
   { id: "list", label: "Vocabulary List", icon: List },
 ];
 
-function ReviewActionsMenu({ onChoose }) {
+function ReviewActionsMenu({ onChoose, showList = true }) {
+  const actions = showList ? REVIEW_ACTIONS : REVIEW_ACTIONS.filter((item) => item.id !== "list");
   return (
     <div className="reader-menu vocab-menu" role="menu">
       <div className="reader-menu-group">
-        {REVIEW_ACTIONS.map((item) => {
+        {actions.map((item) => {
           const Icon = item.icon;
           return (
             <MenuRow
@@ -3080,7 +3081,7 @@ export default function Reader() {
                     <button type="button" aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => setReviewCardMenu((open) => !open)}>
                       <EllipsisVertical size={18} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
-                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
+                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} showList={false} /> : null}
                   </span>
                 </div>
                 <p id="review-card-title">{REVIEW_CARDS[reviewCard]}</p>
@@ -3096,7 +3097,6 @@ export default function Reader() {
                 terms={reviewTermsFrom(lesson, savedPhrases)}
                 onStatus={changeReviewStatus}
                 onClose={collapseSidePanel}
-                onReview={startDefaultReview}
                 compact={lynxOpen}
               />
             ) : sidePanel && activeToken ? (
@@ -3131,7 +3131,6 @@ export default function Reader() {
               terms={reviewTermsFrom(lesson, savedPhrases)}
               onStatus={changeReviewStatus}
               onClose={() => setReviewOpen(false)}
-              onReview={startDefaultReview}
               sheet
             />
           </div>,

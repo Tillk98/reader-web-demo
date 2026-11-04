@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
 import { meaningsFor } from "./meanings.js";
-import reviewIcon from "../assets/Vocabulary_Blue.png";
 
 const SORTS = ["Importance", "Status", "Creation Date", "A-Z", "Z-A"];
 const MATCHES = ["Contains", "Starts With", "Ends With", "Source Text Containing", "Meaning Containing"];
@@ -78,10 +77,6 @@ function termNoun(terms, capitalized) {
 
 function termCountLabel(count, terms) {
   return `${count} ${termNoun(terms, false)}${count === 1 ? "" : "s"}`;
-}
-
-function reviewActionLabel(count, terms) {
-  return `Review ${count} ${termNoun(terms, true)}${count === 1 ? "" : "s"}`;
 }
 
 export function reviewTermsFrom(lesson, savedPhrases) {
@@ -448,7 +443,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet }
   );
 }
 
-export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet = false, compact = false }) {
+export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, compact = false }) {
   const matchButtonRef = useRef(null);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState(null);
@@ -666,14 +661,6 @@ export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet 
           onClose={() => setOpenId(null)}
         />
       ) : null}
-      {compact ? null : (
-      <footer className="review-footer">
-        <button type="button" className="review-start" onClick={onReview}>
-          <img src={reviewIcon} alt="" width={16} height={16} />
-          {reviewActionLabel(listed.length, (appliedFilters ?? defaultFilters()).terms)}
-        </button>
-      </footer>
-      )}
       </>
       )}
     </section>

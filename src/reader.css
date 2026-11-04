@@ -4848,7 +4848,7 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 0 12px 64px;
+  padding: 0 12px 16px;
 }
 
 .review-row {
@@ -4912,38 +4912,6 @@ button:focus-visible {
 .review-divider {
   height: 1px;
   background: var(--border);
-}
-
-.review-footer {
-  position: absolute;
-  right: 12px;
-  bottom: 16px;
-  z-index: 3;
-  display: flex;
-  justify-content: flex-end;
-  pointer-events: none;
-}
-
-.review-start {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border: 1px solid var(--fg-secondary);
-  border-radius: 6px;
-  background: #f1f7fe;
-  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.06);
-  color: var(--fg-secondary);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 18px;
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-.review-start img {
-  width: 16px;
-  height: 16px;
 }
 
 .review-scrim {

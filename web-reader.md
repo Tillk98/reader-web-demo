@@ -243,7 +243,7 @@ On the default bar, while the player is closed, vocabulary is a split button on 
 
 [Review actions](https://www.figma.com/design/dROMt3II5ySPNXRqUZrbjQ?node-id=530-8308) matches that frame’s items. The rows use the reader-menu row, in two groups split by a divider. It opens upward, 16px above the split button on the default bar, aligned to the button’s right edge. There is no lesson header.
 
-**Default for the cards icon on the default bar, in the players, and for the Review button inside the list:**
+**Default for the cards icon on the default bar and in the players:**
 
 - **Page mode** opens Page Vocabulary Review.
 - **Sentence mode** opens Sentence Vocabulary Review.
@@ -257,7 +257,7 @@ A menu choice overrides the mode.
 
 ### Review
 
-Review Page, Review Due, Review Lesson, and the mode’s default review each open that vocabulary review over the lesson. Closing it, or clicking the page behind it, returns to the lesson. Opening a review also closes the vocabulary list if that panel is open. An ellipsis at the top right of every review opens the same Review actions menu, dropping down from that button. Just left of it, a Vocabulary List button uses Lucide List at 18px and the label “Vocabulary List”. It opens the vocabulary list and closes the review. When the card is 720px or narrower, the label hides and the control is the same ghost button. The close X at the top left, that ellipsis, and the header buttons on the side panels are ghost buttons: no border, transparent until hover fills `#F8F9FA`, full radius. Choosing a review there switches the overlay. Vocabulary List closes the overlay and opens the list.
+Review Page, Review Due, Review Lesson, and the mode’s default review each open that vocabulary review over the lesson. Closing it, or clicking the page behind it, returns to the lesson. Opening a review also closes the vocabulary list if that panel is open. An ellipsis at the top right of every review opens the same Review actions menu, dropping down from that button, without the Vocabulary List row. Just left of it, a Vocabulary List button uses Lucide List at 18px and the label “Vocabulary List”. It opens the vocabulary list and closes the review. When the card is 720px or narrower, the label hides and the control is the same ghost button. The close X at the top left, that ellipsis, and the header buttons on the side panels are ghost buttons: no border, transparent until hover fills `#F8F9FA`, full radius. Choosing a review there switches the overlay.
 
 ## Side panel
 
@@ -282,7 +282,7 @@ Default filter: All terms, SRS Due off, statuses New, Recognized, and Familiar. 
 - Search narrows the rows only. Contains matches the term or the meaning. Starts With and Ends With match the term. Source Text Containing matches the term. Meaning Containing matches the meaning. The match control hides once the field has text, and its chevron points up while the menu is open.
 - Sort: Importance and Creation Date keep list order. Status runs Blue, New, Recognized, Familiar, Learned, Known, Ignored. A–Z and Z–A use German sort.
 - A row’s status chip opens the vertical status menu and writes that status onto the phrase, or onto every lesson copy of the word. Choosing the current status leaves it unchanged. The row’s audio plays that term.
-- The Review button uses the same count as the header: “Review 25 Terms”, “Review 5 Words”, “Review 1 Phrase”. It starts the same default review as the bottom-bar vocabulary button.
+- The list has no floating Review button.
 - Course, Lesson, and Tags open those filters. Search submit runs the search.
 
 ### Filters
@@ -294,10 +294,6 @@ Status is chips, not a slider. Order: Blue Words (circle-plus), Ignored (eye-off
 - Select all sits in the Status heading, opposite the label, space-between. Text first, then an 18px checkbox. Checked is `--fg-secondary` with a white check. Mixed is a blue dash on `#F1F7FE`. Empty is white with a `#D1D6D9` stroke. The label stays “Select all”.
 - No back chevron. The header is the title, Clear, then the panel button. On the mobile sheet that last control is an X. Cancel is the way back.
 - Clear is the text pill from [Filters, Clear](https://www.figma.com/design/dROMt3II5ySPNXRqUZrbjQ?node-id=524-7560): “Clear” plus a 16px refresh icon, gap 6px, padding 8px 12px, radius 999, `1px var(--border)`, 14/500/18, color `--fg-muted`. Hover `#F8F9FA`. Disabled text and icon are `#D1D6D9`. On press the icon spins one full turn (500ms), then the button shows disabled. Reduced motion skips the spin.
-
-### Review button
-
-Same blue button: `1px var(--fg-secondary)`, fill `#F1F7FE`, 14/500/18, 16px vocabulary icon. The label is the filtered count, not “Start Review”. Noun follows the terms filter. Singular when the count is 1.
 
 ## Lynx
 

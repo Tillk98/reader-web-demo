@@ -243,21 +243,21 @@ On the default bar, while the player is closed, vocabulary is a split button on 
 
 [Review actions](https://www.figma.com/design/dROMt3II5ySPNXRqUZrbjQ?node-id=530-8308) matches that frame’s items. The rows use the reader-menu row, in two groups split by a divider. It opens upward, 16px above the split button on the default bar, aligned to the button’s right edge. There is no lesson header.
 
-**Default for the cards icon on the default bar, in the players, and for the Review button inside the list:**
+**Default for the cards icon on the default bar and in the players:**
 
 - **Page mode** opens Page Vocabulary Review.
 - **Sentence mode** opens Sentence Vocabulary Review.
-- **Scroll mode** opens the vocabulary list in the side panel.
+- **Scroll mode** opens Lesson Vocabulary Review.
 
 A menu choice overrides the mode.
 
 - **Review Page**, **Review Due**, and **Review Lesson** open that review: Page Vocabulary Review, Due Vocabulary Review, or Lesson Vocabulary Review.
-- **Vocabulary List** opens the list and closes any review overlay.
+- **Vocabulary List** opens the list in the side panel when no review is open. While a review overlay is open, it switches that overlay to the list.
 - **Manage Vocabulary** opens Manage Vocabulary.
 
 ### Review
 
-Review Page, Review Due, Review Lesson, and the mode’s default review each open that vocabulary review over the lesson. Closing it, or clicking the page behind it, returns to the lesson. Opening a review also closes the vocabulary list if that panel is open. An ellipsis at the top right of every review opens the same Review actions menu, dropping down from that button. Just left of it, a Vocabulary List button uses Lucide List at 18px and the label “Vocabulary List”. It opens the vocabulary list and closes the review. When the card is 720px or narrower, the label hides and the control is the same ghost button. The close X at the top left, that ellipsis, and the header buttons on the side panels are ghost buttons: no border, transparent until hover fills `#F8F9FA`, full radius. Choosing a review there switches the overlay. Vocabulary List closes the overlay and opens the list.
+Review Page, Review Due, Review Lesson, and the mode’s default review each open that vocabulary review over the lesson. Closing it, or clicking the page behind it, returns to the lesson. Opening a review also closes the vocabulary list if that panel is open. The header keeps the close X on the left and the ellipsis on the right. Centered between them are two tabs: Lucide List with the label List, then Lucide FileCheck with the label Review. The selected tab is `#0A0A0A` for the icon and the label, with a 2px `#2E75CD` underline. The other tab is `#49525B` for the icon and the label, with no underline. Below 767px the labels hide and each tab is the icon only. Review is selected whenever the overlay opens. Scroll mode opens Lesson Vocabulary Review, since that mode has no page or sentence review. The review card stays 1000px wide. The list hides its own title bar and fills that card. Choosing review returns to the review already open. In the list, a side-panel button sits just left of the ellipsis. It uses Lucide PanelRight at 18px. Pressing it closes the overlay and docks the vocabulary list in the side panel. Below 767px that button is not shown. The ellipsis opens the same Review actions menu, dropping down from that button, without the Vocabulary List row. Choosing a review there switches the overlay back to review view. The close X, the dock button, the ellipsis, and the header buttons on the side panels are ghost buttons: no border, transparent until hover fills `#F8F9FA`, full radius.
 
 ## Side panel
 
@@ -279,10 +279,11 @@ Default filter: All terms, SRS Due off, statuses New, Recognized, and Familiar. 
 - **Cancel** drops the draft and returns to the list. **Apply** commits it. **Clear** restores the draft to the default. It is disabled when the draft already matches the default, including right after a clear. The refresh icon spins once first.
 - **Select all** turns every status on, including Blue Words. When every status is already on, it turns them all off. Some selected shows the mixed checkbox. Chips toggle one status at a time.
 - Words and Phrases split the list by saved phrase. SRS Due shows the terms that are due.
+- Above 767px in the review overlay, the search grows up to 550px. Filter and sort sit at the right, then a 1px divider, then the count. Below 767px the search fills the header on its own row, above filter, sort, and the count. The side panel keeps that stacked header.
 - Search narrows the rows only. Contains matches the term or the meaning. Starts With and Ends With match the term. Source Text Containing matches the term. Meaning Containing matches the meaning. The match control hides once the field has text, and its chevron points up while the menu is open.
 - Sort: Importance and Creation Date keep list order. Status runs Blue, New, Recognized, Familiar, Learned, Known, Ignored. A–Z and Z–A use German sort.
+- Above 767px, a row in the review overlay is three columns, with 10px of vertical padding. The first column is the 32px status, the term at 16px medium, and the play button 12px after the term, the same gap as after the status button. The second is the meaning, and the third is a short piece of the sentence around the term. Meaning and that piece use the large widget’s text: 16px regular, 20px line height, on `#F8F9FA` with a 12px radius and 10px of vertical padding. The meaning’s grey fill hugs the text. The sentence piece’s grey fill also hugs the text, and its right edge lines up with the right edge of the overlay. The columns themselves keep their width. The meaning clamps at two lines. The piece shows four words before the term and four after it. The term is bold. `...` appears before the piece when earlier words were left out, and after it when later words were left out. The row grows to fit that piece. Several meanings show together, separated by ` ; `. Below 767px, and in the side panel, the row goes back to status, term, meaning underneath, and play on the right, with 18px of vertical padding. The sentence hides. The list has no floating Review button.
 - A row’s status chip opens the vertical status menu and writes that status onto the phrase, or onto every lesson copy of the word. Choosing the current status leaves it unchanged. The row’s audio plays that term.
-- The Review button uses the same count as the header: “Review 25 Terms”, “Review 5 Words”, “Review 1 Phrase”. It starts the same default review as the bottom-bar vocabulary button.
 - Course, Lesson, and Tags open those filters. Search submit runs the search.
 
 ### Filters
@@ -294,10 +295,6 @@ Status is chips, not a slider. Order: Blue Words (circle-plus), Ignored (eye-off
 - Select all sits in the Status heading, opposite the label, space-between. Text first, then an 18px checkbox. Checked is `--fg-secondary` with a white check. Mixed is a blue dash on `#F1F7FE`. Empty is white with a `#D1D6D9` stroke. The label stays “Select all”.
 - No back chevron. The header is the title, Clear, then the panel button. On the mobile sheet that last control is an X. Cancel is the way back.
 - Clear is the text pill from [Filters, Clear](https://www.figma.com/design/dROMt3II5ySPNXRqUZrbjQ?node-id=524-7560): “Clear” plus a 16px refresh icon, gap 6px, padding 8px 12px, radius 999, `1px var(--border)`, 14/500/18, color `--fg-muted`. Hover `#F8F9FA`. Disabled text and icon are `#D1D6D9`. On press the icon spins one full turn (500ms), then the button shows disabled. Reduced motion skips the spin.
-
-### Review button
-
-Same blue button: `1px var(--fg-secondary)`, fill `#F1F7FE`, 14/500/18, 16px vocabulary icon. The label is the filtered count, not “Start Review”. Noun follows the terms filter. Singular when the count is 1.
 
 ## Lynx
 

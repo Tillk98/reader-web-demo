@@ -71,3 +71,46 @@ export function sentenceFor(lesson, paragraphIndex, tokenIndex) {
     translation: TRANSLATIONS[paragraphIndex] || "",
   };
 }
+
+function joinedTokens(tokens, from, to) {
+  if (from > to) return "";
+  return tokens.slice(from, to + 1).map((token) => token.value).join("").replace(/\s+/g, " ");
+}
+
+function throughTrailing(tokens, wordIndex, sentenceEnd) {
+  let endAt = wordIndex;
+  for (let index = wordIndex + 1; index <= sentenceEnd; index += 1) {
+    if (tokens[index].type === "word") break;
+    endAt = index;
+  }
+  return endAt;
+}
+
+export function termSnippet(tokens, tokenIndex, endTokenIndex = tokenIndex) {
+  const empty = { lead: false, before: "", term: "", after: "", trail: false };
+  if (!tokens?.length || tokenIndex == null) return empty;
+  const startIndex = Math.min(tokenIndex, endTokenIndex);
+  const finishIndex = Math.max(tokenIndex, endTokenIndex);
+  const { start, end } = sentenceBounds(tokens, startIndex);
+  const words = [];
+  for (let index = start; index <= end; index += 1) {
+    if (tokens[index].type === "word") words.push(index);
+  }
+  const termWords = words.filter((index) => index >= startIndex && index <= finishIndex);
+  const firstTerm = termWords[0] ?? words[0];
+  const lastTerm = termWords[termWords.length - 1] ?? firstTerm;
+  if (firstTerm == null) return empty;
+  const termPos = Math.max(0, words.indexOf(firstTerm));
+  const termEndPos = Math.max(termPos, words.indexOf(lastTerm));
+  const beforeFrom = Math.max(0, termPos - 4);
+  const afterTo = Math.min(words.length, termEndPos + 1 + 4);
+  const beforeStart = words[beforeFrom];
+  const afterWord = words[afterTo - 1];
+  return {
+    lead: beforeFrom > 0,
+    before: joinedTokens(tokens, beforeStart, firstTerm - 1).replace(/^\s+/, ""),
+    term: joinedTokens(tokens, firstTerm, lastTerm).trim(),
+    after: joinedTokens(tokens, lastTerm + 1, throughTrailing(tokens, afterWord ?? lastTerm, end)).replace(/\s+$/, ""),
+    trail: afterTo < words.length,
+  };
+}

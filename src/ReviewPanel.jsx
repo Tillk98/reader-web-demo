@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
 import { meaningsFor } from "./meanings.js";
-import reviewIcon from "../assets/Vocabulary_Blue.png";
+import { termSnippet } from "./sentences.js";
 
 const SORTS = ["Importance", "Status", "Creation Date", "A-Z", "Z-A"];
 const MATCHES = ["Contains", "Starts With", "Ends With", "Source Text Containing", "Meaning Containing"];
@@ -80,8 +80,10 @@ function termCountLabel(count, terms) {
   return `${count} ${termNoun(terms, false)}${count === 1 ? "" : "s"}`;
 }
 
-function reviewActionLabel(count, terms) {
-  return `Review ${count} ${termNoun(terms, true)}${count === 1 ? "" : "s"}`;
+function joinedMeanings(values, fallback) {
+  const list = (values || []).map((item) => String(item).trim()).filter(Boolean);
+  if (list.length) return list.join(" ; ");
+  return fallback || "";
 }
 
 export function reviewTermsFrom(lesson, savedPhrases) {
@@ -92,11 +94,15 @@ export function reviewTermsFrom(lesson, savedPhrases) {
     const key = phrase.text.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
+    const context = phrase.start
+      ? termSnippet(lesson[phrase.start.paragraphIndex], phrase.start.tokenIndex, phrase.end?.tokenIndex ?? phrase.start.tokenIndex)
+      : null;
     items.push({
       id: `phrase-${phrase.id}`,
       phraseId: phrase.id,
       term: phrase.text,
-      meaning: phrase.meaning,
+      meaning: joinedMeanings(phrase.meanings, phrase.meaning),
+      context,
       status: phrase.status || "New",
     });
   });
@@ -109,7 +115,8 @@ export function reviewTermsFrom(lesson, savedPhrases) {
       id: `${paragraphIndex}-${tokenIndex}-${key}`,
       phraseId: null,
       term: token.value,
-      meaning: token.meaning || meaningsFor(token.value).join(" ; "),
+      meaning: joinedMeanings(token.meanings, token.meaning || meaningsFor(token.value).join(" ; ")),
+      context: termSnippet(lesson[paragraphIndex], tokenIndex),
       status: token.kind === "new" ? "Blue" : token.status,
     });
   }
@@ -282,7 +289,7 @@ function PanelClose({ sheet, onClose }) {
   );
 }
 
-function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet }) {
+function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet, embedded = false }) {
   const [clearing, setClearing] = useState(false);
   const allStatusesSelected = FILTER_STATUSES.every((status) => draft.statuses.includes(status.id));
   const someStatusesSelected = draft.statuses.length > 0 && !allStatusesSelected;
@@ -324,7 +331,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet }
             </span>
             Clear
           </button>
-          <PanelClose sheet={sheet} onClose={onClose} />
+          {embedded ? null : <PanelClose sheet={sheet} onClose={onClose} />}
         </div>
       </header>
       <div className="review-filter-body">
@@ -448,7 +455,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet }
   );
 }
 
-export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet = false, compact = false }) {
+export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, compact = false, embedded = false }) {
   const matchButtonRef = useRef(null);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState(null);
@@ -507,7 +514,7 @@ export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet 
   }
 
   return (
-    <section className="review-panel" aria-label={page === "filters" ? "Filters" : "Vocabulary"}>
+    <section className={`review-panel${compact ? " is-compact" : ""}${embedded ? " is-embedded" : ""}`} aria-label={page === "filters" ? "Filters" : "Vocabulary"}>
       {page === "filters" ? (
         <FilterPage
           draft={draftFilters}
@@ -520,17 +527,20 @@ export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet 
           }}
           onClose={onClose}
           sheet={sheet}
+          embedded={embedded}
         />
       ) : null}
       {page === "filters" && !compact ? null : (
       <>
       <header className="review-panel-header">
+        {embedded ? null : (
         <div className="review-header-bar">
           <h2>Vocabulary</h2>
           <PanelClose sheet={sheet} onClose={onClose} />
         </div>
+        )}
         {compact ? null : (
-        <>
+        <div className="review-header-tools">
         <form className="review-search" onSubmit={(event) => event.preventDefault()}>
             <input
               type="search"
@@ -625,16 +635,17 @@ export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet 
               ) : null}
             </div>
           </div>
+          <span className="review-toolbar-divider" aria-hidden="true" />
           <p>{termCountLabel(listed.length, (appliedFilters ?? defaultFilters()).terms)}</p>
         </div>
-        </>
+        </div>
         )}
       </header>
       <div className="review-list">
         {visible.map((item, index) => (
           <div key={item.id}>
             <div className="review-row">
-              <div className="review-row-term">
+              <div className="review-row-lead">
                 <span data-review-status={item.id}>
                   <StatusButton
                     status={item.status}
@@ -642,14 +653,19 @@ export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet 
                     onClick={() => setOpenId((current) => (current === item.id ? null : item.id))}
                   />
                 </span>
-                <span className="review-row-copy">
-                  <strong>{item.term}</strong>
-                  <em>{item.meaning}</em>
-                </span>
+                <strong>{item.term}</strong>
+                <button type="button" className="review-speak" aria-label={`Play ${item.term}`}>
+                  <Volume2 size={16} strokeWidth={1.5} absoluteStrokeWidth />
+                </button>
               </div>
-              <button type="button" className="review-speak" aria-label={`Play ${item.term}`}>
-                <Volume2 size={16} strokeWidth={1.5} absoluteStrokeWidth />
-              </button>
+              <p className="review-row-meaning">{item.meaning}</p>
+              <p className="review-row-sentence">
+                {item.context?.lead ? "... " : null}
+                {item.context?.before}
+                {item.context?.term ? <strong>{item.context.term}</strong> : null}
+                {item.context?.after}
+                {item.context?.trail ? " ..." : null}
+              </p>
             </div>
             {index < visible.length - 1 ? <div className="review-divider" /> : null}
           </div>
@@ -666,14 +682,6 @@ export default function ReviewPanel({ terms, onStatus, onClose, onReview, sheet 
           onClose={() => setOpenId(null)}
         />
       ) : null}
-      {compact ? null : (
-      <footer className="review-footer">
-        <button type="button" className="review-start" onClick={onReview}>
-          <img src={reviewIcon} alt="" width={16} height={16} />
-          {reviewActionLabel(listed.length, (appliedFilters ?? defaultFilters()).terms)}
-        </button>
-      </footer>
-      )}
       </>
       )}
     </section>

@@ -1116,11 +1116,6 @@ button.reader-menu-lesson:hover {
   overflow: hidden;
 }
 
-.lesson-area.is-page-scroll:not(.is-scroll):not(.is-sentence) .page-text {
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
 .page-text p {
   margin: 0 0 var(--lesson-line, 36px);
   font-size: var(--lesson-size, 18px);

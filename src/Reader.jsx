@@ -30,7 +30,6 @@ import {
   Gauge,
   Keyboard,
   Languages,
-  Library,
   List,
   ListPlus,
   ListX,
@@ -630,7 +629,7 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
         onClick: onToggleAutoAdvance,
         trailing: { type: "toggle", on: autoAdvance },
       }) : null,
-      mode === "sentence" ? row("dictionary", "Show Dictionary List", menuGlyph(Library), {
+      mode === "sentence" ? row("dictionary", "Show vocabulary list", menuGlyph(List), {
         keepOpen: true,
         onClick: onToggleDictionary,
         trailing: { type: "toggle", on: showDictionary },
@@ -1197,6 +1196,8 @@ export default function Reader() {
   const [mode, setMode] = useState("page");
   const [sentenceIndex, setSentenceIndex] = useState(1);
   const [showTranslation, setShowTranslation] = useState(false);
+  const [sentencePeek, setSentencePeek] = useState(false);
+  const [sentenceHide, setSentenceHide] = useState(false);
   const [showDictionary, setShowDictionary] = useState(false);
   const [textLayout, setTextLayout] = useState("paragraphs");
   const [modeMenu, setModeMenu] = useState(false);
@@ -1275,7 +1276,6 @@ export default function Reader() {
   const [termPulse, setTermPulse] = useState(null);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageStarts, setPageStarts] = useState(null);
-  const [pageFrames, setPageFrames] = useState(null);
   const [atScrollEnd, setAtScrollEnd] = useState(false);
   const mobile = useIsMobile();
   const roomy = useMinWidth(1400);
@@ -1293,6 +1293,13 @@ export default function Reader() {
     textSizeRef.current = textSize;
     if (pageStarts !== null) setPageStarts(null);
   }
+  const sentenceCursor = useRef(sentenceIndex);
+  if (sentenceCursor.current !== sentenceIndex) {
+    sentenceCursor.current = sentenceIndex;
+    if (sentencePeek) setSentencePeek(false);
+    if (sentenceHide) setSentenceHide(false);
+  }
+  const sentenceShowsTranslation = (showTranslation && !sentenceHide) || sentencePeek;
   const translationRef = useRef(showTranslation);
   if (translationRef.current !== showTranslation) {
     translationRef.current = showTranslation;
@@ -1322,47 +1329,57 @@ export default function Reader() {
         bottom: top + (index + 1) * lineHeight,
       }));
     };
-    const lines = nodes.flatMap((node) => {
+    const sentences = nodes.map((node) => {
       const original = showTranslation ? node.querySelector(":scope > p:not(.sentence-translation)") : node;
-      return lineBoxes(original || node);
+      const lines = lineBoxes(original || node);
+      const translation = showTranslation ? node.querySelector(":scope > .sentence-translation") : null;
+      const translationBottom = translation ? translation.offsetTop + translation.offsetHeight : lines[lines.length - 1].bottom;
+      return { lines, translationBottom };
     });
-    const contentEnd = showTranslation
-      ? nodes[nodes.length - 1].offsetTop + nodes[nodes.length - 1].offsetHeight
-      : lines[lines.length - 1].bottom;
+    const lines = sentences.flatMap((sentence, sentenceIndex) => sentence.lines.map((line, lineIndex) => ({
+      ...line,
+      sentenceIndex,
+      isLast: lineIndex === sentence.lines.length - 1,
+    })));
+    // A translation stays with the end of its sentence. If it does not fit, the break moves
+    // back to an earlier line of original text so the whole translation fits on the next page.
+    const breakTopFor = (line, pageTop, pageLimit) => {
+      if (line.top <= pageTop + 0.5) return null;
+      const sentence = sentences[line.sentenceIndex];
+      const overflows = line.isLast && showTranslation
+        ? sentence.translationBottom - pageTop > pageLimit + 0.5
+        : line.bottom - pageTop > pageLimit + 0.5;
+      if (!overflows) return null;
+      if (line.isLast && showTranslation) {
+        const fitting = [...sentence.lines].reverse().find((candidate) => (
+          sentence.translationBottom - candidate.top <= pageLimit + 0.5 && candidate.top > pageTop + 0.5
+        ));
+        if (fitting) return fitting.top;
+      }
+      return line.top;
+    };
     const starts = [0];
     let pageTop = 0;
     lines.forEach((line) => {
-      if (line.bottom - pageTop <= limit + 0.5) return;
-      if (line.top <= pageTop + 0.5) return;
-      starts.push(line.top);
-      pageTop = line.top;
+      const breakTop = breakTopFor(line, pageTop, limit);
+      if (breakTop == null) return;
+      starts.push(breakTop);
+      pageTop = breakTop;
     });
-    const contentBottom = lines[lines.length - 1].bottom;
-    const lastStart = starts[starts.length - 1];
+    const contentBottom = (from) => sentences.reduce((bottom, sentence) => {
+      const last = sentence.lines[sentence.lines.length - 1];
+      if (last.top < from - 0.5) return bottom;
+      return Math.max(bottom, sentence.translationBottom);
+    }, from);
     const lastLimit = Math.max(36, limit - COMPLETE_BLOCK);
-    if (contentBottom - lastStart > lastLimit + 0.5) {
-      const overflow = lines.find((line) => line.top > lastStart + 0.5 && line.bottom - lastStart > lastLimit + 0.5);
-      if (overflow) starts.push(overflow.top);
+    let safety = 0;
+    while (safety < 30 && contentBottom(starts[starts.length - 1]) - starts[starts.length - 1] > lastLimit + 0.5) {
+      safety += 1;
+      const from = starts[starts.length - 1];
+      const breakTop = lines.reduce((found, line) => found ?? breakTopFor(line, from, lastLimit), null);
+      if (breakTop == null || breakTop <= from + 0.5) break;
+      starts.push(breakTop);
     }
-    const frames = starts.map((start, index) => {
-      const next = starts[index + 1];
-      if (!showTranslation) return { height: (next ?? contentEnd) - start, clearance: 0 };
-      let bottom = start;
-      nodes.forEach((node) => {
-        const original = node.querySelector(":scope > p:not(.sentence-translation)") || node;
-        const originalTop = original.offsetTop;
-        const originalBottom = originalTop + original.offsetHeight;
-        const fullBottom = node.offsetTop + node.offsetHeight;
-        if (next != null && originalTop >= next - 0.5) return;
-        if (originalBottom <= start + 0.5) return;
-        bottom = Math.max(bottom, next != null && originalBottom > next + 0.5 ? next : fullBottom);
-      });
-      if (bottom <= start + 0.5) bottom = next ?? contentEnd;
-      const height = bottom - start;
-      const usable = next == null ? limit - COMPLETE_BLOCK : limit;
-      return { height, clearance: height > usable + 1 && next == null ? COMPLETE_BLOCK : 0 };
-    });
-    setPageFrames(frames);
     setPageStarts(starts);
     setPageIndex((index) => Math.min(index, Math.max(0, starts.length - 1)));
   }, [mode, lesson, pageStarts, textSize]);
@@ -1417,11 +1434,6 @@ export default function Reader() {
     if (mode !== "sentence") return;
     textRef.current?.scrollTo({ top: 0 });
   }, [mode, sentenceIndex, playerOpen, playerShown]);
-
-  useEffect(() => {
-    if (mode !== "page") return;
-    textRef.current?.scrollTo({ top: 0 });
-  }, [mode, pageIndex, showTranslation]);
 
   useLayoutEffect(() => {
     if (!termPulse || mode !== "sentence") return undefined;
@@ -2828,7 +2840,7 @@ export default function Reader() {
           </div>
         </div>
 
-        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${mode === "page" && showTranslation ? " is-page-scroll" : ""}${showVideo ? " has-video" : ""}${showVideo && sideBySide && !theater ? " is-side" : ""}${showComplete && mode === "sentence" ? " is-complete" : ""}`} onPointerDown={onLessonPointerDown}>
+        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${showVideo ? " has-video" : ""}${showVideo && sideBySide && !theater ? " is-side" : ""}${showComplete && mode === "sentence" ? " is-complete" : ""}`} onPointerDown={onLessonPointerDown}>
           <div className="page-control">
             <button
               type="button"
@@ -2905,14 +2917,22 @@ export default function Reader() {
                   <p className="sentence-original">{renderParagraph(sentenceIndex)}</p>
                 </div>
                 <div className="sentence-below">
-                  {showTranslation ? <p className="sentence-translation">{sentenceFor(lesson, sentenceIndex, 0).translation}</p> : null}
+                  {sentenceShowsTranslation ? <p className="sentence-translation">{sentenceFor(lesson, sentenceIndex, 0).translation}</p> : null}
                   <div className="sentence-actions">
                     <button
                       type="button"
-                      className={`sentence-translate${showTranslation ? " is-on" : ""}`}
-                      aria-pressed={showTranslation}
-                      aria-label={showTranslation ? "Hide translation" : "Show translation"}
-                      onClick={() => setShowTranslation((open) => !open)}
+                      className={`sentence-translate${sentenceShowsTranslation ? " is-on" : ""}`}
+                      aria-pressed={sentenceShowsTranslation}
+                      aria-label={sentenceShowsTranslation ? "Hide translation" : "Show translation"}
+                      onClick={() => {
+                        if (sentenceShowsTranslation) {
+                          setSentencePeek(false);
+                          if (showTranslation) setSentenceHide(true);
+                          return;
+                        }
+                        setSentenceHide(false);
+                        setSentencePeek(true);
+                      }}
                     >
                       <Languages size={18} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
@@ -3018,15 +3038,10 @@ export default function Reader() {
                 : paragraphs.map((_, index) => [index]);
               const pageOffset = mode === "page" ? (pageStarts?.[pageIndex] ?? 0) : 0;
               const pageEnd = mode === "page" ? pageStarts?.[pageIndex + 1] : undefined;
-              const frame = mode === "page" && showTranslation && pageStarts ? pageFrames?.[pageIndex] : null;
               return (
               <div
                 className="page-flow"
-                style={frame
-                  ? { height: frame.height, marginBottom: frame.clearance || undefined, overflow: "hidden" }
-                  : mode === "page" && pageEnd != null
-                    ? { height: pageEnd - pageOffset, overflow: "hidden" }
-                    : undefined}
+                style={mode === "page" && pageEnd != null ? { height: pageEnd - pageOffset, overflow: "hidden" } : undefined}
               >
               <div
                 className="page-flow-shift"

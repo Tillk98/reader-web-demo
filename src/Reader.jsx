@@ -30,6 +30,7 @@ import {
   Gauge,
   Keyboard,
   Languages,
+  Library,
   List,
   ListPlus,
   ListX,
@@ -38,6 +39,7 @@ import {
   Minimize,
   MousePointerClick,
   PanelRight,
+  Pilcrow,
   Pause,
   Play,
   Printer,
@@ -45,6 +47,7 @@ import {
   RefreshCw,
   Reply,
   Settings,
+  SkipForward,
   SquarePen,
   Timer,
   Undo2,
@@ -105,6 +108,12 @@ const PARAGRAPHS = [
 ];
 
 const SCROLL_PARAGRAPHS = [];
+// Prototype lesson only. These sentences are joined in By paragraphs so the sample reads as paragraphs.
+const PARAGRAPH_GROUPS = [
+  [0, 1, 2, 3, 4, 5, 6],
+  [7, 8, 9, 10],
+  [11, 12, 13, 14, 15, 16],
+];
 
 const PAGE_COUNT = PARAGRAPHS.length;
 // 16px pad + 42px button (10px + 20px label + 10px + 2px border) + 16px pad.
@@ -390,7 +399,7 @@ function menuChevron(Icon) {
 
 const READER_PLAYLISTS = ["Active Playlist", "YouTube auf Deutsch", "Deutsche Nachrichten"];
 
-function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, onOpenDemo, onOpenLynx, onClose }) {
+function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDictionary, onToggleDictionary, textLayout, onTextLayout, autoAdvance, onToggleAutoAdvance, onOpenDemo, onOpenLynx, onClose }) {
   const mobile = useIsMobile();
   const menuRef = useRef(null);
   const closeTimer = useRef(null);
@@ -535,6 +544,7 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, onOpenD
         {trailing?.type === "toggle" ? (
           <span className={`menu-toggle${trailing.on ? " is-on" : ""}`} aria-hidden="true"><span /></span>
         ) : null}
+        {trailing?.type === "meta" ? <span className="reader-menu-meta">{trailing.label}</span> : null}
         {trailing?.type === "chevron" ? menuChevron(ChevronRight) : null}
       </>
     );
@@ -549,7 +559,7 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, onOpenD
             type="button"
             className={className}
             role={trailing?.type === "toggle" ? "menuitemcheckbox" : "menuitem"}
-            aria-checked={trailing?.type === "toggle" ? showTranslation : undefined}
+            aria-checked={trailing?.type === "toggle" ? trailing.on : undefined}
             aria-haspopup={sub ? "menu" : undefined}
             aria-expanded={sub && !mobile ? open : undefined}
             onClick={() => {
@@ -602,17 +612,31 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, onOpenD
     row("chat-lynx", "Ask Lynx AI", <img src={lynxIcon} alt="" width={16} height={16} />, { onClick: onOpenLynx }),
   ];
 
+  const sentenceText = mode === "sentence" || textLayout === "sentences";
   const groups = [
     [
-      row("translations", "Show Translations", menuGlyph(Languages), {
+      mode === "page" || mode === "scroll" ? row("text-layout", "Text layout", menuGlyph(Pilcrow), {
+        keepOpen: true,
+        onClick: onTextLayout,
+        trailing: { type: "meta", label: textLayout === "sentences" ? "By sentences" : "By paragraphs" },
+      }) : null,
+      sentenceText ? row("translations", "Show Translations", menuGlyph(Languages), {
         keepOpen: true,
         onClick: onToggleTranslation,
         trailing: { type: "toggle", on: showTranslation },
-      }),
+      }) : null,
+      mode === "page" || mode === "sentence" ? row("auto-advance", "Auto-advance", menuGlyph(SkipForward), {
+        keepOpen: true,
+        onClick: onToggleAutoAdvance,
+        trailing: { type: "toggle", on: autoAdvance },
+      }) : null,
+      mode === "sentence" ? row("dictionary", "Show Dictionary List", menuGlyph(Library), {
+        keepOpen: true,
+        onClick: onToggleDictionary,
+        trailing: { type: "toggle", on: showDictionary },
+      }) : null,
       row("simplify", "Simplify Lesson", menuGlyph(ArrowDownNarrowWide)),
       row("regenerate", "Regenerate Lesson", menuGlyph(RefreshCw)),
-    ],
-    [
       mode === "sentence" ? row("edit-sentence", "Edit Sentence", menuGlyph(SquarePen)) : null,
       row("edit-lesson", "Edit Lesson", menuGlyph(SquarePen)),
     ].filter(Boolean),
@@ -752,6 +776,8 @@ function PlayerOptionsMenu({
   loopAudio,
   onLoopAudio,
   showLoop,
+  autoAdvance,
+  onAutoAdvance,
   showSpeed,
   showTimer,
   theater,
@@ -795,6 +821,9 @@ function PlayerOptionsMenu({
             <span className={`menu-toggle${loopAudio ? " is-on" : ""}`} aria-hidden="true"><span /></span>
           </MenuRow>
         ) : null}
+        <MenuRow icon={<SkipForward size={16} strokeWidth={1.5} absoluteStrokeWidth />} label="Auto-advance" onClick={onAutoAdvance}>
+          <span className={`menu-toggle${autoAdvance ? " is-on" : ""}`} aria-hidden="true"><span /></span>
+        </MenuRow>
       </div>
       {showView ? (
         <>
@@ -1113,7 +1142,7 @@ function AudioTimeline({ time, duration, scrubbing, onScrub, onScrubbing }) {
   );
 }
 
-const PLAYBACK_DROP_ORDER = ["loop", "speed", "timer", "layout", "theater"];
+const PLAYBACK_DROP_ORDER = ["loop", "speed", "timer", "advance", "layout", "theater"];
 
 function fitPlaybackActions(row, hasVideo) {
   if (!row || getComputedStyle(row).display === "none") return null;
@@ -1167,7 +1196,9 @@ export default function Reader() {
   const [demoSettings, setDemoSettings] = useState(false);
   const [mode, setMode] = useState("page");
   const [sentenceIndex, setSentenceIndex] = useState(1);
-  const [showTranslation, setShowTranslation] = useState(true);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [showDictionary, setShowDictionary] = useState(false);
+  const [textLayout, setTextLayout] = useState("paragraphs");
   const [modeMenu, setModeMenu] = useState(false);
   const [chromeMenu, setChromeMenu] = useState(null);
   const [playerMenu, setPlayerMenu] = useState(false);
@@ -1221,10 +1252,11 @@ export default function Reader() {
       observer.disconnect();
       window.removeEventListener("resize", fit);
     };
-  }, [playerOpen, lessonHasVideo, theater, wide]);
+  }, [playerOpen, lessonHasVideo, theater, wide, mode]);
   const [audioTime, setAudioTime] = useState(3 * 60 + 30);
   const [scrubbing, setScrubbing] = useState(false);
   const [loopAudio, setLoopAudio] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(false);
   const [syncText, setSyncText] = useState(true);
   const [theme, setTheme] = useState("light");
   const [fontStyle, setFontStyle] = useState("Rubik Original");
@@ -1243,6 +1275,7 @@ export default function Reader() {
   const [termPulse, setTermPulse] = useState(null);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageStarts, setPageStarts] = useState(null);
+  const [pageFrames, setPageFrames] = useState(null);
   const [atScrollEnd, setAtScrollEnd] = useState(false);
   const mobile = useIsMobile();
   const roomy = useMinWidth(1400);
@@ -1260,6 +1293,16 @@ export default function Reader() {
     textSizeRef.current = textSize;
     if (pageStarts !== null) setPageStarts(null);
   }
+  const translationRef = useRef(showTranslation);
+  if (translationRef.current !== showTranslation) {
+    translationRef.current = showTranslation;
+    if (pageStarts !== null) setPageStarts(null);
+  }
+  const textLayoutRef = useRef(textLayout);
+  if (textLayoutRef.current !== textLayout) {
+    textLayoutRef.current = textLayout;
+    if (pageStarts !== null) setPageStarts(null);
+  }
 
   useLayoutEffect(() => {
     if (mode !== "page" || pageStarts !== null || !textRef.current) return;
@@ -1268,15 +1311,24 @@ export default function Reader() {
     const box = getComputedStyle(textRef.current);
     const limit = textRef.current.clientHeight - (parseFloat(box.paddingTop) || 0) - (parseFloat(box.paddingBottom) || 0);
     if (limit <= 0) return;
-    const lines = nodes.flatMap((node) => {
-      const lineHeight = parseFloat(getComputedStyle(node).lineHeight) || node.offsetHeight;
-      const count = Math.max(1, Math.round(node.offsetHeight / lineHeight));
+    const lineBoxes = (node) => {
+      const lineHeight = parseFloat(getComputedStyle(node).lineHeight);
       const top = node.offsetTop;
+      const height = node.offsetHeight;
+      if (!lineHeight) return [{ top, bottom: top + height }];
+      const count = Math.max(1, Math.round(height / lineHeight));
       return Array.from({ length: count }, (_, index) => ({
         top: top + index * lineHeight,
         bottom: top + (index + 1) * lineHeight,
       }));
+    };
+    const lines = nodes.flatMap((node) => {
+      const original = showTranslation ? node.querySelector(":scope > p:not(.sentence-translation)") : node;
+      return lineBoxes(original || node);
     });
+    const contentEnd = showTranslation
+      ? nodes[nodes.length - 1].offsetTop + nodes[nodes.length - 1].offsetHeight
+      : lines[lines.length - 1].bottom;
     const starts = [0];
     let pageTop = 0;
     lines.forEach((line) => {
@@ -1292,6 +1344,25 @@ export default function Reader() {
       const overflow = lines.find((line) => line.top > lastStart + 0.5 && line.bottom - lastStart > lastLimit + 0.5);
       if (overflow) starts.push(overflow.top);
     }
+    const frames = starts.map((start, index) => {
+      const next = starts[index + 1];
+      if (!showTranslation) return { height: (next ?? contentEnd) - start, clearance: 0 };
+      let bottom = start;
+      nodes.forEach((node) => {
+        const original = node.querySelector(":scope > p:not(.sentence-translation)") || node;
+        const originalTop = original.offsetTop;
+        const originalBottom = originalTop + original.offsetHeight;
+        const fullBottom = node.offsetTop + node.offsetHeight;
+        if (next != null && originalTop >= next - 0.5) return;
+        if (originalBottom <= start + 0.5) return;
+        bottom = Math.max(bottom, next != null && originalBottom > next + 0.5 ? next : fullBottom);
+      });
+      if (bottom <= start + 0.5) bottom = next ?? contentEnd;
+      const height = bottom - start;
+      const usable = next == null ? limit - COMPLETE_BLOCK : limit;
+      return { height, clearance: height > usable + 1 && next == null ? COMPLETE_BLOCK : 0 };
+    });
+    setPageFrames(frames);
     setPageStarts(starts);
     setPageIndex((index) => Math.min(index, Math.max(0, starts.length - 1)));
   }, [mode, lesson, pageStarts, textSize]);
@@ -1346,6 +1417,11 @@ export default function Reader() {
     if (mode !== "sentence") return;
     textRef.current?.scrollTo({ top: 0 });
   }, [mode, sentenceIndex, playerOpen, playerShown]);
+
+  useEffect(() => {
+    if (mode !== "page") return;
+    textRef.current?.scrollTo({ top: 0 });
+  }, [mode, pageIndex, showTranslation]);
 
   useLayoutEffect(() => {
     if (!termPulse || mode !== "sentence") return undefined;
@@ -2450,6 +2526,8 @@ export default function Reader() {
     loopAudio,
     onLoopAudio: () => setLoopAudio((on) => !on),
     showLoop: true,
+    autoAdvance,
+    onAutoAdvance: () => setAutoAdvance((on) => !on),
     showSpeed: true,
     showTimer: true,
     theater,
@@ -2715,6 +2793,21 @@ export default function Reader() {
                   mode={mode}
                   showTranslation={showTranslation}
                   onToggleTranslation={() => setShowTranslation((open) => !open)}
+                  showDictionary={showDictionary}
+                  onToggleDictionary={() => {
+                    setShowDictionary((open) => !open);
+                    setTermMenu(null);
+                  }}
+                  textLayout={textLayout}
+                  onTextLayout={() => {
+                    setTextLayout((current) => {
+                      const next = current === "sentences" ? "paragraphs" : "sentences";
+                      if (next === "paragraphs") setShowTranslation(false);
+                      return next;
+                    });
+                  }}
+                  autoAdvance={autoAdvance}
+                  onToggleAutoAdvance={() => setAutoAdvance((on) => !on)}
                   onOpenDemo={() => {
                     setChromeMenu(null);
                     setDemoSettings(true);
@@ -2735,7 +2828,7 @@ export default function Reader() {
           </div>
         </div>
 
-        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${showVideo ? " has-video" : ""}${showVideo && sideBySide && !theater ? " is-side" : ""}${showComplete && mode === "sentence" ? " is-complete" : ""}`} onPointerDown={onLessonPointerDown}>
+        <div className={`lesson-area${mode === "page" ? "" : ` is-${mode}`}${mode === "page" && showTranslation ? " is-page-scroll" : ""}${showVideo ? " has-video" : ""}${showVideo && sideBySide && !theater ? " is-side" : ""}${showComplete && mode === "sentence" ? " is-complete" : ""}`} onPointerDown={onLessonPointerDown}>
           <div className="page-control">
             <button
               type="button"
@@ -2807,16 +2900,13 @@ export default function Reader() {
             {theater ? null : mode === "scroll" || (showVideo && mode === "sentence") ? <div className="video-text-fade" aria-hidden="true" /> : null}
             {theater || mode !== "sentence" ? null : (
               <div className="sentence-view">
+                <div className="sentence-stage">
                 <div className="sentence-block">
                   <p className="sentence-original">{renderParagraph(sentenceIndex)}</p>
+                </div>
+                <div className="sentence-below">
+                  {showTranslation ? <p className="sentence-translation">{sentenceFor(lesson, sentenceIndex, 0).translation}</p> : null}
                   <div className="sentence-actions">
-                    <div className="sentence-play">
-                      <button type="button" aria-label="Play sentence">
-                        <Play size={18} strokeWidth={1.5} absoluteStrokeWidth />
-                      </button>
-                      <span className="sentence-play-divider" aria-hidden="true" />
-                      <button type="button" aria-label="Playback speed">1x</button>
-                    </div>
                     <button
                       type="button"
                       className={`sentence-translate${showTranslation ? " is-on" : ""}`}
@@ -2826,13 +2916,8 @@ export default function Reader() {
                     >
                       <Languages size={18} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
-                    <button type="button" className="sentence-refresh" aria-label="Refresh sentence">
-                      <RefreshCw size={18} strokeWidth={1.5} absoluteStrokeWidth />
-                    </button>
                   </div>
-                  {showTranslation ? <p className="sentence-translation">{sentenceFor(lesson, sentenceIndex, 0).translation}</p> : null}
-                </div>
-                <div className="sentence-terms" ref={termsRef}>
+                {showDictionary ? <div className="sentence-terms" ref={termsRef}>
                   {lesson[sentenceIndex].flatMap((token, tokenIndex) => {
                     if (token.type !== "word") return [];
                     const phrase = savedPhrases.find((item) => phraseCovers(item, sentenceIndex, tokenIndex));
@@ -2910,8 +2995,10 @@ export default function Reader() {
                       </div>
                     )];
                   })}
+                </div> : null}
                 </div>
-                {termMenu ? (
+                </div>
+                {showDictionary && termMenu ? (
                   <TermStatusMenu
                     anchorKey={termMenu.key}
                     status={termMenu.phraseId
@@ -2926,51 +3013,56 @@ export default function Reader() {
             {theater || mode === "sentence" ? null : (() => {
               const pageSource = lesson.slice(0, PAGE_COUNT);
               const paragraphs = mode === "scroll" ? lesson : pageSource;
+              const units = textLayout === "paragraphs"
+                ? PARAGRAPH_GROUPS
+                : paragraphs.map((_, index) => [index]);
               const pageOffset = mode === "page" ? (pageStarts?.[pageIndex] ?? 0) : 0;
               const pageEnd = mode === "page" ? pageStarts?.[pageIndex + 1] : undefined;
+              const frame = mode === "page" && showTranslation && pageStarts ? pageFrames?.[pageIndex] : null;
               return (
               <div
                 className="page-flow"
-                style={mode === "page" && pageEnd != null ? { height: pageEnd - pageOffset, overflow: "hidden" } : undefined}
+                style={frame
+                  ? { height: frame.height, marginBottom: frame.clearance || undefined, overflow: "hidden" }
+                  : mode === "page" && pageEnd != null
+                    ? { height: pageEnd - pageOffset, overflow: "hidden" }
+                    : undefined}
               >
               <div
                 className="page-flow-shift"
                 style={mode === "page" ? { transform: `translateY(-${pageOffset}px)` } : undefined}
               >
-              {paragraphs.map((tokens, listIndex) => {
-              const paragraphIndex = listIndex;
-              const nodes = [];
-              let tokenIndex = 0;
-              while (tokenIndex < tokens.length) {
-                const mark = markAt(paragraphIndex, tokenIndex);
-                if (!mark) {
-                  nodes.push(renderToken(tokens[tokenIndex], paragraphIndex, tokenIndex));
-                  tokenIndex += 1;
-                  continue;
+              {units.map((indexes) => {
+              const key = indexes[0];
+              if (textLayout === "sentences") {
+                const paragraphIndex = indexes[0];
+                const nodes = renderParagraph(paragraphIndex);
+                if (showTranslation) {
+                  return (
+                    <div
+                      className="scroll-sentence"
+                      key={key}
+                      data-page-paragraph={mode === "page" ? paragraphIndex : undefined}
+                    >
+                      <p>{nodes}</p>
+                      <p className="sentence-translation">{sentenceFor(lesson, paragraphIndex, 0).translation}</p>
+                    </div>
+                  );
                 }
-                const chunk = [];
-                const { key, kind, level } = mark;
-                const start = tokenIndex;
-                while (tokenIndex < tokens.length) {
-                  const next = markAt(paragraphIndex, tokenIndex);
-                  if (!next || next.key !== key) break;
-                  chunk.push(renderToken(tokens[tokenIndex], paragraphIndex, tokenIndex));
-                  tokenIndex += 1;
-                }
-                nodes.push(
-                  <span
-                    key={`${key}-${start}`}
-                    className="phrase-range"
-                    data-kind={kind}
-                    data-level={level || undefined}
-                  >
-                    {chunk}
-                  </span>,
+                return (
+                  <p key={key} data-page-paragraph={mode === "page" ? paragraphIndex : undefined}>
+                    {nodes}
+                  </p>
                 );
               }
               return (
-                <p key={paragraphIndex} data-page-paragraph={mode === "page" ? paragraphIndex : undefined}>
-                  {nodes}
+                <p key={key} data-page-paragraph={mode === "page" ? key : undefined}>
+                  {indexes.map((paragraphIndex, index) => (
+                    <span key={paragraphIndex}>
+                      {index > 0 ? " " : null}
+                      {renderParagraph(paragraphIndex)}
+                    </span>
+                  ))}
                 </p>
               );
             })}
@@ -3248,6 +3340,11 @@ export default function Reader() {
                   <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} data-playback="loop" hidden={droppedPlayback.includes("loop")} aria-label="Loop audio" aria-pressed={loopAudio} onClick={() => setLoopAudio((on) => !on)}>
                     <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
                   </button>
+                  {mode === "page" || mode === "sentence" ? (
+                    <button type="button" className={`audio-bar-control audio-bar-advance${autoAdvance ? " is-on" : ""}`} data-playback="advance" hidden={droppedPlayback.includes("advance")} aria-label="Auto-advance" aria-pressed={autoAdvance} onClick={() => setAutoAdvance((on) => !on)}>
+                      <SkipForward size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                  ) : null}
                   <button type="button" className="audio-bar-speed" data-playback="speed" hidden={droppedPlayback.includes("speed")} aria-label="Playback speed">1x</button>
                   <button type="button" className="audio-bar-control audio-bar-timer" data-playback="timer" hidden={droppedPlayback.includes("timer")} aria-label="Timer">
                     <Timer size={20} strokeWidth={1.5} absoluteStrokeWidth />
@@ -3335,6 +3432,11 @@ export default function Reader() {
                     <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} aria-label="Loop audio" aria-pressed={loopAudio} onClick={() => setLoopAudio((on) => !on)}>
                       <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
+                    {mode === "page" || mode === "sentence" ? (
+                      <button type="button" className={`audio-bar-control audio-bar-advance${autoAdvance ? " is-on" : ""}`} aria-label="Auto-advance" aria-pressed={autoAdvance} onClick={() => setAutoAdvance((on) => !on)}>
+                        <SkipForward size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                    ) : null}
                   </div>
                   <span className="player-menu-anchor">
                     <button type="button" className="audio-bar-control" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>

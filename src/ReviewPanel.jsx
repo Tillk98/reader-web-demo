@@ -46,7 +46,7 @@ const COURSE_NAME = "YouTube auf Deutsch";
 const LESSON_NAME = "Mehrere Sprachen auf einmal lernen?! Wie lange jeden Tag lernen?";
 
 function defaultFilters() {
-  return { terms: "All", srsDue: false, statuses: ["New", "Recognized", "Familiar"] };
+  return { terms: "All", srsDue: false, statuses: ["Blue", "New", "Recognized", "Familiar", "Learned"] };
 }
 
 function cloneFilters(filters) {

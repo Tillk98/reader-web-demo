@@ -54,6 +54,7 @@ import {
   X,
   Youtube,
 } from "lucide-react";
+import ReviewSession from "./ReviewSession.jsx";
 import WidgetSmall from "./WidgetSmall.jsx";
 import WidgetMedium from "./WidgetMedium.jsx";
 import WidgetLarge from "./WidgetLarge.jsx";
@@ -219,7 +220,7 @@ const REVIEW_ACTIONS = [
   { id: "list", label: "Vocabulary List", icon: List },
 ];
 
-function ReviewActionsMenu({ onChoose, showList = true }) {
+function ReviewActionsMenu({ onChoose, showList = true, showSettings = false }) {
   const actions = showList ? REVIEW_ACTIONS : REVIEW_ACTIONS.filter((item) => item.id !== "list");
   return (
     <div className="reader-menu vocab-menu" role="menu">
@@ -242,6 +243,22 @@ function ReviewActionsMenu({ onChoose, showList = true }) {
         <MenuRow role="menuitem" icon={<img src={lingqIcon} alt="" width={16} height={16} />} label="Manage Vocabulary" onClick={() => onChoose("manage")}>
           <ArrowUpRight className="reader-menu-chevron" size={12} strokeWidth={1.5} absoluteStrokeWidth />
         </MenuRow>
+        {showSettings ? (
+          <MenuRow
+            role="menuitem"
+            icon={<FlaskConical size={16} strokeWidth={1.5} absoluteStrokeWidth />}
+            label="Demo settings"
+            onClick={() => onChoose("demo")}
+          />
+        ) : null}
+        {showSettings ? (
+          <MenuRow
+            role="menuitem"
+            icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />}
+            label="Review Settings"
+            onClick={() => onChoose("settings")}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -349,6 +366,49 @@ const LESSON_TYPES = [
   { id: "audio", label: "Audio Only" },
   { id: "both", label: "Audio & Video" },
 ];
+
+const VOCAB_LIST_MODES = [
+  { id: "fullscreen", label: "Full screen" },
+  { id: "docked", label: "Docked" },
+];
+
+function ReviewDemoSettings({ mode, onMode, onClose }) {
+  return (
+    <div className="demo-settings-layer" onClick={onClose}>
+      <div
+        className="demo-settings"
+        role="dialog"
+        aria-labelledby="review-demo-settings-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="demo-settings-heading">
+          <p id="review-demo-settings-title">Demo settings</p>
+          <button type="button" className="demo-settings-close" aria-label="Close demo settings" onClick={onClose}>
+            <X size={16} strokeWidth={1.5} absoluteStrokeWidth />
+          </button>
+        </div>
+        <p className="demo-settings-note">Placeholder for previewing the vocabulary list. Not part of the reader.</p>
+        <div className="demo-type">
+          <p id="review-demo-list-label">Vocab list</p>
+          <div role="radiogroup" aria-labelledby="review-demo-list-label">
+            {VOCAB_LIST_MODES.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={mode === item.id}
+                className={mode === item.id ? "is-selected" : ""}
+                onClick={() => onMode(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function DemoSettings({ lessonType, onLessonType, onClose }) {
   return (
@@ -1271,6 +1331,10 @@ export default function Reader() {
   const [reviewCardMenu, setReviewCardMenu] = useState(false);
   const [reviewCard, setReviewCard] = useState(null);
   const [reviewListView, setReviewListView] = useState(false);
+  const [vocabListMode, setVocabListMode] = useState("fullscreen");
+  const [reviewDemo, setReviewDemo] = useState(false);
+  const [reviewProgress, setReviewProgress] = useState(null);
+  const vocabDocked = vocabListMode === "docked";
   const [showMini, setShowMini] = useState(false);
   const [termMenu, setTermMenu] = useState(null);
   const [termPulse, setTermPulse] = useState(null);
@@ -2424,13 +2488,19 @@ export default function Reader() {
 
   function closeReview() {
     setReviewCardMenu(false);
+    setReviewDemo(false);
     setReviewCard(null);
     setReviewListView(false);
   }
 
-  function dockReviewList() {
-    setReviewMenu(false);
+  function chooseVocabListMode(mode) {
+    setVocabListMode(mode);
+    if (mode === "docked") setReviewListView(false);
+  }
+
+  function openDockedVocabulary() {
     setReviewCardMenu(false);
+    setReviewDemo(false);
     setReviewCard(null);
     setReviewListView(false);
     setReviewOpen(true);
@@ -2441,6 +2511,10 @@ export default function Reader() {
   function chooseReviewAction(action) {
     setReviewMenu(false);
     setReviewCardMenu(false);
+    if (action === "demo") {
+      setReviewDemo(true);
+      return;
+    }
     if (action === "list") {
       if (reviewCard) {
         setReviewListView(true);
@@ -3196,71 +3270,6 @@ export default function Reader() {
               <ChevronRight size={16} strokeWidth={1.36} absoluteStrokeWidth />
             </button>
           </div>
-          {reviewCard ? (
-            <div className="review-card-layer" onClick={closeReview}>
-              <div
-                className="review-card"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={reviewListView ? undefined : "review-card-title"}
-                aria-label={reviewListView ? "Vocabulary" : undefined}
-                onClick={(event) => event.stopPropagation()}
-              >
-                <div className="review-card-header">
-                  <button type="button" className="review-card-close" aria-label="Close review" onClick={closeReview}>
-                    <X size={18} strokeWidth={1.5} absoluteStrokeWidth />
-                  </button>
-                  <div className="review-card-tabs" role="tablist" aria-label="Review display">
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={reviewListView}
-                      aria-label="List"
-                      className={reviewListView ? "is-on" : ""}
-                      onClick={() => { setReviewCardMenu(false); setReviewListView(true); }}
-                    >
-                      <List size={18} strokeWidth={1.5} absoluteStrokeWidth />
-                      <span>List</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={!reviewListView}
-                      aria-label="Review"
-                      className={reviewListView ? "" : "is-on"}
-                      onClick={() => { setReviewCardMenu(false); setReviewListView(false); }}
-                    >
-                      <FileCheck size={18} strokeWidth={1.5} absoluteStrokeWidth />
-                      <span>Review</span>
-                    </button>
-                  </div>
-                  <div className="review-card-tools">
-                    {reviewListView && !mobile ? (
-                      <button type="button" className="review-card-dock" aria-label="Dock vocabulary list" onClick={dockReviewList}>
-                        <PanelRight size={18} strokeWidth={1.5} absoluteStrokeWidth />
-                      </button>
-                    ) : null}
-                    <span className="review-card-options">
-                      <button type="button" aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => setReviewCardMenu((open) => !open)}>
-                        <EllipsisVertical size={18} strokeWidth={1.5} absoluteStrokeWidth />
-                      </button>
-                      {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} showList={false} /> : null}
-                    </span>
-                  </div>
-                </div>
-                {reviewListView ? (
-                  <ReviewPanel
-                    terms={reviewTermsFrom(lesson, savedPhrases)}
-                    onStatus={changeReviewStatus}
-                    onClose={closeReview}
-                    embedded
-                  />
-                ) : (
-                  <p id="review-card-title">{REVIEW_CARDS[reviewCard]}</p>
-                )}
-              </div>
-            </div>
-          ) : null}
         </div>
         </div>
         {sideColumn ? (
@@ -3599,7 +3608,106 @@ export default function Reader() {
         />
       ) : null}
 
-      {reviewCard ? <button type="button" className="review-scrim" aria-label="Close review" onClick={closeReview} /> : null}
+      {reviewCard ? createPortal(
+        <div className={`review-card-layer${theater ? " is-theater" : ""}`}>
+          <div
+            className="review-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={reviewListView ? undefined : "review-card-title"}
+            aria-label={reviewListView ? "Vocabulary" : undefined}
+          >
+            <div className="review-card-header">
+              <div className={`review-card-header-bar${vocabDocked ? " is-docked" : ""}`}>
+              <button type="button" className="icon-button review-card-close" aria-label="Close review" onClick={closeReview}>
+                <X size={24} strokeWidth={1.5} absoluteStrokeWidth />
+              </button>
+              {vocabDocked ? (
+                <div className="review-session-progress review-card-progress">
+                  {reviewProgress && !reviewProgress.done ? (
+                    <>
+                      <div className="review-session-track" aria-hidden="true">
+                        <div style={{ width: `${((reviewProgress.index + 1) / reviewProgress.total) * 100}%` }} />
+                      </div>
+                      <span>{reviewProgress.index + 1} / {reviewProgress.total}</span>
+                    </>
+                  ) : null}
+                </div>
+              ) : (
+              <div className="review-card-tabs" role="tablist" aria-label="Review display">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={reviewListView}
+                  aria-label="List"
+                  className={reviewListView ? "is-on" : ""}
+                  onClick={() => { setReviewCardMenu(false); setReviewListView(true); }}
+                >
+                  <List size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                  <span>List</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!reviewListView}
+                  aria-label="Review"
+                  className={reviewListView ? "" : "is-on"}
+                  onClick={() => { setReviewCardMenu(false); setReviewListView(false); }}
+                >
+                  <FileCheck size={18} strokeWidth={1.5} absoluteStrokeWidth />
+                  <span>Review</span>
+                </button>
+              </div>
+              )}
+              <div className="review-card-tools">
+                {vocabDocked ? (
+                  <button
+                    type="button"
+                    className={mobile ? "icon-button" : "review-card-list"}
+                    aria-label="Vocabulary list"
+                    onClick={openDockedVocabulary}
+                  >
+                    <List size={mobile ? 24 : 16} strokeWidth={1.5} absoluteStrokeWidth />
+                    {mobile ? null : <span>Vocabulary list</span>}
+                  </button>
+                ) : null}
+                <span className="review-card-options">
+                  <button type="button" className="icon-button" aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => setReviewCardMenu((open) => !open)}>
+                    <EllipsisVertical size={24} strokeWidth={1.5} absoluteStrokeWidth />
+                  </button>
+                  {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} showList={false} showSettings /> : null}
+                </span>
+              </div>
+              </div>
+            </div>
+            {reviewListView ? (
+              <ReviewPanel
+                terms={reviewTermsFrom(lesson, savedPhrases)}
+                onStatus={changeReviewStatus}
+                onClose={closeReview}
+                embedded
+              />
+            ) : null}
+            <ReviewSession
+              key={reviewCard}
+              kind={reviewCard}
+              title={REVIEW_CARDS[reviewCard]}
+              hidden={reviewListView}
+              docked={vocabDocked}
+              onProgress={setReviewProgress}
+              onClose={closeReview}
+            />
+          </div>
+          {reviewDemo ? (
+            <ReviewDemoSettings
+              mode={vocabListMode}
+              onMode={chooseVocabListMode}
+              onClose={() => setReviewDemo(false)}
+            />
+          ) : null}
+        </div>,
+        document.body,
+      ) : null}
     </div>
   );
 }

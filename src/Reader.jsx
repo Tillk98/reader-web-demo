@@ -593,13 +593,16 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
     ));
   }
 
-  function row(id, label, icon, { onClick, trailing, danger, sub, plain, keepOpen, href } = {}) {
+  function row(id, label, icon, { onClick, trailing, danger, sub, plain, keepOpen, href, note } = {}) {
     const open = !mobile && openSub === id;
     const className = `reader-menu-item${danger ? " is-destructive" : ""}${open ? " is-open" : ""}${plain ? " is-plain" : ""}`;
     const content = (
       <>
         {icon || null}
-        <span>{label}</span>
+        <span className="reader-menu-copy">
+          <span>{label}</span>
+          {note ? <span className="reader-menu-note">{note}</span> : null}
+        </span>
         {trailing?.type === "toggle" ? (
           <span className={`menu-toggle${trailing.on ? " is-on" : ""}`} aria-hidden="true"><span /></span>
         ) : null}
@@ -671,7 +674,6 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
     row("chat-lynx", "Ask Lynx AI", <img src={lynxIcon} alt="" width={16} height={16} />, { onClick: onOpenLynx }),
   ];
 
-  const sentenceText = mode === "sentence" || textLayout === "sentences";
   const groups = [
     [
       mode === "page" || mode === "scroll" ? row("text-layout", "Text layout", menuGlyph(Pilcrow), {
@@ -679,11 +681,12 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
         onClick: onTextLayout,
         trailing: { type: "meta", label: textLayout === "sentences" ? "By sentences" : "By paragraphs" },
       }) : null,
-      sentenceText ? row("translations", "Show Translations", menuGlyph(Languages), {
+      row("translations", "Show Translations", menuGlyph(Languages), {
         keepOpen: true,
         onClick: onToggleTranslation,
+        note: mode === "sentence" ? null : "Only available in layout by sentences",
         trailing: { type: "toggle", on: showTranslation },
-      }) : null,
+      }),
       mode === "page" || mode === "sentence" ? row("auto-advance", "Auto-advance", menuGlyph(SkipForward), {
         keepOpen: true,
         onClick: onToggleAutoAdvance,
@@ -2878,7 +2881,13 @@ export default function Reader() {
                 <ReaderOptionsMenu
                   mode={mode}
                   showTranslation={showTranslation}
-                  onToggleTranslation={() => setShowTranslation((open) => !open)}
+                  onToggleTranslation={() => {
+                    setShowTranslation((open) => {
+                      const next = !open;
+                      if (next && mode !== "sentence") setTextLayout("sentences");
+                      return next;
+                    });
+                  }}
                   showDictionary={showDictionary}
                   onToggleDictionary={() => {
                     setShowDictionary((open) => !open);

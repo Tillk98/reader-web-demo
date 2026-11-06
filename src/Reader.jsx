@@ -699,6 +699,8 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
       }) : null,
       row("simplify", "Simplify Lesson", menuGlyph(ArrowDownNarrowWide)),
       row("regenerate", "Regenerate Lesson", menuGlyph(RefreshCw)),
+    ].filter(Boolean),
+    [
       mode === "sentence" ? row("edit-sentence", "Edit Sentence", menuGlyph(SquarePen)) : null,
       row("edit-lesson", "Edit Lesson", menuGlyph(SquarePen)),
     ].filter(Boolean),

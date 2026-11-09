@@ -43,6 +43,7 @@ import {
   Play,
   Printer,
   Repeat2,
+  RefreshCcw,
   RefreshCw,
   Reply,
   Settings,
@@ -687,6 +688,7 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
         note: "When viewing sentences",
         trailing: { type: "toggle", on: showTranslation },
       }) : null,
+      row("refresh-translations", "Refresh Translations", menuGlyph(RefreshCcw)),
       mode === "page" || mode === "sentence" ? row("auto-advance", "Auto-advance", menuGlyph(SkipForward), {
         keepOpen: true,
         onClick: onToggleAutoAdvance,
@@ -1262,7 +1264,6 @@ export default function Reader() {
   const [sentenceIndex, setSentenceIndex] = useState(1);
   const [showTranslation, setShowTranslation] = useState(false);
   const [sentencePeek, setSentencePeek] = useState(false);
-  const [sentenceHide, setSentenceHide] = useState(false);
   const [showDictionary, setShowDictionary] = useState(false);
   const [textLayout, setTextLayout] = useState("paragraphs");
   const [modeMenu, setModeMenu] = useState(false);
@@ -1366,9 +1367,8 @@ export default function Reader() {
   if (sentenceCursor.current !== sentenceIndex) {
     sentenceCursor.current = sentenceIndex;
     if (sentencePeek) setSentencePeek(false);
-    if (sentenceHide) setSentenceHide(false);
   }
-  const sentenceShowsTranslation = (showTranslation && !sentenceHide) || sentencePeek;
+  const sentenceShowsTranslation = sentencePeek;
   const translationRef = useRef(showTranslation);
   if (translationRef.current !== showTranslation) {
     translationRef.current = showTranslation;
@@ -1402,30 +1402,32 @@ export default function Reader() {
       const original = showTranslation ? node.querySelector(":scope > p:not(.sentence-translation)") : node;
       const lines = lineBoxes(original || node);
       const translation = showTranslation ? node.querySelector(":scope > .sentence-translation") : null;
-      const translationBottom = translation ? translation.offsetTop + translation.offsetHeight : lines[lines.length - 1].bottom;
-      return { lines, translationBottom };
+      const translationTop = translation ? translation.offsetTop : lines[lines.length - 1].bottom;
+      const translationBottom = translation ? translation.offsetTop + translation.offsetHeight : translationTop;
+      const translationLine = translation ? (parseFloat(getComputedStyle(translation).lineHeight) || 20) : 0;
+      return { lines, translationTop, translationBottom, translationLine };
     });
     const lines = sentences.flatMap((sentence, sentenceIndex) => sentence.lines.map((line, lineIndex) => ({
       ...line,
       sentenceIndex,
       isLast: lineIndex === sentence.lines.length - 1,
     })));
-    // A translation stays with the end of its sentence. If it does not fit, the break moves
-    // back to an earlier line of original text so the whole translation fits on the next page.
+    // The translation starts under its sentence. A translation long enough to be cut off
+    // continues on the next page. The break moves earlier only so that start can fit.
     const breakTopFor = (line, pageTop, pageLimit) => {
       if (line.top <= pageTop + 0.5) return null;
+      if (line.bottom - pageTop > pageLimit + 0.5) return line.top;
+      if (!line.isLast || !showTranslation) return null;
       const sentence = sentences[line.sentenceIndex];
-      const overflows = line.isLast && showTranslation
-        ? sentence.translationBottom - pageTop > pageLimit + 0.5
-        : line.bottom - pageTop > pageLimit + 0.5;
-      if (!overflows) return null;
-      if (line.isLast && showTranslation) {
+      const startFits = sentence.translationTop + sentence.translationLine - pageTop <= pageLimit + 0.5;
+      if (!startFits) {
         const fitting = [...sentence.lines].reverse().find((candidate) => (
-          sentence.translationBottom - candidate.top <= pageLimit + 0.5 && candidate.top > pageTop + 0.5
+          sentence.translationTop + sentence.translationLine - candidate.top <= pageLimit + 0.5 && candidate.top > pageTop + 0.5
         ));
-        if (fitting) return fitting.top;
+        return fitting ? fitting.top : line.top;
       }
-      return line.top;
+      if (sentence.translationBottom - pageTop > pageLimit + 0.5) return pageTop + pageLimit;
+      return null;
     };
     const starts = [0];
     let pageTop = 0;
@@ -1434,6 +1436,16 @@ export default function Reader() {
       if (breakTop == null) return;
       starts.push(breakTop);
       pageTop = breakTop;
+      let guard = 0;
+      while (guard < 30) {
+        guard += 1;
+        const hanging = sentences.find((sentence) => (
+          sentence.translationTop < pageTop - 0.5 && sentence.translationBottom > pageTop + limit + 0.5
+        ));
+        if (!hanging) break;
+        starts.push(pageTop + limit);
+        pageTop += limit;
+      }
     });
     const contentBottom = (from) => sentences.reduce((bottom, sentence) => {
       const last = sentence.lines[sentence.lines.length - 1];
@@ -2538,9 +2550,21 @@ export default function Reader() {
     }
   }
 
+  function visibleScrollSentence() {
+    const root = textRef.current;
+    if (!root) return sentenceIndex;
+    const box = root.getBoundingClientRect();
+    const visible = [...root.querySelectorAll("[data-sentence]")].find((node) => {
+      const rect = node.getBoundingClientRect();
+      return rect.bottom > box.top + 8 && rect.top < box.bottom - 8;
+    });
+    return visible ? Number(visible.dataset.sentence) : sentenceIndex;
+  }
+
   function startDefaultReview() {
     if (mode === "scroll") {
-      chooseReviewAction("lesson");
+      setSentenceIndex(visibleScrollSentence());
+      chooseReviewAction("sentence");
       return;
     }
     chooseReviewAction(mode === "sentence" ? "sentence" : "page");
@@ -2613,12 +2637,28 @@ export default function Reader() {
   const videoFrame = playing ? (videoChrome ? videoPlayingUi : videoPlaying) : videoPausedUi;
   const sideColumn = (sidePanel && activeToken) || (lynxOpen && !mobile) || (reviewOpen && !mobile);
   const sideBySide = split && wide && (!sideColumn || roomy);
+  function toggleLoopAudio() {
+    setLoopAudio((on) => {
+      const next = !on;
+      if (next) setAutoAdvance(false);
+      return next;
+    });
+  }
+
+  function toggleAutoAdvance() {
+    setAutoAdvance((on) => {
+      const next = !on;
+      if (next) setLoopAudio(false);
+      return next;
+    });
+  }
+
   const audioMenuProps = {
     loopAudio,
-    onLoopAudio: () => setLoopAudio((on) => !on),
+    onLoopAudio: toggleLoopAudio,
     showLoop: true,
     autoAdvance,
-    onAutoAdvance: () => setAutoAdvance((on) => !on),
+    onAutoAdvance: toggleAutoAdvance,
     showSpeed: true,
     showTimer: true,
     theater,
@@ -2904,7 +2944,7 @@ export default function Reader() {
                     });
                   }}
                   autoAdvance={autoAdvance}
-                  onToggleAutoAdvance={() => setAutoAdvance((on) => !on)}
+                  onToggleAutoAdvance={toggleAutoAdvance}
                   onOpenDemo={() => {
                     setChromeMenu(null);
                     setDemoSettings(true);
@@ -3009,15 +3049,7 @@ export default function Reader() {
                       className={`sentence-translate${sentenceShowsTranslation ? " is-on" : ""}`}
                       aria-pressed={sentenceShowsTranslation}
                       aria-label={sentenceShowsTranslation ? "Hide translation" : "Show translation"}
-                      onClick={() => {
-                        if (sentenceShowsTranslation) {
-                          setSentencePeek(false);
-                          if (showTranslation) setSentenceHide(true);
-                          return;
-                        }
-                        setSentenceHide(false);
-                        setSentencePeek(true);
-                      }}
+                      onClick={() => setSentencePeek((open) => !open)}
                     >
                       <Languages size={18} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
@@ -3142,6 +3174,7 @@ export default function Reader() {
                     <div
                       className="scroll-sentence"
                       key={key}
+                      data-sentence={paragraphIndex}
                       data-page-paragraph={mode === "page" ? paragraphIndex : undefined}
                     >
                       <p>{nodes}</p>
@@ -3150,13 +3183,13 @@ export default function Reader() {
                   );
                 }
                 return (
-                  <p key={key} data-page-paragraph={mode === "page" ? paragraphIndex : undefined}>
+                  <p key={key} data-sentence={paragraphIndex} data-page-paragraph={mode === "page" ? paragraphIndex : undefined}>
                     {nodes}
                   </p>
                 );
               }
               return (
-                <p key={key} data-page-paragraph={mode === "page" ? key : undefined}>
+                <p key={key} data-sentence={key} data-page-paragraph={mode === "page" ? key : undefined}>
                   {indexes.map((paragraphIndex, index) => (
                     <span key={paragraphIndex}>
                       {index > 0 ? " " : null}
@@ -3372,11 +3405,11 @@ export default function Reader() {
               </div>
               <div className="audio-bar-trailing">
                 <div className="audio-bar-playback">
-                  <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} data-playback="loop" hidden={droppedPlayback.includes("loop")} aria-label="Loop audio" aria-pressed={loopAudio} onClick={() => setLoopAudio((on) => !on)}>
+                  <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} data-playback="loop" hidden={droppedPlayback.includes("loop")} aria-label="Loop audio" aria-pressed={loopAudio} onClick={toggleLoopAudio}>
                     <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
                   </button>
                   {mode === "page" || mode === "sentence" ? (
-                    <button type="button" className={`audio-bar-control audio-bar-advance${autoAdvance ? " is-on" : ""}`} data-playback="advance" hidden={droppedPlayback.includes("advance")} aria-label="Auto-advance" aria-pressed={autoAdvance} onClick={() => setAutoAdvance((on) => !on)}>
+                    <button type="button" className={`audio-bar-control audio-bar-advance${autoAdvance ? " is-on" : ""}`} data-playback="advance" hidden={droppedPlayback.includes("advance")} aria-label="Auto-advance" aria-pressed={autoAdvance} onClick={toggleAutoAdvance}>
                       <SkipForward size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
                   ) : null}
@@ -3464,11 +3497,11 @@ export default function Reader() {
                     <button type="button" className="audio-bar-control audio-bar-timer" aria-label="Timer">
                       <Timer size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
-                    <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} aria-label="Loop audio" aria-pressed={loopAudio} onClick={() => setLoopAudio((on) => !on)}>
+                    <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} aria-label="Loop audio" aria-pressed={loopAudio} onClick={toggleLoopAudio}>
                       <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
                     {mode === "page" || mode === "sentence" ? (
-                      <button type="button" className={`audio-bar-control audio-bar-advance${autoAdvance ? " is-on" : ""}`} aria-label="Auto-advance" aria-pressed={autoAdvance} onClick={() => setAutoAdvance((on) => !on)}>
+                      <button type="button" className={`audio-bar-control audio-bar-advance${autoAdvance ? " is-on" : ""}`} aria-label="Auto-advance" aria-pressed={autoAdvance} onClick={toggleAutoAdvance}>
                         <SkipForward size={20} strokeWidth={1.5} absoluteStrokeWidth />
                       </button>
                     ) : null}

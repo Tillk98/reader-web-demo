@@ -681,12 +681,12 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
         onClick: onTextLayout,
         trailing: { type: "meta", label: textLayout === "sentences" ? "By sentences" : "By paragraphs" },
       }) : null,
-      row("translations", "Show Translations", menuGlyph(Languages), {
+      mode === "page" || mode === "scroll" ? row("translations", "Show Translations", menuGlyph(Languages), {
         keepOpen: true,
         onClick: onToggleTranslation,
-        note: mode === "sentence" ? null : "Only available in layout by sentences",
+        note: "When viewing sentences",
         trailing: { type: "toggle", on: showTranslation },
-      }),
+      }) : null,
       mode === "page" || mode === "sentence" ? row("auto-advance", "Auto-advance", menuGlyph(SkipForward), {
         keepOpen: true,
         onClick: onToggleAutoAdvance,

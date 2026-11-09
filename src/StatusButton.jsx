@@ -13,6 +13,35 @@ const DETAILS = {
 
 export const WORD_BAR_STATUSES = ["Ignored", "New", "Recognized", "Familiar", "Learned", "Known"];
 
+export function BlueWordStatus({ onAdd, onKnown, onIgnore, collapsing = null }) {
+  const choice = collapsing === "New" ? "New" : collapsing;
+
+  return (
+    <span
+      className={`blue-status${collapsing ? " is-collapsing" : ""}`}
+      data-choice={choice || undefined}
+      role="group"
+      aria-label="New word"
+    >
+      <StatusButton
+        status={collapsing === "New" ? "New" : "Blue"}
+        state="focus"
+        onClick={collapsing ? () => {} : onAdd}
+      />
+      <StatusButton
+        status="Ignored"
+        state={collapsing === "Ignored" ? "focus" : "default"}
+        onClick={collapsing ? () => {} : onIgnore}
+      />
+      <StatusButton
+        status="Known"
+        state={collapsing === "Known" ? "focus" : "default"}
+        onClick={collapsing ? () => {} : onKnown}
+      />
+    </span>
+  );
+}
+
 export default function StatusButton({
   status,
   state = "default",

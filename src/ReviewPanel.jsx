@@ -18,7 +18,7 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
+import StatusButton, { BlueWordStatus, WORD_BAR_STATUSES } from "./StatusButton.jsx";
 import { meaningsFor } from "./meanings.js";
 import { termSnippet } from "./sentences.js";
 
@@ -486,7 +486,45 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
       })
       .map(({ item }) => item);
   }, [query, listed, sort, match]);
+  const [motion, setMotion] = useState(null);
+  const [arrivedTerm, setArrivedTerm] = useState(null);
+  const motionTimers = useRef([]);
+  const pendingStatus = useRef(null);
   const openItem = visible.find((item) => item.id === openId) || null;
+
+  useEffect(() => () => {
+    motionTimers.current.forEach((timer) => clearTimeout(timer));
+    pendingStatus.current?.();
+    pendingStatus.current = null;
+  }, []);
+
+  function chooseBlueStatus(item, status) {
+    if (motion) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onStatus?.(item, status);
+      return;
+    }
+    const filters = appliedFilters ?? defaultFilters();
+    const stays = passesFilter({ ...item, status }, filters)
+      && termMatches(item, query.trim().toLowerCase(), match);
+    setOpenId(null);
+    setArrivedTerm(null);
+    setMotion({ id: item.id, status, phase: "show" });
+    pendingStatus.current = () => onStatus?.(item, status);
+    const leaveTimer = window.setTimeout(() => {
+      setMotion((current) => (current?.id === item.id ? { ...current, phase: "leave" } : current));
+    }, 1280);
+    const doneTimer = window.setTimeout(() => {
+      const commit = pendingStatus.current;
+      pendingStatus.current = null;
+      setMotion(null);
+      commit?.();
+      if (!stays) return;
+      setArrivedTerm(item.term.toLowerCase());
+      motionTimers.current.push(window.setTimeout(() => setArrivedTerm(null), 360));
+    }, 1560);
+    motionTimers.current.push(leaveTimer, doneTimer);
+  }
 
   useEffect(() => {
     if (!sortOpen) return undefined;
@@ -642,16 +680,31 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
         )}
       </header>
       <div className="review-list">
-        {visible.map((item, index) => (
-          <div key={item.id}>
-            <div className="review-row">
+        {visible.map((item, index) => {
+          const moving = motion?.id === item.id;
+          return (
+          <div
+            key={item.id}
+            className={`review-row-wrap${moving && motion.phase === "leave" ? " is-leaving" : ""}${arrivedTerm === item.term.toLowerCase() ? " is-arrived" : ""}`}
+          >
+            <div className="review-row-clip">
+            <div className={`review-row${item.status === "Blue" ? " is-blue" : ""}`}>
               <div className="review-row-lead">
-                <span data-review-status={item.id}>
-                  <StatusButton
-                    status={item.status}
-                    state="focus"
-                    onClick={() => setOpenId((current) => (current === item.id ? null : item.id))}
-                  />
+                <span className="review-row-status" data-review-status={item.id}>
+                  {item.status === "Blue" ? (
+                    <BlueWordStatus
+                      collapsing={moving ? motion.status : null}
+                      onAdd={() => chooseBlueStatus(item, "New")}
+                      onKnown={() => chooseBlueStatus(item, "Known")}
+                      onIgnore={() => chooseBlueStatus(item, "Ignored")}
+                    />
+                  ) : (
+                    <StatusButton
+                      status={item.status}
+                      state="focus"
+                      onClick={() => setOpenId((current) => (current === item.id ? null : item.id))}
+                    />
+                  )}
                 </span>
                 <strong>{item.term}</strong>
                 <button type="button" className="review-speak" aria-label={`Play ${item.term}`}>
@@ -659,17 +712,24 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
                 </button>
               </div>
               <p className="review-row-meaning">{item.meaning}</p>
-              <p className="review-row-sentence">
-                {item.context?.lead ? "... " : null}
-                {item.context?.before}
-                {item.context?.term ? <strong>{item.context.term}</strong> : null}
-                {item.context?.after}
-                {item.context?.trail ? " ..." : null}
-              </p>
+              <div className="review-row-sentence">
+                <button type="button" className="review-speak" aria-label={`Play sentence for ${item.term}`}>
+                  <Volume2 size={16} strokeWidth={1.5} absoluteStrokeWidth />
+                </button>
+                <span>
+                  {item.context?.lead ? "... " : null}
+                  {item.context?.before}
+                  {item.context?.term ? <strong>{item.context.term}</strong> : null}
+                  {item.context?.after}
+                  {item.context?.trail ? " ..." : null}
+                </span>
+              </div>
             </div>
             {index < visible.length - 1 ? <div className="review-divider" /> : null}
+            </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       {openItem ? (
         <ReviewStatusMenu

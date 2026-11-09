@@ -35,7 +35,9 @@ import {
   ListX,
   LogOut,
   Maximize,
+  Maximize2,
   Minimize,
+  Minimize2,
   MousePointerClick,
   PanelRight,
   Pilcrow,
@@ -1232,6 +1234,61 @@ function fitPlaybackActions(row, hasVideo) {
   return hidden;
 }
 
+function ReviewToggle({ listView, iconSize, onList, onReview }) {
+  const rootRef = useRef(null);
+  const [thumb, setThumb] = useState(null);
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+    function place() {
+      const active = root.querySelector(".is-on");
+      if (!active) return;
+      setThumb({
+        width: active.offsetWidth,
+        height: active.offsetHeight,
+        x: active.offsetLeft,
+        y: active.offsetTop,
+      });
+    }
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [listView, iconSize]);
+
+  return (
+    <div className="review-card-toggle" role="tablist" aria-label="Review display" ref={rootRef}>
+      {thumb ? (
+        <span
+          className="review-card-toggle-thumb"
+          style={{ width: thumb.width, height: thumb.height, transform: `translate(${thumb.x}px, ${thumb.y}px)` }}
+        />
+      ) : null}
+      <button
+        type="button"
+        role="tab"
+        aria-selected={listView}
+        className={listView ? "is-on" : ""}
+        onClick={onList}
+      >
+        <List size={iconSize} strokeWidth={1.5} absoluteStrokeWidth />
+        <span>Vocabulary List</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={!listView}
+        className={listView ? "" : "is-on"}
+        onClick={onReview}
+      >
+        <FileCheck size={iconSize} strokeWidth={1.5} absoluteStrokeWidth />
+        <span>Review</span>
+      </button>
+    </div>
+  );
+}
+
 export default function Reader() {
   const textRef = useRef(null);
   const theaterScopeRef = useRef(null);
@@ -1332,15 +1389,19 @@ export default function Reader() {
   const completeHintTimer = useRef(null);
   const [sidePanel, setSidePanel] = useState(false);
   const [lynxOpen, setLynxOpen] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewMenu, setReviewMenu] = useState(false);
   const [reviewCardMenu, setReviewCardMenu] = useState(false);
   const [reviewCard, setReviewCard] = useState(null);
+  const [reviewDocked, setReviewDocked] = useState(false);
+  const [reviewDockHost, setReviewDockHost] = useState(null);
+  const [reviewPortalNode] = useState(() => {
+    const node = document.createElement("div");
+    node.className = "review-portal";
+    return node;
+  });
   const [reviewListView, setReviewListView] = useState(false);
   const [vocabListMode, setVocabListMode] = useState("fullscreen");
   const [reviewDemo, setReviewDemo] = useState(false);
-  const [reviewProgress, setReviewProgress] = useState(null);
-  const vocabDocked = vocabListMode === "docked";
   const [showMini, setShowMini] = useState(false);
   const [termMenu, setTermMenu] = useState(null);
   const [termPulse, setTermPulse] = useState(null);
@@ -1991,7 +2052,7 @@ export default function Reader() {
     if (!playerShown) return undefined;
     function onKeyDown(event) {
       if (event.key !== "Escape") return;
-      if (modeMenu || reviewMenu || playerMenu || playMenu || chromeMenu || demoSettings || phrasePick || active || termMenu || reviewCard || reviewOpen || lynxOpen) return;
+      if (modeMenu || reviewMenu || playerMenu || playMenu || chromeMenu || demoSettings || phrasePick || active || termMenu || reviewCard || lynxOpen) return;
       if (theater) {
         runTheater(() => setTheater(false));
         return;
@@ -2000,11 +2061,17 @@ export default function Reader() {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [playerShown, theater, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, phrasePick, active, termMenu, reviewCard, reviewOpen, lynxOpen]);
+  }, [playerShown, theater, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, phrasePick, active, termMenu, reviewCard, lynxOpen]);
 
   function openLynx() {
     transition(() => {
-      if (mobile) setReviewOpen(false);
+      if (mobile && reviewListView) {
+        setReviewCardMenu(false);
+        setReviewDemo(false);
+        setReviewCard(null);
+        setReviewListView(false);
+        setReviewDocked(false);
+      }
       setLynxOpen(true);
     });
   }
@@ -2117,7 +2184,7 @@ export default function Reader() {
       return;
     }
     const saved = savedAt(paragraphIndex, tokenIndex);
-    const panelShowsList = sidePanel && reviewOpen;
+    const panelShowsList = reviewDocked;
     if (saved) {
       if (active?.phrase?.savedId === saved.id && !panelShowsList) {
         if (sidePanel) {
@@ -2130,7 +2197,7 @@ export default function Reader() {
       openSaved(saved, paragraphIndex, tokenIndex, "small");
       highlightSentenceTerm(paragraphIndex, tokenIndex);
       if (sidePanel) {
-        setReviewOpen(false);
+        dismissDockedReview();
         setShowMini(true);
       }
       return;
@@ -2151,7 +2218,7 @@ export default function Reader() {
     setActive({ paragraphIndex, tokenIndex, size: "small", mode: "meaning", statusMenu: false });
     highlightSentenceTerm(paragraphIndex, tokenIndex);
     if (sidePanel) {
-      setReviewOpen(false);
+      dismissDockedReview();
       setShowMini(true);
     }
   }
@@ -2447,7 +2514,7 @@ export default function Reader() {
     if (phrase) openSaved(phrase, paragraphIndex, tokenIndex, "large");
     else setActive({ paragraphIndex, tokenIndex, size: "large", mode: "meaning", statusMenu: false });
     if (sidePanel) {
-      setReviewOpen(false);
+      dismissDockedReview();
       setShowMini(false);
     }
   }
@@ -2513,21 +2580,46 @@ export default function Reader() {
     setReviewDemo(false);
     setReviewCard(null);
     setReviewListView(false);
+    setReviewDocked(false);
+    setSidePanel(false);
+  }
+
+  function dismissDockedReview() {
+    if (!reviewDocked) return;
+    setReviewCardMenu(false);
+    setReviewDemo(false);
+    setReviewCard(null);
+    setReviewListView(false);
+    setReviewDocked(false);
+  }
+
+  useLayoutEffect(() => {
+    if (!reviewCard) {
+      reviewPortalNode.remove();
+      return undefined;
+    }
+    const parent = reviewDocked && reviewDockHost ? reviewDockHost : document.body;
+    if (reviewPortalNode.parentElement !== parent) parent.appendChild(reviewPortalNode);
+    return undefined;
+  }, [reviewCard, reviewDocked, reviewDockHost, reviewPortalNode]);
+
+  function dockReview() {
+    setReviewCardMenu(false);
+    setReviewDemo(false);
+    setLynxOpen(false);
+    setReviewDocked(true);
+    setSidePanel(true);
+  }
+
+  function undockReview() {
+    setReviewCardMenu(false);
+    setReviewDocked(false);
+    setSidePanel(false);
   }
 
   function chooseVocabListMode(mode) {
     setVocabListMode(mode);
     if (mode === "docked") setReviewListView(false);
-  }
-
-  function openDockedVocabulary() {
-    setReviewCardMenu(false);
-    setReviewDemo(false);
-    setReviewCard(null);
-    setReviewListView(false);
-    setReviewOpen(true);
-    if (mobile) setLynxOpen(false);
-    else setSidePanel(true);
   }
 
   function chooseReviewAction(action) {
@@ -2542,16 +2634,14 @@ export default function Reader() {
         setReviewListView(true);
         return;
       }
-      setReviewListView(false);
-      setReviewOpen(true);
-      if (mobile) setLynxOpen(false);
-      else setSidePanel(true);
+      openSideVocabulary();
       return;
     }
     if (REVIEW_CARDS[action]) {
+      const opening = !reviewCard;
       setReviewListView(false);
       setReviewCard(action);
-      if (reviewOpen) collapseSidePanel();
+      if (wide && (opening || reviewDocked)) dockReview();
     }
   }
 
@@ -2575,23 +2665,43 @@ export default function Reader() {
     chooseReviewAction(mode === "sentence" ? "sentence" : "page");
   }
 
+  function openSideVocabulary() {
+    setReviewCardMenu(false);
+    setReviewDemo(false);
+    setLynxOpen(false);
+    setReviewListView(true);
+    if (!reviewCard) {
+      if (mode === "scroll") setSentenceIndex(visibleScrollSentence());
+      setReviewCard(mode === "sentence" || mode === "scroll" ? "sentence" : "page");
+    }
+    if (mobile) {
+      setReviewDocked(false);
+      return;
+    }
+    setReviewDocked(true);
+    setSidePanel(true);
+  }
+
   function toggleSidePanel() {
     if (sidePanel) {
-      setSidePanel(false);
+      if (reviewDocked) closeReview();
+      else setSidePanel(false);
       return;
     }
     if (!mobile && active?.size === "large") {
-      setReviewOpen(false);
+      dismissDockedReview();
       setSidePanel(true);
       return;
     }
-    setReviewOpen(true);
-    if (mobile) setLynxOpen(false);
-    else setSidePanel(true);
+    if (reviewCard && !mobile) {
+      dockReview();
+      return;
+    }
+    openSideVocabulary();
   }
 
   function collapseSidePanel() {
-    setReviewOpen(false);
+    setReviewDocked(false);
     if (!sidePanel) return;
     setSidePanel(false);
     setShowMini(false);
@@ -2605,7 +2715,7 @@ export default function Reader() {
     }
     query.addEventListener("change", closeIfNarrow);
     return () => query.removeEventListener("change", closeIfNarrow);
-  }, [sidePanel, reviewOpen]);
+  }, [sidePanel, reviewDocked]);
 
   function startPhraseSelect() {
     if (!active) return;
@@ -2640,7 +2750,7 @@ export default function Reader() {
   const activeToken = active ? lesson[active.paragraphIndex][active.tokenIndex] : null;
   const showVideo = lessonHasVideo && media === "video" && !videoClosed;
   const videoFrame = playing ? (videoChrome ? videoPlayingUi : videoPlaying) : videoPausedUi;
-  const sideColumn = (sidePanel && activeToken) || (lynxOpen && !mobile) || (reviewOpen && !mobile);
+  const sideColumn = (sidePanel && activeToken) || (lynxOpen && !mobile) || (reviewDocked && sidePanel && !mobile);
   const sideBySide = split && wide && (!sideColumn || roomy);
   function toggleLoopAudio() {
     setLoopAudio((on) => {
@@ -2962,7 +3072,7 @@ export default function Reader() {
                 />
               ) : null}
             </span>
-            {sidePanel || reviewOpen ? null : (
+            {sidePanel || reviewDocked ? null : (
             <button type="button" className="icon-button panel-button" aria-label="Open side panel" onClick={toggleSidePanel}>
               <PanelRight size={24} strokeWidth={1.5} absoluteStrokeWidth />
             </button>
@@ -3225,6 +3335,7 @@ export default function Reader() {
                 selectStatus={selectStatus}
                 meaning={activeMeaning}
                 mode={active.mode}
+                isNew={activeIsNew}
                 hideChevron={sidePanel}
                 onMode={(mode) => setActive((current) => (current ? { ...current, mode } : current))}
                 onStatus={handleStatusChange}
@@ -3322,14 +3433,9 @@ export default function Reader() {
         </div>
         </div>
         {sideColumn ? (
-          <aside className={`side-panel${lynxOpen && !playerOpen ? " is-anchored" : ""}${lynxOpen && ((sidePanel && activeToken) || (reviewOpen && !mobile)) ? " is-split" : ""}`}>
-            {reviewOpen && !mobile ? (
-              <ReviewPanel
-                terms={reviewTermsFrom(lesson, savedPhrases)}
-                onStatus={changeReviewStatus}
-                onClose={collapseSidePanel}
-                onReview={startDefaultReview}
-              />
+          <aside className={`side-panel${lynxOpen && !playerOpen ? " is-anchored" : ""}${lynxOpen && ((sidePanel && activeToken) || reviewDocked) ? " is-split" : ""}`}>
+            {reviewDocked && !mobile ? (
+              <div className="review-dock-host" ref={setReviewDockHost} />
             ) : sidePanel && activeToken ? (
             <WidgetLarge
               term={largeTerm}
@@ -3354,18 +3460,6 @@ export default function Reader() {
             ) : null}
             {lynxOpen && !mobile ? <LynxChat onClose={closeLynx} /> : null}
           </aside>
-        ) : null}
-        {reviewOpen && mobile ? createPortal(
-          <div className="review-sheet" role="dialog" aria-label="Vocabulary">
-            <PlayerDragHandle label="Close vocabulary" onDragDown={() => setReviewOpen(false)} />
-            <ReviewPanel
-              terms={reviewTermsFrom(lesson, savedPhrases)}
-              onStatus={changeReviewStatus}
-              onClose={() => setReviewOpen(false)}
-              onReview={startDefaultReview}
-            />
-          </div>,
-          document.body,
         ) : null}
         {lynxOpen && mobile ? createPortal(
           <div className="review-sheet lynx-sheet" role="dialog" aria-label="Lynx AI">
@@ -3658,94 +3752,73 @@ export default function Reader() {
       ) : null}
 
       {reviewCard ? createPortal(
-        <div className={`review-card-layer${theater ? " is-theater" : ""}`}>
+        <div className={`review-card-layer${theater ? " is-theater" : ""}${reviewDocked ? " is-docked" : ""}${reviewDocked && !reviewDockHost ? " is-moving" : ""}`}>
           <div
-            className="review-card"
+            className={`review-card${reviewListView ? " is-list" : ""}`}
             role="dialog"
-            aria-modal="true"
+            aria-modal={reviewDocked ? "false" : "true"}
             aria-labelledby={reviewListView ? undefined : "review-card-title"}
             aria-label={reviewListView ? "Vocabulary" : undefined}
           >
             <div className="review-card-header">
-              <div className={`review-card-header-bar${vocabDocked ? " is-docked" : ""}`}>
-              <button type="button" className="icon-button review-card-close" aria-label="Close review" onClick={closeReview}>
-                <X size={24} strokeWidth={1.5} absoluteStrokeWidth />
-              </button>
-              {vocabDocked ? (
-                <div className="review-session-progress review-card-progress">
-                  {reviewProgress && !reviewProgress.done ? (
-                    <>
-                      <div className="review-session-track" aria-hidden="true">
-                        <div style={{ width: `${((reviewProgress.index + 1) / reviewProgress.total) * 100}%` }} />
-                      </div>
-                      <span>{reviewProgress.index + 1} / {reviewProgress.total}</span>
-                    </>
+              <div className={`review-card-header-bar${mobile && !reviewDocked ? " is-compact" : ""}`}>
+                <div className="review-card-header-start">
+                  {reviewDocked ? null : (
+                    <button type="button" className={`${mobile ? "widget-large-icon-button" : "icon-button"} review-card-close`} aria-label="Close review" onClick={closeReview}>
+                      <X size={mobile ? 16 : 20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                  )}
+                  <ReviewToggle
+                    listView={reviewListView}
+                    iconSize={mobile && !reviewDocked ? 16 : 20}
+                    onList={() => { setReviewCardMenu(false); setReviewListView(true); }}
+                    onReview={() => { setReviewCardMenu(false); setReviewListView(false); }}
+                  />
+                </div>
+                <div className="review-card-tools">
+                  {wide ? (
+                    <button
+                      type="button"
+                      className={reviewDocked || mobile ? "widget-large-icon-button" : "icon-button"}
+                      aria-label={reviewDocked ? "Expand review" : "Collapse to side panel"}
+                      onClick={reviewDocked ? undockReview : dockReview}
+                    >
+                      {reviewDocked
+                        ? <Maximize2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                        : <Minimize2 size={20} strokeWidth={1.5} absoluteStrokeWidth />}
+                    </button>
+                  ) : null}
+                  <span className="review-card-options">
+                    <button type="button" className={reviewDocked || mobile ? "widget-large-icon-button" : "icon-button"} aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => setReviewCardMenu((open) => !open)}>
+                      <EllipsisVertical size={mobile && !reviewDocked ? 16 : 20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} showList={false} showSettings /> : null}
+                  </span>
+                  {reviewDocked ? (
+                    <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={closeReview}>
+                      <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
                   ) : null}
                 </div>
-              ) : (
-              <div className="review-card-tabs" role="tablist" aria-label="Review display">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={reviewListView}
-                  aria-label="List"
-                  className={reviewListView ? "is-on" : ""}
-                  onClick={() => { setReviewCardMenu(false); setReviewListView(true); }}
-                >
-                  <List size={18} strokeWidth={1.5} absoluteStrokeWidth />
-                  <span>List</span>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={!reviewListView}
-                  aria-label="Review"
-                  className={reviewListView ? "" : "is-on"}
-                  onClick={() => { setReviewCardMenu(false); setReviewListView(false); }}
-                >
-                  <FileCheck size={18} strokeWidth={1.5} absoluteStrokeWidth />
-                  <span>Review</span>
-                </button>
-              </div>
-              )}
-              <div className="review-card-tools">
-                {vocabDocked ? (
-                  <button
-                    type="button"
-                    className={mobile ? "icon-button" : "review-card-list"}
-                    aria-label="Vocabulary list"
-                    onClick={openDockedVocabulary}
-                  >
-                    <List size={mobile ? 24 : 16} strokeWidth={1.5} absoluteStrokeWidth />
-                    {mobile ? null : <span>Vocabulary list</span>}
-                  </button>
-                ) : null}
-                <span className="review-card-options">
-                  <button type="button" className="icon-button" aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => setReviewCardMenu((open) => !open)}>
-                    <EllipsisVertical size={24} strokeWidth={1.5} absoluteStrokeWidth />
-                  </button>
-                  {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} showList={false} showSettings /> : null}
-                </span>
-              </div>
               </div>
             </div>
-            {reviewListView ? (
-              <ReviewPanel
-                terms={reviewTermsFrom(lesson, savedPhrases)}
-                onStatus={changeReviewStatus}
+            <div className="review-card-stage">
+              {reviewListView ? (
+                <ReviewPanel
+                  terms={reviewTermsFrom(lesson, savedPhrases)}
+                  onStatus={changeReviewStatus}
+                  onClose={closeReview}
+                  embedded
+                />
+              ) : null}
+              <ReviewSession
+                key={reviewCard}
+                kind={reviewCard}
+                title={REVIEW_CARDS[reviewCard]}
+                hidden={reviewListView}
                 onClose={closeReview}
-                embedded
               />
-            ) : null}
-            <ReviewSession
-              key={reviewCard}
-              kind={reviewCard}
-              title={REVIEW_CARDS[reviewCard]}
-              hidden={reviewListView}
-              docked={vocabDocked}
-              onProgress={setReviewProgress}
-              onClose={closeReview}
-            />
+            </div>
           </div>
           {reviewDemo ? (
             <ReviewDemoSettings
@@ -3755,7 +3828,7 @@ export default function Reader() {
             />
           ) : null}
         </div>,
-        document.body,
+        reviewPortalNode,
       ) : null}
     </div>
   );

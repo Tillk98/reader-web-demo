@@ -20,7 +20,7 @@ import flagIcon from "../assets/language_flag_icon.png";
 import localeFlag from "../assets/flag-en.svg";
 import lynxIcon from "../assets/lynx-icon-blue.png";
 import sentenceIcon from "../assets/sentencemode_icon_light.png";
-import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
+import StatusButton, { BlueWordStatus, WORD_BAR_STATUSES } from "./StatusButton.jsx";
 
 const TAGS = ["Noun", "Proper Noun"];
 const DICTIONARIES = ["Google Translate", "Linguee", "DeepL", "WörterBuch"];
@@ -696,7 +696,13 @@ export default function WidgetLarge({
       {compact || page !== "dictionaries" ? (
         <footer className="widget-large-footer">
           <div className="widget-large-status-bar">
-            {WORD_BAR_STATUSES.map((item) => (
+            {isNew ? (
+              <BlueWordStatus
+                onAdd={() => onStatus("New")}
+                onKnown={() => onStatus("Known")}
+                onIgnore={() => onStatus("Ignored")}
+              />
+            ) : WORD_BAR_STATUSES.map((item) => (
               <StatusButton
                 key={item}
                 status={item}

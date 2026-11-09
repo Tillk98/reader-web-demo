@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowUpRight, BookA, Brackets, ChevronRight, Languages, Plus, Tags, Volume2 } from "lucide-react";
 import flagIcon from "../assets/language_flag_icon.png";
-import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
+import StatusButton, { BlueWordStatus, WORD_BAR_STATUSES } from "./StatusButton.jsx";
 
 const GAP = 8;
 const TAGS = ["Noun", "Proper Noun"];
@@ -275,7 +275,13 @@ export default function WidgetMedium({
 
         {!phraseError ? (
           <div className="widget-medium-status-bar">
-            {WORD_BAR_STATUSES.map((item) => (
+            {isNew ? (
+              <BlueWordStatus
+                onAdd={() => onStatus("New")}
+                onKnown={() => onStatus("Known")}
+                onIgnore={() => onStatus("Ignored")}
+              />
+            ) : WORD_BAR_STATUSES.map((item) => (
               <StatusButton
                 key={item}
                 status={item}

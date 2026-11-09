@@ -1,5 +1,5 @@
 import { Children, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { CircleCheck, CircleX, Info, Mic, RefreshCw, Square, Volume2 } from "lucide-react";
+import { Check, Info, Mic, RefreshCw, Square, Volume2, X } from "lucide-react";
 import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
 
 const WORDS = [
@@ -69,7 +69,7 @@ function wordFor(kind, index) {
   return WORDS[index];
 }
 
-export default function ReviewSession({ kind, title, hidden = false, docked = false, onProgress, onClose }) {
+export default function ReviewSession({ kind, title, hidden = false, onClose }) {
   const steps = stepsFor(kind);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState("ask");
@@ -86,10 +86,6 @@ export default function ReviewSession({ kind, title, hidden = false, docked = fa
   const missTimer = useRef(0);
   const done = index >= steps.length;
   const step = steps[index];
-
-  useEffect(() => {
-    onProgress?.({ index, total: steps.length, done });
-  }, [onProgress, index, steps.length, done]);
   const word = wordFor(kind, Math.min(index, steps.length - 1));
 
   useEffect(() => {
@@ -263,14 +259,12 @@ export default function ReviewSession({ kind, title, hidden = false, docked = fa
       <div className="review-session-body">
         {done ? null : (
           <div className="review-session-lead">
-            {docked ? null : (
-              <div className="review-session-progress">
-                <div className="review-session-track" aria-hidden="true">
-                  <div style={{ width: `${((index + 1) / steps.length) * 100}%` }} />
-                </div>
-                <span>{index + 1} / {steps.length}</span>
+            <div className="review-session-progress">
+              <div className="review-session-track" aria-hidden="true">
+                <div style={{ width: `${((index + 1) / steps.length) * 100}%` }} />
               </div>
-            )}
+              <span>{index + 1} / {steps.length}</span>
+            </div>
             <MessageReveal notice={notice} />
           </div>
         )}
@@ -562,12 +556,12 @@ function Flashcard({ notice, word, reverse, face, status, onStatus, onFlip, onWr
         ) : (
           <>
             <button type="button" className="review-session-wrong" onClick={onWrong}>
-              <CircleX size={16} strokeWidth={1.5} absoluteStrokeWidth />
-              I got it wrong
+              <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
+              <span>Oops</span>
             </button>
             <button type="button" className="review-session-right" onClick={onRight}>
-              <CircleCheck size={16} strokeWidth={1.5} absoluteStrokeWidth />
-              I got it right
+              <Check size={20} strokeWidth={1.5} absoluteStrokeWidth />
+              <span>Got it</span>
               <kbd>Enter</kbd>
             </button>
           </>

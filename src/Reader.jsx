@@ -1363,6 +1363,11 @@ export default function Reader() {
     textSizeRef.current = textSize;
     if (pageStarts !== null) setPageStarts(null);
   }
+  const playerLayoutRef = useRef(playerOpen);
+  if (playerLayoutRef.current !== playerOpen) {
+    playerLayoutRef.current = playerOpen;
+    if (pageStarts !== null) setPageStarts(null);
+  }
   const sentenceCursor = useRef(sentenceIndex);
   if (sentenceCursor.current !== sentenceIndex) {
     sentenceCursor.current = sentenceIndex;
@@ -2836,7 +2841,7 @@ export default function Reader() {
 
   return (
     <div
-      className={`reader${theater ? " is-theater" : ""}`}
+      className={`reader${theater ? " is-theater" : ""}${playerOpen ? " is-player-open" : ""}`}
       style={{
         "--lesson-size": `${TEXT_SIZES[textSize]}px`,
         "--lesson-line": `${TEXT_SIZES[textSize] * 2}px`,

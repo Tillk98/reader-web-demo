@@ -1130,6 +1130,10 @@ button.reader-menu-lesson:hover {
   overflow: hidden;
 }
 
+.reader.is-player-open:not(.is-theater) .lesson-area:not(.is-scroll):not(.is-sentence) .page-text {
+  padding-bottom: 24px;
+}
+
 .page-text p {
   margin: 0 0 var(--lesson-line, 36px);
   font-size: var(--lesson-size, 18px);
@@ -1756,6 +1760,25 @@ html.split-motion::view-transition-new(split-text) {
 .lesson-area.is-sentence.has-video .sentence-stage {
   position: relative;
   top: auto;
+  transform: none;
+}
+
+.lesson-area.is-sentence.has-video.is-side .video-text-fade {
+  display: none;
+}
+
+.lesson-area.is-sentence.has-video.is-side .sentence-view {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: safe center;
+  height: 100%;
+  min-height: 0;
+}
+
+.lesson-area.is-sentence.has-video.is-side .sentence-stage {
+  position: relative;
+  top: auto;
+  width: 100%;
   transform: none;
 }
 

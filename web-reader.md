@@ -163,7 +163,7 @@ Below 767px the theme menu, the reader menu, and the audio menu open as bottom s
 
 ### Reader menu
 
-The menu is 367px wide, radius 12, shadow `0 8px 24px rgba(0,0,0,0.1)`. It does not scroll. Groups are split by a full-width 1px `#F1F3F4` divider. There are no group headings. On-state switches are 36×18, on `#2E75CD`.
+The menu is 367px wide, radius 12, shadow `0 8px 24px rgba(0,0,0,0.1)`. On a wide screen the lesson header stays put, and the list under it scrolls once the menu is taller than 560px, or taller than the viewport minus 140px. Groups are split by a full-width 1px `#F1F3F4` divider. There are no group headings. On-state switches are 36×18, on `#2E75CD`.
 
 The header is 64px, with 6px of padding. Previous and next are 34px circles on `#F8F9FA`, with 16px chevrons. Previous and next open the neighboring lessons in the course. The lesson card between them is 52px, radius 8, the same fill, with a 36px thumbnail. Its title is 14px medium. The card shows the lesson title and the course, with the lesson’s place in the course, as in YouTube auf Deutsch (3/5).
 
@@ -174,7 +174,7 @@ Four groups:
 - **Organise:** Course, Remove from Active Playlist, Add to Playlist, Download & Print. A playlist the lesson is in shows Remove from that playlist, in red `#DD2525` with a list-x icon. Choosing it removes the lesson from that playlist and leaves the menu open. Add to Playlist can put it back.
 - **App:** Settings, Statistics, Help.
 
-Desktop rows with a chevron fly out to the left, 251px wide, 4px away, the first item level with the row. Hover opens one at once. Moving toward it keeps it open. Resting on another row switches after 300ms. Leaving both closes it after 300ms. Clicking the row opens it and focuses the first item. Left Arrow opens it. Right Arrow or Escape closes it and returns to the row.
+Desktop rows with a chevron fly out to the left, 251px wide, 4px away, the first item level with the row. The flyout sits outside the scrolling list, so it is not clipped, and it stays level with its row while that list scrolls. Hover opens one at once. Moving toward it keeps it open. Resting on another row switches after 300ms. Leaving both closes it after 300ms. Clicking the row opens it and focuses the first item. Left Arrow opens it. Right Arrow or Escape closes it and returns to the row.
 
 - **Course:** View Course, Subscribe, Edit Course. Subscribe flips to Unsubscribe, in red with a bell-minus icon, and the menu stays open.
 - **Add to Playlist:** New Playlist with a circle-plus icon, a divider, then playlists the lesson is not in. Those rows have no icon.

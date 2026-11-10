@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { ArrowUp, CornerDownRight, Mic, X } from "lucide-react";
+import { ArrowUp, CornerDownRight, Mic, PanelRight, X } from "lucide-react";
 import lynxIcon from "../assets/lynx_icon_light.png";
-import thumbnail from "../assets/lesson-thumbnail.jpg";
 
 const SUGGESTIONS = [
   "Frag mich den heutigen Wortschatz ab.",
   "Wiederhole die Wörter, die ich falsch hatte.",
 ];
 
-export default function LynxChat({ onClose, sheet = false }) {
+export default function LynxChat({ onClose, sheet = false, closeIcon = "panel" }) {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState([]);
 
@@ -26,28 +25,23 @@ export default function LynxChat({ onClose, sheet = false }) {
           <div className="review-header-bar">
             <h2>Lynx AI</h2>
             <button type="button" className="widget-large-icon-button" aria-label="Close" onClick={onClose}>
-              <X size={18} strokeWidth={1.5} absoluteStrokeWidth />
+              <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
             </button>
           </div>
         </header>
       ) : (
         <header className="lynx-chat-header">
           <div className="lynx-chat-title">
-            <img src={lynxIcon} alt="" width={18} height={18} />
+            <img src={lynxIcon} alt="" width={20} height={20} />
             <p>Lynx AI</p>
           </div>
-          <button type="button" className="lynx-chat-close" aria-label="Close Lynx" onClick={onClose}>
-            <X size={18} strokeWidth={1.5} absoluteStrokeWidth />
+          <button type="button" className="lynx-chat-close" aria-label={closeIcon === "x" ? "Close Lynx" : "Close side panel"} onClick={onClose}>
+            {closeIcon === "x"
+              ? <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
+              : <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />}
           </button>
         </header>
       )}
-      <div className="lynx-chat-lesson">
-        <img src={thumbnail} alt="" width={32} height={32} />
-        <span>
-          <strong>Mehrere Sprachen auf einmal lernen?! Wie lange jeden Tag lernen?</strong>
-          <em>YouTube auf Deutsch</em>
-        </span>
-      </div>
       <div className="lynx-chat-thread">
         {messages.map((message, index) => (
           <p key={`${index}-${message}`}>{message}</p>

@@ -249,16 +249,8 @@ function ReviewActionsMenu({ onChoose, showList = true, showSettings = false }) 
         {showSettings ? (
           <MenuRow
             role="menuitem"
-            icon={<FlaskConical size={16} strokeWidth={1.5} absoluteStrokeWidth />}
-            label="Demo settings"
-            onClick={() => onChoose("demo")}
-          />
-        ) : null}
-        {showSettings ? (
-          <MenuRow
-            role="menuitem"
             icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />}
-            label="Review Settings"
+            label="Settings"
             onClick={() => onChoose("settings")}
           />
         ) : null}
@@ -370,49 +362,6 @@ const LESSON_TYPES = [
   { id: "both", label: "Audio & Video" },
 ];
 
-const VOCAB_LIST_MODES = [
-  { id: "fullscreen", label: "Full screen" },
-  { id: "docked", label: "Docked" },
-];
-
-function ReviewDemoSettings({ mode, onMode, onClose }) {
-  return (
-    <div className="demo-settings-layer" onClick={onClose}>
-      <div
-        className="demo-settings"
-        role="dialog"
-        aria-labelledby="review-demo-settings-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="demo-settings-heading">
-          <p id="review-demo-settings-title">Demo settings</p>
-          <button type="button" className="demo-settings-close" aria-label="Close demo settings" onClick={onClose}>
-            <X size={16} strokeWidth={1.5} absoluteStrokeWidth />
-          </button>
-        </div>
-        <p className="demo-settings-note">Placeholder for previewing the vocabulary list. Not part of the reader.</p>
-        <div className="demo-type">
-          <p id="review-demo-list-label">Vocab list</p>
-          <div role="radiogroup" aria-labelledby="review-demo-list-label">
-            {VOCAB_LIST_MODES.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                role="radio"
-                aria-checked={mode === item.id}
-                className={mode === item.id ? "is-selected" : ""}
-                onClick={() => onMode(item.id)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function DemoSettings({ lessonType, onLessonType, onClose }) {
   return (
     <div className="demo-settings-layer" onClick={onClose}>
@@ -493,16 +442,28 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
   useEffect(() => () => clearClose(), []);
 
   useLayoutEffect(() => {
-    if (mobile || !openSub || !menuRef.current) return;
-    const row = menuRef.current.querySelector(`[data-sub="${openSub}"]`);
-    const submenu = row?.querySelector(".reader-submenu");
-    if (!row || !submenu) return;
-    const rowBox = row.getBoundingClientRect();
-    let top = -6;
-    const bottom = rowBox.top + top + submenu.offsetHeight;
-    if (bottom > window.innerHeight - 8) top -= bottom - (window.innerHeight - 8);
-    if (rowBox.top + top < 8) top += 8 - (rowBox.top + top);
-    submenu.style.top = `${top}px`;
+    if (mobile || !openSub || !menuRef.current) return undefined;
+    const menu = menuRef.current;
+    const row = menu.querySelector(`[data-sub="${openSub}"]`);
+    const submenu = menu.querySelector(":scope > .reader-submenu");
+    const scroller = menu.querySelector(".reader-menu-scroll");
+    if (!row || !submenu) return undefined;
+    function place() {
+      const menuBox = menu.getBoundingClientRect();
+      const rowBox = row.getBoundingClientRect();
+      let top = rowBox.top - menuBox.top - 6;
+      const bottom = menuBox.top + top + submenu.offsetHeight;
+      if (bottom > window.innerHeight - 8) top -= bottom - (window.innerHeight - 8);
+      if (menuBox.top + top < 8) top += 8 - (menuBox.top + top);
+      submenu.style.top = `${top}px`;
+    }
+    place();
+    scroller?.addEventListener("scroll", place);
+    window.addEventListener("resize", place);
+    return () => {
+      scroller?.removeEventListener("scroll", place);
+      window.removeEventListener("resize", place);
+    };
   }, [mobile, openSub, subscribed, playlists, showTranslation, mode]);
 
   useLayoutEffect(() => {
@@ -587,7 +548,7 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
     }
     apex.current = null;
     flushSync(() => setOpenSub(id));
-    menuRef.current?.querySelector(`[data-sub="${id}"] .reader-submenu .reader-menu-item`)?.focus();
+    menuRef.current?.querySelector(":scope > .reader-submenu .reader-menu-item")?.focus();
   }
 
   function togglePlaylist(title) {
@@ -639,11 +600,6 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
             {content}
           </button>
         )}
-        {sub && open ? (
-          <div className="reader-submenu" role="menu" aria-label={label}>
-            <div className="reader-menu-group">{sub}</div>
-          </div>
-        ) : null}
       </div>
     );
   }
@@ -728,12 +684,14 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
     ],
   ];
 
-  const drillParent = {
+  const submenus = {
     course: ["Course", courseItems],
     playlist: ["Add to Playlist", playlistItems],
     download: ["Download & Print", downloadItems],
     help: ["Help", helpItems],
-  }[drill];
+  };
+  const drillParent = submenus[drill];
+  const openSubmenu = submenus[openSub];
 
   function onMenuKeyDown(event) {
     const current = event.target.closest(".reader-menu-item");
@@ -817,12 +775,26 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
       ) : (
         <>
           {header}
-          {groups.map((items, index) => (
+          {mobile ? groups.map((items, index) => (
             <div key={items[0]?.key || index}>
               {index > 0 ? <div className="reader-menu-divider" /> : null}
               <div className="reader-menu-group">{items}</div>
             </div>
-          ))}
+          )) : (
+            <div className="reader-menu-scroll">
+              {groups.map((items, index) => (
+                <div key={items[0]?.key || index}>
+                  {index > 0 ? <div className="reader-menu-divider" /> : null}
+                  <div className="reader-menu-group">{items}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {!mobile && openSubmenu ? (
+            <div className="reader-submenu" role="menu" aria-label={openSubmenu[0]}>
+              <div className="reader-menu-group">{openSubmenu[1]}</div>
+            </div>
+          ) : null}
         </>
       )}
     </div>
@@ -1235,36 +1207,8 @@ function fitPlaybackActions(row, hasVideo) {
 }
 
 function ReviewToggle({ listView, iconSize, onList, onReview }) {
-  const rootRef = useRef(null);
-  const [thumb, setThumb] = useState(null);
-
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root) return undefined;
-    function place() {
-      const active = root.querySelector(".is-on");
-      if (!active) return;
-      setThumb({
-        width: active.offsetWidth,
-        height: active.offsetHeight,
-        x: active.offsetLeft,
-        y: active.offsetTop,
-      });
-    }
-    place();
-    const observer = new ResizeObserver(place);
-    observer.observe(root);
-    return () => observer.disconnect();
-  }, [listView, iconSize]);
-
   return (
-    <div className="review-card-toggle" role="tablist" aria-label="Review display" ref={rootRef}>
-      {thumb ? (
-        <span
-          className="review-card-toggle-thumb"
-          style={{ width: thumb.width, height: thumb.height, transform: `translate(${thumb.x}px, ${thumb.y}px)` }}
-        />
-      ) : null}
+    <div className="review-card-toggle" role="tablist" aria-label="Review display">
       <button
         type="button"
         role="tab"
@@ -1400,8 +1344,6 @@ export default function Reader() {
     return node;
   });
   const [reviewListView, setReviewListView] = useState(false);
-  const [vocabListMode, setVocabListMode] = useState("fullscreen");
-  const [reviewDemo, setReviewDemo] = useState(false);
   const [showMini, setShowMini] = useState(false);
   const [termMenu, setTermMenu] = useState(null);
   const [termPulse, setTermPulse] = useState(null);
@@ -2067,10 +2009,14 @@ export default function Reader() {
     transition(() => {
       if (mobile && reviewListView) {
         setReviewCardMenu(false);
-        setReviewDemo(false);
         setReviewCard(null);
         setReviewListView(false);
         setReviewDocked(false);
+      }
+      if (wide && reviewCard) {
+        setReviewCardMenu(false);
+        setReviewDocked(true);
+        setSidePanel(true);
       }
       setLynxOpen(true);
     });
@@ -2078,6 +2024,11 @@ export default function Reader() {
 
   function closeLynx() {
     transition(() => setLynxOpen(false));
+  }
+
+  function toggleLynx() {
+    if (lynxOpen) closeLynx();
+    else openLynx();
   }
 
   function showSnackbar() {
@@ -2577,7 +2528,6 @@ export default function Reader() {
 
   function closeReview() {
     setReviewCardMenu(false);
-    setReviewDemo(false);
     setReviewCard(null);
     setReviewListView(false);
     setReviewDocked(false);
@@ -2587,7 +2537,6 @@ export default function Reader() {
   function dismissDockedReview() {
     if (!reviewDocked) return;
     setReviewCardMenu(false);
-    setReviewDemo(false);
     setReviewCard(null);
     setReviewListView(false);
     setReviewDocked(false);
@@ -2605,7 +2554,6 @@ export default function Reader() {
 
   function dockReview() {
     setReviewCardMenu(false);
-    setReviewDemo(false);
     setLynxOpen(false);
     setReviewDocked(true);
     setSidePanel(true);
@@ -2617,18 +2565,9 @@ export default function Reader() {
     setSidePanel(false);
   }
 
-  function chooseVocabListMode(mode) {
-    setVocabListMode(mode);
-    if (mode === "docked") setReviewListView(false);
-  }
-
   function chooseReviewAction(action) {
     setReviewMenu(false);
     setReviewCardMenu(false);
-    if (action === "demo") {
-      setReviewDemo(true);
-      return;
-    }
     if (action === "list") {
       if (reviewCard) {
         setReviewListView(true);
@@ -2657,6 +2596,10 @@ export default function Reader() {
   }
 
   function startDefaultReview() {
+    if (reviewCard) {
+      closeReview();
+      return;
+    }
     if (mode === "scroll") {
       setSentenceIndex(visibleScrollSentence());
       chooseReviewAction("sentence");
@@ -2667,14 +2610,13 @@ export default function Reader() {
 
   function openSideVocabulary() {
     setReviewCardMenu(false);
-    setReviewDemo(false);
     setLynxOpen(false);
     setReviewListView(true);
     if (!reviewCard) {
       if (mode === "scroll") setSentenceIndex(visibleScrollSentence());
       setReviewCard(mode === "sentence" || mode === "scroll" ? "sentence" : "page");
     }
-    if (mobile) {
+    if (!wide) {
       setReviewDocked(false);
       return;
     }
@@ -3072,8 +3014,8 @@ export default function Reader() {
                 />
               ) : null}
             </span>
-            {sidePanel || reviewDocked ? null : (
-            <button type="button" className="icon-button panel-button" aria-label="Open side panel" onClick={toggleSidePanel}>
+            {sidePanel || reviewDocked || lynxOpen ? null : (
+            <button type="button" className="icon-button panel-button" aria-label={sideColumn ? "Close side panel" : "Open side panel"} aria-pressed={sideColumn} onClick={toggleSidePanel}>
               <PanelRight size={24} strokeWidth={1.5} absoluteStrokeWidth />
             </button>
             )}
@@ -3431,9 +3373,277 @@ export default function Reader() {
             </button>
           </div>
         </div>
+        <footer ref={footerRef} className={`reader-footer${playerOpen ? " is-player-open" : ""}`}>
+          {playerOpen ? (
+            <div className="audio-bar" role="group" aria-label="Lesson audio">
+              <PlayerDragHandle label={mobile ? "Collapse player" : "Close player"} onDragDown={mobile ? collapsePlayer : dismissPlayer} />
+              <AudioTimeline
+                time={audioTime}
+                duration={AUDIO_DURATION}
+                scrubbing={scrubbing}
+                onScrub={setAudioTime}
+                onScrubbing={setScrubbing}
+              />
+              <div className="audio-bar-row audio-bar-desktop" ref={desktopPlayerRef}>
+                <div className="audio-bar-leading">
+                  <div className="audio-bar-transport">
+                    <button type="button" className="audio-bar-pause" aria-label={playing ? "Pause" : "Play"} onClick={() => setPlayback(!playing)}>
+                      {playing ? <Pause size={24} strokeWidth={1.5} absoluteStrokeWidth /> : <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />}
+                    </button>
+                    <button type="button" className="audio-bar-control audio-bar-back" aria-label="Back 5 seconds">
+                      <img src={skipBackIcon} alt="" width={20} height={20} />
+                    </button>
+                    <button type="button" className="audio-bar-control audio-bar-forward" aria-label="Forward 5 seconds">
+                      <img src={skipForwardIcon} alt="" width={20} height={20} />
+                    </button>
+                  </div>
+                  <span className="audio-bar-time">
+                    <span className="audio-bar-time-current">{formatAudioTime(audioTime)}</span>
+                    <span className="audio-bar-time-sep">/</span>
+                    <span className="audio-bar-time-rest">{formatAudioTime(AUDIO_DURATION)}</span>
+                  </span>
+                </div>
+                <div className="audio-bar-trailing">
+                  <div className="audio-bar-playback">
+                    <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} data-playback="loop" hidden={droppedPlayback.includes("loop")} aria-label="Loop audio" aria-pressed={loopAudio} onClick={toggleLoopAudio}>
+                      <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                    {mode === "page" || mode === "sentence" ? (
+                      <button type="button" className={`audio-bar-control audio-bar-advance${autoAdvance ? " is-on" : ""}`} data-playback="advance" hidden={droppedPlayback.includes("advance")} aria-label="Auto-advance" aria-pressed={autoAdvance} onClick={toggleAutoAdvance}>
+                        <SkipForward size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                    ) : null}
+                    <button type="button" className="audio-bar-speed" data-playback="speed" hidden={droppedPlayback.includes("speed")} aria-label="Playback speed">1x</button>
+                    <button type="button" className="audio-bar-control audio-bar-timer" data-playback="timer" hidden={droppedPlayback.includes("timer")} aria-label="Timer">
+                      <Timer size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                  </div>
+                  <div className="audio-bar-tools">
+                    {lessonHasVideo && !theater && wide ? (
+                      <button type="button" className="audio-bar-control" data-playback="layout" hidden={droppedPlayback.includes("layout")} aria-label={split ? "Landscape" : "Portrait"} onClick={() => chooseLayout(!split)}>
+                        <Rows2 className={`audio-bar-layout-icon${split ? " is-landscape" : ""}`} size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                    ) : null}
+                    {lessonHasVideo ? (
+                      <button type="button" className={`audio-bar-control audio-bar-theater${theater ? " is-on" : ""}`} data-playback="theater" hidden={droppedPlayback.includes("theater")} aria-label={theater ? "Exit theater mode" : "Theater mode"} aria-pressed={theater} onClick={toggleTheater}>
+                        {theater ? <Minimize size={20} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={20} strokeWidth={1.5} absoluteStrokeWidth />}
+                      </button>
+                    ) : null}
+                    <span className="player-menu-anchor">
+                      <button type="button" className="audio-bar-control" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
+                        <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                      {playerMenu ? (
+                        <PlayerOptionsMenu {...audioMenuProps} />
+                      ) : null}
+                    </span>
+                  </div>
+                  <span className="audio-bar-divider" aria-hidden="true" />
+                  <div className="audio-bar-nav">
+                    <div className={`audio-bar-reading${theater ? " is-hidden" : ""}`} inert={theater ? true : undefined}>
+                      <div className="audio-bar-reading-clip">
+                        <span className="mode-anchor">
+                          <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
+                            {modeIcon(mode, 24)}
+                          </button>
+                          {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="vocab-split audio-bar-vocab">
+                      <button type="button" className="vocab-button" aria-label="Vocabulary" onClick={startDefaultReview}>
+                        <span className="audio-bar-vocab-mark">
+                          <img className="is-light" src={reviewIcon} alt="" width={24} height={24} />
+                          <img className="is-dark" src={reviewIconOnDark} alt="" width={24} height={24} />
+                        </span>
+                      </button>
+                    </span>
+                    <button type="button" className="audio-bar-lynx" aria-label={lynxOpen ? "Close Lynx" : "Ask Lynx AI"} aria-pressed={lynxOpen} onClick={toggleLynx}>
+                      <span className="audio-bar-lynx-mark">
+                        <img className="is-light" src={lynxIcon} alt="" width={24} height={24} />
+                        <img className="is-dark" src={lynxIconOnDark} alt="" width={24} height={24} />
+                      </span>
+                    </button>
+                  </div>
+                  <span className="audio-bar-divider" aria-hidden="true" />
+                  <div className="audio-bar-edge">
+                    <button type="button" className="audio-bar-control audio-bar-close" aria-label={lessonHasVideo && media === "video" ? "Dismiss video" : "Dismiss audio"} onClick={dismissPlayer}>
+                      <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="audio-bar-phone">
+                <div className="audio-bar-transport">
+                  <button type="button" className="audio-bar-control audio-bar-back" aria-label="Back 5 seconds">
+                    <img src={skipBackIcon} alt="" width={20} height={20} />
+                  </button>
+                  <button type="button" className="audio-bar-pause" aria-label={playing ? "Pause" : "Play"} onClick={() => setPlayback(!playing)}>
+                    {playing ? <Pause size={24} strokeWidth={1.5} absoluteStrokeWidth /> : <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />}
+                  </button>
+                  <button type="button" className="audio-bar-control audio-bar-forward" aria-label="Forward 5 seconds">
+                    <img src={skipForwardIcon} alt="" width={20} height={20} />
+                  </button>
+                </div>
+                <div className="audio-bar-secondary">
+                  <div className="audio-bar-actions">
+                    {lessonHasVideo ? (
+                      <button type="button" className={`audio-bar-control audio-bar-theater${theater ? " is-on" : ""}`} aria-label={theater ? "Exit theater mode" : "Theater mode"} aria-pressed={theater} onClick={toggleTheater}>
+                        {theater ? <Minimize size={20} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={20} strokeWidth={1.5} absoluteStrokeWidth />}
+                      </button>
+                    ) : null}
+                    <div className="audio-bar-actions-core">
+                      <button type="button" className="audio-bar-speed" aria-label="Playback speed">1x</button>
+                      <button type="button" className="audio-bar-control audio-bar-timer" aria-label="Timer">
+                        <Timer size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                      <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} aria-label="Loop audio" aria-pressed={loopAudio} onClick={toggleLoopAudio}>
+                        <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                      {mode === "page" || mode === "sentence" ? (
+                        <button type="button" className={`audio-bar-control audio-bar-advance${autoAdvance ? " is-on" : ""}`} aria-label="Auto-advance" aria-pressed={autoAdvance} onClick={toggleAutoAdvance}>
+                          <SkipForward size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                        </button>
+                      ) : null}
+                    </div>
+                    <span className="player-menu-anchor">
+                      <button type="button" className="audio-bar-control" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
+                        <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                      </button>
+                      {playerMenu ? (
+                        <PlayerOptionsMenu {...audioMenuProps} />
+                      ) : null}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : mobile && playerShown ? (
+            <div
+              className="audio-player"
+              role="group"
+              aria-label="Lesson audio"
+              onClick={(event) => {
+                if (event.target.closest("button, .player-menu, .mode-menu, .vocab-menu")) return;
+                openPlayer();
+              }}
+            >
+              <PlayerDragHandle label="Close player" onDragUp={openPlayer} onDragDown={dismissPlayer} />
+              <div className="audio-player-main">
+                <div className="audio-player-leading">
+                  <button type="button" className="audio-player-pause" aria-label={playing ? "Pause" : "Play"} onClick={() => setPlayback(!playing)}>
+                    {playing ? <Pause size={24} strokeWidth={1.5} absoluteStrokeWidth /> : <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />}
+                  </button>
+                  <button type="button" className="audio-player-icon audio-player-back" aria-label="Replay 10 seconds">
+                    <img src={replayIcon} alt="" width={20} height={20} />
+                  </button>
+                </div>
+                <div className="audio-player-tools">
+                  <span className="mode-anchor audio-player-mode">
+                    <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
+                      {modeIcon(mode, 20)}
+                    </button>
+                    {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
+                  </span>
+                  <span className="vocab-split audio-player-vocab">
+                    <button type="button" className="vocab-button" aria-label="Vocabulary" onClick={startDefaultReview}>
+                      <img src={reviewIcon} alt="" width={20} height={20} />
+                    </button>
+                  </span>
+                  <button type="button" className="audio-player-icon audio-player-lynx" aria-label={lynxOpen ? "Close Lynx" : "Ask Lynx AI"} aria-pressed={lynxOpen} onClick={toggleLynx}>
+                    <img src={lynxIcon} alt="" width={20} height={20} />
+                  </button>
+                  <span className="player-menu-anchor">
+                    <button type="button" className="audio-player-icon" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
+                      <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                    {playerMenu ? (
+                      <PlayerOptionsMenu {...audioMenuProps} />
+                    ) : null}
+                  </span>
+                </div>
+              </div>
+              <div className="audio-player-progress" aria-hidden="true">
+                <span />
+              </div>
+            </div>
+          ) : lessonType === "both" ? (
+            <span className="play-split">
+              <button type="button" className="play-button" aria-label={media === "audio" ? "Play audio" : "Play video"} onClick={() => startPlayback(media === "audio" ? "audio" : "video")}>
+                {media === "audio"
+                  ? <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />
+                  : <Youtube size={24} strokeWidth={1.5} absoluteStrokeWidth />}
+              </button>
+              <span className="play-split-divider" aria-hidden="true" />
+              <button
+                type="button"
+                className="play-split-chevron"
+                aria-label="Playback options"
+                aria-haspopup="menu"
+                aria-expanded={playMenu}
+                onClick={() => setPlayMenu((open) => !open)}
+              >
+                <ChevronDown size={20} strokeWidth={1.5} absoluteStrokeWidth />
+              </button>
+              {playMenu ? (
+                <div className="play-split-menu" role="menu">
+                  {media === "audio" ? (
+                    <button type="button" role="menuitem" onClick={() => startPlayback("video")}>
+                      <Youtube size={16} strokeWidth={1.5} absoluteStrokeWidth />
+                      Play video
+                    </button>
+                  ) : (
+                    <button type="button" role="menuitem" onClick={() => startPlayback("audio")}>
+                      <Play size={16} strokeWidth={1.5} absoluteStrokeWidth />
+                      Play audio
+                    </button>
+                  )}
+                </div>
+              ) : null}
+            </span>
+          ) : (
+            <button type="button" className="play-button" aria-label="Play" onClick={() => startPlayback(lessonHasVideo ? "video" : "audio")}>
+              {lessonHasVideo
+                ? <Youtube size={24} strokeWidth={1.5} absoluteStrokeWidth />
+                : <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />}
+            </button>
+          )}
+
+          {playerOpen ? null : (
+          <>
+          <div className="floating-nav">
+            <span className="mode-anchor">
+              <button type="button" className="mode-selector" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
+                {modeIcon(mode)}
+                <span>{MODES.find((item) => item.id === mode)?.label}</span>
+                <ChevronsUpDown size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
+              </button>
+              {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
+            </span>
+            <span className="nav-divider" aria-hidden="true" />
+            <span className="vocab-split">
+              <button type="button" className="vocab-button" aria-label="Vocabulary" onClick={startDefaultReview}>
+                <img src={reviewIcon} alt="" width={24} height={24} />
+              </button>
+              <button type="button" className="vocab-split-menu" aria-label="Review actions" aria-haspopup="menu" aria-expanded={reviewMenu} onClick={() => { setModeMenu(false); setReviewMenu((open) => !open); }}>
+                <ChevronDown size={20} strokeWidth={1.5} absoluteStrokeWidth />
+              </button>
+              {reviewMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
+            </span>
+          </div>
+
+          <form className="lynx-control" onSubmit={(event) => event.preventDefault()} onClick={toggleLynx}>
+            <input type="text" placeholder="Ask Lynx AI ..." aria-label="Ask Lynx AI" readOnly />
+            <button type="button" className="lynx-button" aria-label={lynxOpen ? "Close Lynx" : "Ask Lynx AI"} aria-pressed={lynxOpen}>
+              <img src={lynxIcon} alt="" width={24} height={24} />
+            </button>
+          </form>
+          </>
+          )}
+        </footer>
         </div>
         {sideColumn ? (
-          <aside className={`side-panel${lynxOpen && !playerOpen ? " is-anchored" : ""}${lynxOpen && ((sidePanel && activeToken) || reviewDocked) ? " is-split" : ""}`}>
+          <aside className={`side-panel${lynxOpen && ((sidePanel && activeToken) || reviewDocked) ? " is-split" : ""}${lynxOpen && reviewDocked && !reviewListView ? " is-review-compact" : ""}${lynxOpen && reviewDocked && reviewListView ? " is-list-compact" : ""}`}>
             {reviewDocked && !mobile ? (
               <div className="review-dock-host" ref={setReviewDockHost} />
             ) : sidePanel && activeToken ? (
@@ -3458,7 +3668,7 @@ export default function Reader() {
               onTogglePanel={toggleSidePanel}
             />
             ) : null}
-            {lynxOpen && !mobile ? <LynxChat onClose={closeLynx} /> : null}
+            {lynxOpen && !mobile ? <LynxChat onClose={closeLynx} closeIcon={(sidePanel && activeToken) || reviewDocked ? "x" : "panel"} /> : null}
           </aside>
         ) : null}
         {lynxOpen && mobile ? createPortal(
@@ -3472,276 +3682,6 @@ export default function Reader() {
       </main>
       </div>
 
-      <footer ref={footerRef} className={`reader-footer${playerOpen ? " is-player-open" : ""}`}>
-        {playerOpen ? (
-          <div className="audio-bar" role="group" aria-label="Lesson audio">
-            <PlayerDragHandle label={mobile ? "Collapse player" : "Close player"} onDragDown={mobile ? collapsePlayer : dismissPlayer} />
-            <AudioTimeline
-              time={audioTime}
-              duration={AUDIO_DURATION}
-              scrubbing={scrubbing}
-              onScrub={setAudioTime}
-              onScrubbing={setScrubbing}
-            />
-            <div className="audio-bar-row audio-bar-desktop" ref={desktopPlayerRef}>
-              <div className="audio-bar-leading">
-                <div className="audio-bar-transport">
-                  <button type="button" className="audio-bar-pause" aria-label={playing ? "Pause" : "Play"} onClick={() => setPlayback(!playing)}>
-                    {playing ? <Pause size={24} strokeWidth={1.5} absoluteStrokeWidth /> : <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />}
-                  </button>
-                  <button type="button" className="audio-bar-control audio-bar-back" aria-label="Back 5 seconds">
-                    <img src={skipBackIcon} alt="" width={20} height={20} />
-                  </button>
-                  <button type="button" className="audio-bar-control audio-bar-forward" aria-label="Forward 5 seconds">
-                    <img src={skipForwardIcon} alt="" width={20} height={20} />
-                  </button>
-                </div>
-                <span className="audio-bar-time">
-                  <span className="audio-bar-time-current">{formatAudioTime(audioTime)}</span>
-                  <span className="audio-bar-time-sep">/</span>
-                  <span className="audio-bar-time-rest">{formatAudioTime(AUDIO_DURATION)}</span>
-                </span>
-              </div>
-              <div className="audio-bar-trailing">
-                <div className="audio-bar-playback">
-                  <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} data-playback="loop" hidden={droppedPlayback.includes("loop")} aria-label="Loop audio" aria-pressed={loopAudio} onClick={toggleLoopAudio}>
-                    <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                  </button>
-                  {mode === "page" || mode === "sentence" ? (
-                    <button type="button" className={`audio-bar-control audio-bar-advance${autoAdvance ? " is-on" : ""}`} data-playback="advance" hidden={droppedPlayback.includes("advance")} aria-label="Auto-advance" aria-pressed={autoAdvance} onClick={toggleAutoAdvance}>
-                      <SkipForward size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                    </button>
-                  ) : null}
-                  <button type="button" className="audio-bar-speed" data-playback="speed" hidden={droppedPlayback.includes("speed")} aria-label="Playback speed">1x</button>
-                  <button type="button" className="audio-bar-control audio-bar-timer" data-playback="timer" hidden={droppedPlayback.includes("timer")} aria-label="Timer">
-                    <Timer size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                  </button>
-                </div>
-                <div className="audio-bar-tools">
-                  {lessonHasVideo && !theater && wide ? (
-                    <button type="button" className="audio-bar-control" data-playback="layout" hidden={droppedPlayback.includes("layout")} aria-label={split ? "Landscape" : "Portrait"} onClick={() => chooseLayout(!split)}>
-                      <Rows2 className={`audio-bar-layout-icon${split ? " is-landscape" : ""}`} size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                    </button>
-                  ) : null}
-                  {lessonHasVideo ? (
-                    <button type="button" className={`audio-bar-control audio-bar-theater${theater ? " is-on" : ""}`} data-playback="theater" hidden={droppedPlayback.includes("theater")} aria-label={theater ? "Exit theater mode" : "Theater mode"} aria-pressed={theater} onClick={toggleTheater}>
-                      {theater ? <Minimize size={20} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={20} strokeWidth={1.5} absoluteStrokeWidth />}
-                    </button>
-                  ) : null}
-                  <span className="player-menu-anchor">
-                    <button type="button" className="audio-bar-control" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
-                      <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                    </button>
-                    {playerMenu ? (
-                      <PlayerOptionsMenu {...audioMenuProps} />
-                    ) : null}
-                  </span>
-                </div>
-                <span className="audio-bar-divider" aria-hidden="true" />
-                <div className="audio-bar-nav">
-                  <div className={`audio-bar-reading${theater ? " is-hidden" : ""}`} inert={theater ? true : undefined}>
-                    <div className="audio-bar-reading-clip">
-                      <span className="mode-anchor">
-                        <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
-                          {modeIcon(mode, 24)}
-                        </button>
-                        {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
-                      </span>
-                    </div>
-                  </div>
-                  <span className="vocab-split audio-bar-vocab">
-                    <button type="button" className="vocab-button" aria-label="Vocabulary" onClick={startDefaultReview}>
-                      <span className="audio-bar-vocab-mark">
-                        <img className="is-light" src={reviewIcon} alt="" width={24} height={24} />
-                        <img className="is-dark" src={reviewIconOnDark} alt="" width={24} height={24} />
-                      </span>
-                    </button>
-                  </span>
-                  <button type="button" className="audio-bar-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
-                    <span className="audio-bar-lynx-mark">
-                      <img className="is-light" src={lynxIcon} alt="" width={24} height={24} />
-                      <img className="is-dark" src={lynxIconOnDark} alt="" width={24} height={24} />
-                    </span>
-                  </button>
-                </div>
-                <span className="audio-bar-divider" aria-hidden="true" />
-                <div className="audio-bar-edge">
-                  <button type="button" className="audio-bar-control audio-bar-close" aria-label={lessonHasVideo && media === "video" ? "Dismiss video" : "Dismiss audio"} onClick={dismissPlayer}>
-                    <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="audio-bar-phone">
-              <div className="audio-bar-transport">
-                <button type="button" className="audio-bar-control audio-bar-back" aria-label="Back 5 seconds">
-                  <img src={skipBackIcon} alt="" width={20} height={20} />
-                </button>
-                <button type="button" className="audio-bar-pause" aria-label={playing ? "Pause" : "Play"} onClick={() => setPlayback(!playing)}>
-                  {playing ? <Pause size={24} strokeWidth={1.5} absoluteStrokeWidth /> : <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />}
-                </button>
-                <button type="button" className="audio-bar-control audio-bar-forward" aria-label="Forward 5 seconds">
-                  <img src={skipForwardIcon} alt="" width={20} height={20} />
-                </button>
-              </div>
-              <div className="audio-bar-secondary">
-                <div className="audio-bar-actions">
-                  {lessonHasVideo ? (
-                    <button type="button" className={`audio-bar-control audio-bar-theater${theater ? " is-on" : ""}`} aria-label={theater ? "Exit theater mode" : "Theater mode"} aria-pressed={theater} onClick={toggleTheater}>
-                      {theater ? <Minimize size={20} strokeWidth={1.5} absoluteStrokeWidth /> : <Maximize size={20} strokeWidth={1.5} absoluteStrokeWidth />}
-                    </button>
-                  ) : null}
-                  <div className="audio-bar-actions-core">
-                    <button type="button" className="audio-bar-speed" aria-label="Playback speed">1x</button>
-                    <button type="button" className="audio-bar-control audio-bar-timer" aria-label="Timer">
-                      <Timer size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                    </button>
-                    <button type="button" className={`audio-bar-control audio-bar-loop${loopAudio ? " is-on" : ""}`} aria-label="Loop audio" aria-pressed={loopAudio} onClick={toggleLoopAudio}>
-                      <Repeat2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                    </button>
-                    {mode === "page" || mode === "sentence" ? (
-                      <button type="button" className={`audio-bar-control audio-bar-advance${autoAdvance ? " is-on" : ""}`} aria-label="Auto-advance" aria-pressed={autoAdvance} onClick={toggleAutoAdvance}>
-                        <SkipForward size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                      </button>
-                    ) : null}
-                  </div>
-                  <span className="player-menu-anchor">
-                    <button type="button" className="audio-bar-control" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
-                      <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                    </button>
-                    {playerMenu ? (
-                      <PlayerOptionsMenu {...audioMenuProps} />
-                    ) : null}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : mobile && playerShown ? (
-          <div
-            className="audio-player"
-            role="group"
-            aria-label="Lesson audio"
-            onClick={(event) => {
-              if (event.target.closest("button, .player-menu, .mode-menu, .vocab-menu")) return;
-              openPlayer();
-            }}
-          >
-            <PlayerDragHandle label="Close player" onDragUp={openPlayer} onDragDown={dismissPlayer} />
-            <div className="audio-player-main">
-              <div className="audio-player-leading">
-                <button type="button" className="audio-player-pause" aria-label={playing ? "Pause" : "Play"} onClick={() => setPlayback(!playing)}>
-                  {playing ? <Pause size={24} strokeWidth={1.5} absoluteStrokeWidth /> : <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />}
-                </button>
-                <button type="button" className="audio-player-icon audio-player-back" aria-label="Replay 10 seconds">
-                  <img src={replayIcon} alt="" width={20} height={20} />
-                </button>
-              </div>
-              <div className="audio-player-tools">
-                <span className="mode-anchor audio-player-mode">
-                  <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
-                    {modeIcon(mode, 20)}
-                  </button>
-                  {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
-                </span>
-                <span className="vocab-split audio-player-vocab">
-                  <button type="button" className="vocab-button" aria-label="Vocabulary" onClick={startDefaultReview}>
-                    <img src={reviewIcon} alt="" width={20} height={20} />
-                  </button>
-                </span>
-                <button type="button" className="audio-player-icon audio-player-lynx" aria-label="Ask Lynx AI" onClick={openLynx}>
-                  <img src={lynxIcon} alt="" width={20} height={20} />
-                </button>
-                <span className="player-menu-anchor">
-                  <button type="button" className="audio-player-icon" aria-label="More audio options" aria-expanded={playerMenu} onClick={() => setPlayerMenu((open) => !open)}>
-                    <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                  </button>
-                  {playerMenu ? (
-                    <PlayerOptionsMenu {...audioMenuProps} />
-                  ) : null}
-                </span>
-              </div>
-            </div>
-            <div className="audio-player-progress" aria-hidden="true">
-              <span />
-            </div>
-          </div>
-        ) : lessonType === "both" ? (
-          <span className="play-split">
-            <button type="button" className="play-button" aria-label={media === "audio" ? "Play audio" : "Play video"} onClick={() => startPlayback(media === "audio" ? "audio" : "video")}>
-              {media === "audio"
-                ? <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />
-                : <Youtube size={24} strokeWidth={1.5} absoluteStrokeWidth />}
-            </button>
-            <span className="play-split-divider" aria-hidden="true" />
-            <button
-              type="button"
-              className="play-split-chevron"
-              aria-label="Playback options"
-              aria-haspopup="menu"
-              aria-expanded={playMenu}
-              onClick={() => setPlayMenu((open) => !open)}
-            >
-              <ChevronDown size={20} strokeWidth={1.5} absoluteStrokeWidth />
-            </button>
-            {playMenu ? (
-              <div className="play-split-menu" role="menu">
-                {media === "audio" ? (
-                  <button type="button" role="menuitem" onClick={() => startPlayback("video")}>
-                    <Youtube size={16} strokeWidth={1.5} absoluteStrokeWidth />
-                    Play video
-                  </button>
-                ) : (
-                  <button type="button" role="menuitem" onClick={() => startPlayback("audio")}>
-                    <Play size={16} strokeWidth={1.5} absoluteStrokeWidth />
-                    Play audio
-                  </button>
-                )}
-              </div>
-            ) : null}
-          </span>
-        ) : (
-          <button type="button" className="play-button" aria-label="Play" onClick={() => startPlayback(lessonHasVideo ? "video" : "audio")}>
-            {lessonHasVideo
-              ? <Youtube size={24} strokeWidth={1.5} absoluteStrokeWidth />
-              : <Play size={24} strokeWidth={1.5} absoluteStrokeWidth />}
-          </button>
-        )}
-
-        {playerOpen ? null : (
-        <>
-        <div className="floating-nav">
-          <span className="mode-anchor">
-            <button type="button" className="mode-selector" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
-              {modeIcon(mode)}
-              <span>{MODES.find((item) => item.id === mode)?.label}</span>
-              <ChevronsUpDown size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
-            </button>
-            {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
-          </span>
-          <span className="nav-divider" aria-hidden="true" />
-          <span className="vocab-split">
-            <button type="button" className="vocab-button" aria-label="Vocabulary" onClick={startDefaultReview}>
-              <img src={reviewIcon} alt="" width={24} height={24} />
-            </button>
-            <button type="button" className="vocab-split-menu" aria-label="Review actions" aria-haspopup="menu" aria-expanded={reviewMenu} onClick={() => { setModeMenu(false); setReviewMenu((open) => !open); }}>
-              <ChevronDown size={20} strokeWidth={1.5} absoluteStrokeWidth />
-            </button>
-            {reviewMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
-          </span>
-        </div>
-
-        {lynxOpen ? null : (
-        <form className="lynx-control" onClick={openLynx} onSubmit={(event) => { event.preventDefault(); openLynx(); }}>
-          <input type="text" placeholder="Ask Lynx AI ..." aria-label="Ask Lynx AI" readOnly />
-          <button type="submit" className="lynx-button" aria-label="Ask Lynx AI">
-            <img src={lynxIcon} alt="" width={24} height={24} />
-          </button>
-        </form>
-        )}
-        </>
-        )}
-      </footer>
 
       {demoSettings ? (
         <DemoSettings
@@ -3765,12 +3705,12 @@ export default function Reader() {
                 <div className="review-card-header-start">
                   {reviewDocked ? null : (
                     <button type="button" className={`${mobile ? "widget-large-icon-button" : "icon-button"} review-card-close`} aria-label="Close review" onClick={closeReview}>
-                      <X size={mobile ? 16 : 20} strokeWidth={1.5} absoluteStrokeWidth />
+                      <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
                   )}
                   <ReviewToggle
                     listView={reviewListView}
-                    iconSize={mobile && !reviewDocked ? 16 : 20}
+                    iconSize={20}
                     onList={() => { setReviewCardMenu(false); setReviewListView(true); }}
                     onReview={() => { setReviewCardMenu(false); setReviewListView(false); }}
                   />
@@ -3790,9 +3730,9 @@ export default function Reader() {
                   ) : null}
                   <span className="review-card-options">
                     <button type="button" className={reviewDocked || mobile ? "widget-large-icon-button" : "icon-button"} aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => setReviewCardMenu((open) => !open)}>
-                      <EllipsisVertical size={mobile && !reviewDocked ? 16 : 20} strokeWidth={1.5} absoluteStrokeWidth />
+                      <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
-                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} showList={false} showSettings /> : null}
+                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} showSettings /> : null}
                   </span>
                   {reviewDocked ? (
                     <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={closeReview}>
@@ -3809,6 +3749,7 @@ export default function Reader() {
                   onStatus={changeReviewStatus}
                   onClose={closeReview}
                   embedded
+                  compact={lynxOpen}
                 />
               ) : null}
               <ReviewSession
@@ -3816,17 +3757,11 @@ export default function Reader() {
                 kind={reviewCard}
                 title={REVIEW_CARDS[reviewCard]}
                 hidden={reviewListView}
+                compact={lynxOpen && reviewDocked}
                 onClose={closeReview}
               />
             </div>
           </div>
-          {reviewDemo ? (
-            <ReviewDemoSettings
-              mode={vocabListMode}
-              onMode={chooseVocabListMode}
-              onClose={() => setReviewDemo(false)}
-            />
-          ) : null}
         </div>,
         reviewPortalNode,
       ) : null}

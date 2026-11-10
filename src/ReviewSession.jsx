@@ -69,7 +69,30 @@ function wordFor(kind, index) {
   return WORDS[index];
 }
 
-export default function ReviewSession({ kind, title, hidden = false, onClose }) {
+function ReviewInProgress({ index, total, done }) {
+  const completed = done ? total : index;
+  const left = total - completed;
+  const percent = total ? Math.round((completed / total) * 100) : 0;
+  return (
+    <div className="review-session-hold">
+      <p className="review-session-hold-label">
+        {done ? "Review Complete" : "Review in Progress"}
+        {done ? <span className="review-session-hold-result"> • You can do better! 🤨</span> : null}
+      </p>
+      <div className="review-session-hold-completion">
+        <div className="review-session-hold-top">
+          <p className="review-session-hold-percent">{percent}% Complete</p>
+          <span className="review-session-hold-count">{left} / {total} Cards Left</span>
+        </div>
+        <div className="review-session-track" aria-hidden="true">
+          <div style={{ width: `${percent}%` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ReviewSession({ kind, title, hidden = false, compact = false, onClose }) {
   const steps = stepsFor(kind);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState("ask");
@@ -254,10 +277,12 @@ export default function ReviewSession({ kind, title, hidden = false, onClose }) 
         : null;
 
   return (
-    <section className={`review-session${hidden ? " is-hidden" : ""}`} aria-hidden={hidden || undefined}>
+    <section className={`review-session${hidden ? " is-hidden" : ""}${compact ? " is-compact" : ""}`} aria-hidden={hidden || undefined}>
       <h2 id="review-card-title" className="review-session-sr">{title}</h2>
       <div className="review-session-body">
-        {done ? null : (
+        {compact ? (
+          <ReviewInProgress index={index} total={steps.length} done={done} />
+        ) : done ? null : (
           <div className="review-session-lead">
             <div className="review-session-progress">
               <div className="review-session-track" aria-hidden="true">
@@ -268,7 +293,7 @@ export default function ReviewSession({ kind, title, hidden = false, onClose }) 
             <MessageReveal notice={notice} />
           </div>
         )}
-        {done ? (
+        {compact ? null : done ? (
           <Results onClose={onClose} onAgain={reviewAgain} />
         ) : phase === "result" && step !== "unscramble" ? (
           <ResultFace
@@ -538,10 +563,7 @@ function Flashcard({ notice, word, reverse, face, status, onStatus, onFlip, onWr
                   </div>
                   <p className="review-session-meaning">{word.meaning}</p>
                 </div>
-                <div className="review-session-quote is-context">
-                  <Speak small />
-                  <SentenceLine sentence={word.sentence} term={word.word} />
-                </div>
+                <SentenceQuote sentence={word.sentence} term={word.word} />
                 <Tags tags={word.tags} />
               </div>
             </div>
@@ -677,11 +699,9 @@ function Matching({ notice, tiles, matched, armed, wrongPair, miss, onChoose, on
       </div>
       </div>
       </div>
-      {matched.length === tiles.length ? null : (
-        <Actions>
-          <Quiet onClick={onSkip}>Skip</Quiet>
-        </Actions>
-      )}
+      <Actions>
+        <Quiet onClick={onSkip}>Skip</Quiet>
+      </Actions>
     </ActivityFrame>
   );
 }
@@ -829,21 +849,21 @@ function Speaking({ notice, speech, onStart, onStop, onRetry, onSkip, onNext }) 
       <div className="review-session-card">
         <div className="review-session-card-body">
           <div className="review-session-speaking">
-            <div className="review-session-speak-prompt">
-              <div>
-                <p className="review-session-prompt">Speak the sentence...</p>
+            <p className="review-session-prompt">Speak the sentence...</p>
+            <div className="review-session-speak-body">
+              <div className="review-session-speak-foot">
+                <button type="button" className={`review-session-record${recording ? " is-recording" : ""}`} onClick={rated ? undefined : (recording ? onStop : onStart)}>
+                  {recording ? <Square size={16} strokeWidth={1.5} absoluteStrokeWidth /> : <Mic size={16} strokeWidth={1.5} absoluteStrokeWidth />}
+                  {recording ? "Stop speaking" : "Start speaking"}
+                </button>
+              </div>
+              <div className="review-session-speak-lines">
+                <SentenceQuote sentence={sentence} term={WORDS[0].word} />
+                {(recording || rated) && heard ? (
+                  <p className="review-session-transcript">{heard}</p>
+                ) : null}
               </div>
             </div>
-            <SentenceQuote sentence={sentence} term={WORDS[0].word} />
-            <div className="review-session-speak-foot">
-              <button type="button" className={`review-session-record${recording ? " is-recording" : ""}`} onClick={rated ? undefined : (recording ? onStop : onStart)}>
-                {recording ? <Square size={16} strokeWidth={1.5} absoluteStrokeWidth /> : <Mic size={16} strokeWidth={1.5} absoluteStrokeWidth />}
-                {recording ? "Stop speaking" : "Start speaking"}
-              </button>
-            </div>
-            {(recording || rated) && heard ? (
-              <p className="review-session-transcript">{heard}</p>
-            ) : null}
           </div>
         </div>
       </div>

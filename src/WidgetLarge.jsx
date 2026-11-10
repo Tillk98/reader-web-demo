@@ -431,6 +431,7 @@ export default function WidgetLarge({
   onClose,
   docked = false,
   compact = false,
+  closeIcon = "panel",
   onTogglePanel,
 }) {
   const cardRef = useRef(null);
@@ -508,8 +509,10 @@ export default function WidgetLarge({
           </button>
           <p className="widget-large-dict-title">Dictionaries</p>
           {docked ? (
-            <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={onTogglePanel}>
-              <PanelRight size={16} strokeWidth={1.5} absoluteStrokeWidth />
+            <button type="button" className="widget-large-icon-button" aria-label={closeIcon === "x" ? "Close" : "Close side panel"} onClick={onTogglePanel}>
+              {closeIcon === "x"
+                ? <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                : <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />}
             </button>
           ) : null}
         </header>
@@ -519,11 +522,13 @@ export default function WidgetLarge({
             <p className="widget-large-term">{term}</p>
             <div className="widget-large-term-actions">
               <button type="button" className="widget-large-icon-button" aria-label="Play audio">
-                <Volume2 size={16} strokeWidth={1.5} absoluteStrokeWidth />
+                <Volume2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
               </button>
               {docked ? (
-                <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={onTogglePanel}>
-                  <PanelRight size={16} strokeWidth={1.5} absoluteStrokeWidth />
+                <button type="button" className="widget-large-icon-button" aria-label={closeIcon === "x" ? "Close" : "Close side panel"} onClick={onTogglePanel}>
+                  {closeIcon === "x"
+                    ? <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    : <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />}
                 </button>
               ) : null}
             </div>

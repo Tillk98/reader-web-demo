@@ -18,7 +18,7 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-import StatusButton, { BlueWordStatus, WORD_BAR_STATUSES } from "./StatusButton.jsx";
+import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
 import { meaningsFor } from "./meanings.js";
 import { termSnippet } from "./sentences.js";
 
@@ -274,22 +274,23 @@ function MatchMenu({ anchorRef, selected, onSelect, onClose }) {
   );
 }
 
-function PanelClose({ sheet, onClose }) {
+function PanelClose({ sheet, onClose, closeIcon = "panel" }) {
+  const useX = sheet || closeIcon === "x";
   return (
     <button
       type="button"
       className="widget-large-icon-button"
-      aria-label={sheet ? "Close" : "Close side panel"}
+      aria-label={useX ? "Close" : "Close side panel"}
       onClick={onClose}
     >
-      {sheet
+      {useX
         ? <X size={18} strokeWidth={1.5} absoluteStrokeWidth />
         : <PanelRight size={18} strokeWidth={1.5} absoluteStrokeWidth />}
     </button>
   );
 }
 
-function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet, embedded = false }) {
+function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet, embedded = false, closeIcon = "panel" }) {
   const [clearing, setClearing] = useState(false);
   const allStatusesSelected = FILTER_STATUSES.every((status) => draft.statuses.includes(status.id));
   const someStatusesSelected = draft.statuses.length > 0 && !allStatusesSelected;
@@ -331,7 +332,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet, 
             </span>
             Clear
           </button>
-          {embedded ? null : <PanelClose sheet={sheet} onClose={onClose} />}
+          {embedded ? null : <PanelClose sheet={sheet} closeIcon={closeIcon} onClose={onClose} />}
         </div>
       </header>
       <div className="review-filter-body">
@@ -455,7 +456,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet, 
   );
 }
 
-export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, compact = false, embedded = false }) {
+export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, compact = false, embedded = false, closeIcon = "panel" }) {
   const matchButtonRef = useRef(null);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState(null);
@@ -499,7 +500,7 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
   }, []);
 
   function chooseBlueStatus(item, status) {
-    if (motion) return;
+    if (motion || item.status === status) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       onStatus?.(item, status);
       return;
@@ -553,7 +554,7 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
 
   return (
     <section className={`review-panel${compact ? " is-compact" : ""}${embedded ? " is-embedded" : ""}`} aria-label={page === "filters" ? "Filters" : "Vocabulary"}>
-      {page === "filters" ? (
+      {page === "filters" && !compact ? (
         <FilterPage
           draft={draftFilters}
           onDraft={setDraftFilters}
@@ -566,6 +567,7 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
           onClose={onClose}
           sheet={sheet}
           embedded={embedded}
+          closeIcon={closeIcon}
         />
       ) : null}
       {page === "filters" && !compact ? null : (
@@ -574,7 +576,7 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
         {embedded ? null : (
         <div className="review-header-bar">
           <h2>Vocabulary</h2>
-          <PanelClose sheet={sheet} onClose={onClose} />
+          <PanelClose sheet={sheet} closeIcon={closeIcon} onClose={onClose} />
         </div>
         )}
         {compact ? null : (
@@ -688,15 +690,14 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
             className={`review-row-wrap${moving && motion.phase === "leave" ? " is-leaving" : ""}${arrivedTerm === item.term.toLowerCase() ? " is-arrived" : ""}`}
           >
             <div className="review-row-clip">
-            <div className={`review-row${item.status === "Blue" ? " is-blue" : ""}`}>
+            <div className={`review-row${item.status === "Blue" ? " is-blue" : ""}${moving ? " is-updating" : ""}`}>
               <div className="review-row-lead">
                 <span className="review-row-status" data-review-status={item.id}>
                   {item.status === "Blue" ? (
-                    <BlueWordStatus
-                      collapsing={moving ? motion.status : null}
-                      onAdd={() => chooseBlueStatus(item, "New")}
-                      onKnown={() => chooseBlueStatus(item, "Known")}
-                      onIgnore={() => chooseBlueStatus(item, "Ignored")}
+                    <StatusButton
+                      status={moving && motion.status === "New" ? "New" : "Blue"}
+                      state="focus"
+                      onClick={moving ? () => {} : () => chooseBlueStatus(item, "New")}
                     />
                   ) : (
                     <StatusButton
@@ -707,9 +708,30 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
                   )}
                 </span>
                 <strong>{item.term}</strong>
-                <button type="button" className="review-speak" aria-label={`Play ${item.term}`}>
-                  <Volume2 size={16} strokeWidth={1.5} absoluteStrokeWidth />
-                </button>
+                <div className="review-row-audio">
+                  {item.status === "Blue" ? (
+                    <span
+                      className={`blue-status review-row-quick${moving && (motion.status === "Ignored" || motion.status === "Known") ? " is-collapsing" : ""}`}
+                      data-choice={moving && (motion.status === "Ignored" || motion.status === "Known") ? motion.status : undefined}
+                      role="group"
+                      aria-label={`Ignore or known ${item.term}`}
+                    >
+                      <StatusButton
+                        status="Ignored"
+                        state={moving && motion.status === "Ignored" ? "focus" : "default"}
+                        onClick={moving ? () => {} : () => chooseBlueStatus(item, "Ignored")}
+                      />
+                      <StatusButton
+                        status="Known"
+                        state={moving && motion.status === "Known" ? "focus" : "default"}
+                        onClick={moving ? () => {} : () => chooseBlueStatus(item, "Known")}
+                      />
+                    </span>
+                  ) : null}
+                  <button type="button" className="review-speak" aria-label={`Play ${item.term}`}>
+                    <Volume2 size={16} strokeWidth={1.5} absoluteStrokeWidth />
+                  </button>
+                </div>
               </div>
               <p className="review-row-meaning">{item.meaning}</p>
               <div className="review-row-sentence">
@@ -723,6 +745,16 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
                   {item.context?.after}
                   {item.context?.trail ? " ..." : null}
                 </span>
+              </div>
+              <div className="review-row-bar" role="group" aria-label={`Status for ${item.term}`}>
+                {WORD_BAR_STATUSES.map((status) => (
+                  <StatusButton
+                    key={status}
+                    status={status}
+                    state={(moving ? motion.status : item.status) === status ? "focus" : "default"}
+                    onClick={() => chooseBlueStatus(item, status)}
+                  />
+                ))}
               </div>
             </div>
             {index < visible.length - 1 ? <div className="review-divider" /> : null}

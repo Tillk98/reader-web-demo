@@ -337,6 +337,7 @@ export default function ReviewSession({ kind, title, words = [], hidden = false,
             miss={miss}
             onChoose={chooseTile}
             onSkip={goNext}
+            solved={matchingDone}
           />
         ) : step === "flashcard" || step === "reverse" ? (
           <Flashcard
@@ -521,8 +522,18 @@ function Actions({ children, wide = false }) {
   return <div className={`review-session-actions${wide ? " is-wide" : ""}`}>{children}</div>;
 }
 
-function Quiet({ children, onClick }) {
-  return <button type="button" className="review-session-quiet" onClick={onClick}>{children}</button>;
+function Quiet({ children, onClick, reserved = false }) {
+  return (
+    <button
+      type="button"
+      className={`review-session-quiet${reserved ? " is-reserved" : ""}`}
+      onClick={reserved ? undefined : onClick}
+      tabIndex={reserved ? -1 : undefined}
+      aria-hidden={reserved || undefined}
+    >
+      {children}
+    </button>
+  );
 }
 
 function Affordance({ children, onClick, enter = false, disabled = false, green = true }) {
@@ -695,7 +706,7 @@ function Dictation({ notice, word, typed, onType, onSubmit, onSkip }) {
   );
 }
 
-function Matching({ notice, tiles, matched, armed, wrongPair, miss, onChoose, onSkip }) {
+function Matching({ notice, tiles, matched, armed, wrongPair, miss, onChoose, onSkip, solved = false }) {
   return (
     <ActivityFrame notice={notice}>
       <div className="review-session-card">
@@ -723,7 +734,7 @@ function Matching({ notice, tiles, matched, armed, wrongPair, miss, onChoose, on
       </div>
       </div>
       <Actions>
-        <Quiet onClick={onSkip}>Skip</Quiet>
+        <Quiet onClick={onSkip} reserved={solved}>Skip</Quiet>
       </Actions>
     </ActivityFrame>
   );

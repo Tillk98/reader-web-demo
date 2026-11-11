@@ -46,12 +46,15 @@ export default function StatusButton({
   status,
   state = "default",
   label = false,
+  text,
   theme = "light",
   flipping = false,
   onClick,
+  role,
 }) {
   const detail = DETAILS[status];
   const Icon = detail.icon;
+  const name = text || detail.label;
 
   const interactive = typeof onClick === "function";
   const Tag = interactive ? "button" : "span";
@@ -64,13 +67,14 @@ export default function StatusButton({
       data-state={state}
       data-label={label ? "true" : "false"}
       data-theme={theme}
-      aria-label={detail.label}
-      aria-pressed={interactive ? state === "focus" : undefined}
+      aria-label={name}
+      aria-pressed={interactive && !role ? state === "focus" : undefined}
+      role={role}
       onClick={onClick}
     >
       {Icon ? <Icon size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" /> : null}
       {detail.numeral ? <span>{detail.numeral}</span> : null}
-      {label ? <span>{detail.label}</span> : null}
+      {label ? <span>{name}</span> : null}
     </Tag>
   );
 }

@@ -65,6 +65,22 @@ import { formatMeanings, meaningsFor } from "./meanings.js";
 import { describePhrase, phraseCovers } from "./phrases.js";
 import { pastSentences, sentenceFor, sentenceWords } from "./sentences.js";
 import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
+import {
+  AutoMoveSettings,
+  BlueTermsModal,
+  OutcomeDialog,
+  ProgressPopover,
+} from "./Accumulator.jsx";
+import {
+  coinsForStatus,
+  loadPassed,
+  loadPrefs,
+  loadSwipeSeen,
+  locateTerm,
+  savePassed,
+  savePrefs,
+  saveSwipeSeen,
+} from "./accumulator.js";
 import logo from "../assets/LingQLogo_Light.png";
 import streakIcon from "../assets/streak_icon.png";
 import coinIcon from "../assets/coin_icon.png";
@@ -362,7 +378,7 @@ const LESSON_TYPES = [
   { id: "both", label: "Audio & Video" },
 ];
 
-function DemoSettings({ lessonType, onLessonType, onClose }) {
+function DemoSettings({ lessonType, onLessonType, onResetPassed, onResetHint, onClose }) {
   return (
     <div className="demo-settings-layer" onClick={onClose}>
       <div
@@ -395,6 +411,10 @@ function DemoSettings({ lessonType, onLessonType, onClose }) {
             ))}
           </div>
         </div>
+        <div className="demo-reset">
+          <button type="button" onClick={onResetPassed}>Reset passed blue terms</button>
+          <button type="button" onClick={onResetHint}>Reset swipe hint</button>
+        </div>
       </div>
     </div>
   );
@@ -410,7 +430,7 @@ function menuChevron(Icon) {
 
 const READER_PLAYLISTS = ["Active Playlist", "YouTube auf Deutsch", "Deutsche Nachrichten"];
 
-function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDictionary, onToggleDictionary, textLayout, onTextLayout, autoAdvance, onToggleAutoAdvance, onOpenDemo, onOpenLynx, onClose }) {
+function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDictionary, onToggleDictionary, textLayout, onTextLayout, autoAdvance, onToggleAutoAdvance, onOpenDemo, onOpenSettings, onOpenLynx, onClose }) {
   const mobile = useIsMobile();
   const menuRef = useRef(null);
   const closeTimer = useRef(null);
@@ -675,7 +695,7 @@ function ReaderOptionsMenu({ mode, showTranslation, onToggleTranslation, showDic
       row("download", "Download & Print", menuGlyph(Download), { trailing: { type: "chevron" }, sub: downloadItems }),
     ],
     [
-      row("settings", "Settings", menuGlyph(Settings)),
+      row("settings", "Settings", menuGlyph(Settings), { onClick: onOpenSettings }),
       row("statistics", "Statistics", menuGlyph(ChartColumn)),
       row("help", "Help", menuGlyph(CircleHelp), { trailing: { type: "chevron" }, sub: helpItems }),
     ],
@@ -1282,6 +1302,21 @@ function ReviewToggle({ listView, iconSize, onList, onReview }) {
   );
 }
 
+function morphAccumulator(update) {
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce || typeof document.startViewTransition !== "function") {
+    update();
+    return;
+  }
+  try {
+    document.startViewTransition(() => {
+      flushSync(update);
+    });
+  } catch {
+    update();
+  }
+}
+
 export default function Reader() {
   const textRef = useRef(null);
   const theaterScopeRef = useRef(null);
@@ -1295,6 +1330,28 @@ export default function Reader() {
   const [phrasePick, setPhrasePick] = useState(null);
   const [savedPhrases, setSavedPhrases] = useState([]);
   const [snackbar, setSnackbar] = useState(null);
+  const [passedKeys, setPassedKeys] = useState(loadPassed);
+  const [accumulatorPrefs, setAccumulatorPrefs] = useState(loadPrefs);
+  const [lessonCoins, setLessonCoins] = useState(0);
+  const [blueCoins, setBlueCoins] = useState(0);
+  const [blueCoinTerms, setBlueCoinTerms] = useState(0);
+  const [progressPrompt, setProgressPrompt] = useState(null);
+  const [moveChoice, setMoveChoice] = useState(null);
+  const [listEdited, setListEdited] = useState(false);
+  const [termsList, setTermsList] = useState(null);
+  const [readerSettings, setReaderSettings] = useState(false);
+  const [celebration, setCelebration] = useState(null);
+  const [exitHint, setExitHint] = useState(false);
+  const [swipeSeen, setSwipeSeen] = useState(loadSwipeSeen);
+  const passedRef = useRef(passedKeys);
+  const prefsRef = useRef(accumulatorPrefs);
+  const phrasesRef = useRef([]);
+  const pageBlueRef = useRef(new Map());
+  const sentenceBlueRef = useRef(new Map());
+  const prevPageRef = useRef(0);
+  const prevSentenceRef = useRef(1);
+  const passRef = useRef(() => {});
+  const listEnding = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [videoHovered, setVideoHovered] = useState(false);
   const [videoChrome, setVideoChrome] = useState(true);
@@ -1378,8 +1435,6 @@ export default function Reader() {
   const [theme, setTheme] = useState("light");
   const [fontStyle, setFontStyle] = useState("Rubik Original");
   const [textSize, setTextSize] = useState(DEFAULT_TEXT_LEVEL);
-  const [completeHint, setCompleteHint] = useState(false);
-  const completeHintTimer = useRef(null);
   const [sidePanel, setSidePanel] = useState(false);
   const [lynxOpen, setLynxOpen] = useState(false);
   const [reviewMenu, setReviewMenu] = useState(false);
@@ -1413,9 +1468,15 @@ export default function Reader() {
   const roomy = useMinWidth(1400);
 
   const lessonRef = useRef(lesson);
+  lessonRef.current = lesson;
+  passedRef.current = passedKeys;
+  prefsRef.current = accumulatorPrefs;
+  phrasesRef.current = savedPhrases;
+  const lessonContentRef = useRef("");
+  const lessonContent = lesson.map((paragraph) => paragraph.map((token) => token.value).join("")).join("\n");
   const modeRef = useRef(mode);
-  if (lessonRef.current !== lesson || modeRef.current !== mode) {
-    lessonRef.current = lesson;
+  if (lessonContentRef.current !== lessonContent || modeRef.current !== mode) {
+    lessonContentRef.current = lessonContent;
     modeRef.current = mode;
     if (pageStarts !== null) setPageStarts(null);
     if (pageIndex !== 0) setPageIndex(0);
@@ -1817,13 +1878,282 @@ export default function Reader() {
     };
   }, [theater, theaterLine, lesson, textSize]);
 
-  function completeLesson() {
-    setCompleteHint(true);
-    clearTimeout(completeHintTimer.current);
-    completeHintTimer.current = setTimeout(() => setCompleteHint(false), 3000);
+  const passedTerms = useMemo(
+    () => passedKeys.map((key) => locateTerm(lesson, key, meaningsFor)).filter(Boolean),
+    [passedKeys, lesson],
+  );
+  useEffect(() => {
+    const live = passedTerms.map((term) => term.key);
+    if (live.length === passedKeys.length) return;
+    passedRef.current = live;
+    savePassed(live);
+    setPassedKeys(live);
+  }, [passedTerms, passedKeys]);
+
+  function showExitHint() {
+    setExitHint(true);
   }
 
-  useEffect(() => () => clearTimeout(completeHintTimer.current), []);
+  function rememberAccumulatorStatus(status) {
+    if (!["Ignored", "New", "Recognized", "Familiar", "Learned", "Known"].includes(status)) return;
+    setAccumulatorPrefs((current) => {
+      const next = { ...current, splitDefault: status, moveTo: status };
+      savePrefs(next);
+      return next;
+    });
+  }
+
+  function releaseTerm(key) {
+    setPassedKeys((current) => {
+      if (!current.includes(key)) return current;
+      const next = current.filter((item) => item !== key);
+      passedRef.current = next;
+      savePassed(next);
+      return next;
+    });
+  }
+
+  function applyPassed(keys, status) {
+    const appearance = STATUS_APPEARANCE[status];
+    if (!appearance || !keys?.length) return 0;
+    const wanted = new Set(keys);
+    const present = new Set();
+    lessonRef.current.forEach((paragraph) => {
+      paragraph.forEach((token) => {
+        if (token.type !== "word" || token.kind !== "new") return;
+        const key = token.value.toLowerCase();
+        if (wanted.has(key)) present.add(key);
+      });
+    });
+    if (!present.size) return 0;
+    setLesson((current) => current.map((paragraph) => paragraph.map((token) => {
+      if (token.type !== "word" || token.kind !== "new" || !present.has(token.value.toLowerCase())) return token;
+      return { ...token, status, ...appearance };
+    })));
+    setPassedKeys((current) => {
+      const next = current.filter((key) => !present.has(key));
+      passedRef.current = next;
+      savePassed(next);
+      return next;
+    });
+    const gained = present.size * coinsForStatus(status);
+    if (gained) {
+      setLessonCoins((value) => value + gained);
+      setBlueCoins((value) => value + gained);
+      setBlueCoinTerms((value) => value + present.size);
+    }
+    return present.size;
+  }
+
+  function passBlueKeys(keys) {
+    const unique = [...new Set(keys)];
+    if (!unique.length) return;
+    const present = [];
+    const seen = new Set();
+    lessonRef.current.forEach((paragraph) => {
+      paragraph.forEach((token) => {
+        if (token.type !== "word" || token.kind !== "new") return;
+        const key = token.value.toLowerCase();
+        if (!unique.includes(key) || seen.has(key)) return;
+        seen.add(key);
+        present.push(key);
+      });
+    });
+    if (!present.length) return;
+    if (prefsRef.current.autoMove) {
+      if (prefsRef.current.moveTo !== "Leave Blue") applyPassed(present, prefsRef.current.moveTo);
+      return;
+    }
+    const fresh = present.filter((key) => !passedRef.current.includes(key));
+    if (!fresh.length) return;
+    const next = [...passedRef.current, ...fresh];
+    passedRef.current = next;
+    savePassed(next);
+    setPassedKeys(next);
+  }
+
+  passRef.current = passBlueKeys;
+
+  function continueProgress(prompt, snapshot) {
+    setProgressPrompt(null);
+    setTermsList(null);
+    window.setTimeout(() => {
+      if (prompt === "finish") setCelebration(snapshot);
+      else showExitHint();
+    }, 500);
+  }
+
+  function blueKeysLeaving() {
+    if (mode === "sentence") return sentenceBlueRef.current.get(sentenceIndex) || [];
+    const root = textRef.current;
+    if (mode === "page") {
+      const cached = pageBlueRef.current.get(pageIndex);
+      if (cached) return cached;
+    }
+    if (!root) return [];
+    const bounds = (mode === "page" ? root.querySelector(".page-flow") : root)?.getBoundingClientRect();
+    if (!bounds) return [];
+    const keys = [];
+    root.querySelectorAll("[data-word-id]").forEach((el) => {
+      if (el.closest(".phrase-range")) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.bottom <= bounds.top + 1 || rect.top >= bounds.bottom - 1) return;
+      const [paragraphIndex, tokenIndex] = el.dataset.wordId.split("-").map(Number);
+      const token = lessonRef.current[paragraphIndex]?.[tokenIndex];
+      if (token?.type === "word" && token.kind === "new") keys.push(token.value.toLowerCase());
+    });
+    return keys;
+  }
+
+  function requestExit() {
+    setChromeMenu(null);
+    passBlueKeys(blueKeysLeaving());
+    if (!prefsRef.current.autoMove && passedRef.current.length) {
+      setListEdited(false);
+      setMoveChoice(prefsRef.current.splitDefault);
+      setProgressPrompt("exit");
+      return;
+    }
+    showExitHint();
+  }
+
+  function requestFinish() {
+    passBlueKeys(blueKeysLeaving());
+    if (!prefsRef.current.autoMove && passedRef.current.length) {
+      setListEdited(false);
+      setMoveChoice(prefsRef.current.splitDefault);
+      setProgressPrompt("finish");
+      return;
+    }
+    setCelebration({ total: lessonCoins, blue: blueCoins, terms: blueCoinTerms });
+  }
+
+  function applyFromPopover(status) {
+    const prompt = progressPrompt;
+    let snapshot = { total: lessonCoins, blue: blueCoins, terms: blueCoinTerms };
+    if (status !== "Leave Blue") {
+      const moved = applyPassed(passedTerms.map((term) => term.key), status);
+      const gained = moved * coinsForStatus(status);
+      snapshot = {
+        total: lessonCoins + gained,
+        blue: blueCoins + gained,
+        terms: blueCoinTerms + (gained ? moved : 0),
+      };
+      rememberAccumulatorStatus(status);
+    }
+    continueProgress(prompt, snapshot);
+  }
+
+  function finishListed(status) {
+    const prompt = progressPrompt;
+    const moved = status ? applyPassed(passedTerms.map((term) => term.key), status) : 0;
+    if (status) rememberAccumulatorStatus(status);
+    const gained = status ? moved * coinsForStatus(status) : 0;
+    const snapshot = {
+      total: lessonCoins + gained,
+      blue: blueCoins + gained,
+      terms: blueCoinTerms + (gained ? moved : 0),
+    };
+    setTermsList(null);
+    setActive(null);
+    continueProgress(prompt, snapshot);
+  }
+
+  function openAccumulatorSettings() {
+    setChromeMenu(null);
+    setReaderSettings(true);
+  }
+
+  useEffect(() => {
+    if (!termsList || passedTerms.length > 0 || listEnding.current) return;
+    listEnding.current = true;
+    const prompt = progressPrompt;
+    const snapshot = { total: lessonCoins, blue: blueCoins, terms: blueCoinTerms };
+    setTermsList(null);
+    setActive(null);
+    window.setTimeout(() => {
+      listEnding.current = false;
+      if (prompt === "finish") setCelebration(snapshot);
+      else setExitHint(true);
+      setProgressPrompt(null);
+    }, 500);
+  }, [termsList, passedTerms.length, progressPrompt, lessonCoins, blueCoins, blueCoinTerms]);
+
+  useLayoutEffect(() => {
+    if (theater || mode !== "page" || !textRef.current) return;
+    const bounds = textRef.current.querySelector(".page-flow")?.getBoundingClientRect();
+    if (!bounds) return;
+    const keys = [];
+    textRef.current.querySelectorAll("[data-word-id]").forEach((el) => {
+      if (el.closest(".phrase-range")) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.bottom <= bounds.top + 1 || rect.top >= bounds.bottom - 1) return;
+      const [paragraphIndex, tokenIndex] = el.dataset.wordId.split("-").map(Number);
+      const token = lesson[paragraphIndex]?.[tokenIndex];
+      if (token?.type === "word" && token.kind === "new") keys.push(token.value.toLowerCase());
+    });
+    pageBlueRef.current.set(pageIndex, keys);
+  }, [theater, mode, pageIndex, lesson, pageStarts, textLayout, showTranslation, textSize]);
+
+  useEffect(() => {
+    if (mode !== "page") {
+      prevPageRef.current = pageIndex;
+      return;
+    }
+    const previous = prevPageRef.current;
+    if (previous !== pageIndex) passRef.current(pageBlueRef.current.get(previous) || []);
+    prevPageRef.current = pageIndex;
+  }, [mode, pageIndex]);
+
+  useLayoutEffect(() => {
+    if (mode !== "sentence") return;
+    const keys = [];
+    (lesson[sentenceIndex] || []).forEach((token, tokenIndex) => {
+      if (token.type !== "word" || token.kind !== "new") return;
+      if (phrasesRef.current.some((phrase) => phraseCovers(phrase, sentenceIndex, tokenIndex))) return;
+      keys.push(token.value.toLowerCase());
+    });
+    sentenceBlueRef.current.set(sentenceIndex, keys);
+  }, [mode, sentenceIndex, lesson, savedPhrases]);
+
+  useEffect(() => {
+    if (mode !== "sentence") {
+      prevSentenceRef.current = sentenceIndex;
+      return;
+    }
+    const previous = prevSentenceRef.current;
+    if (previous !== sentenceIndex) passRef.current(sentenceBlueRef.current.get(previous) || []);
+    prevSentenceRef.current = sentenceIndex;
+  }, [mode, sentenceIndex]);
+
+  useEffect(() => {
+    if (theater || mode !== "scroll" || !textRef.current) return undefined;
+    const root = textRef.current;
+    const seen = new Set();
+    const observer = new IntersectionObserver((entries) => {
+      const passed = [];
+      entries.forEach((entry) => {
+        const id = entry.target.dataset.wordId;
+        if (!id || entry.target.closest(".phrase-range")) return;
+        if (entry.isIntersecting) {
+          seen.add(id);
+          return;
+        }
+        if (!seen.has(id) || !entry.rootBounds || entry.boundingClientRect.bottom > entry.rootBounds.top + 1) return;
+        seen.delete(id);
+        const [paragraphIndex, tokenIndex] = id.split("-").map(Number);
+        const token = lessonRef.current[paragraphIndex]?.[tokenIndex];
+        if (token?.type === "word" && token.kind === "new") passed.push(token.value.toLowerCase());
+      });
+      if (passed.length) passRef.current(passed);
+    }, { root, threshold: [0, 0.01] });
+    root.querySelectorAll("[data-word-id]").forEach((node) => {
+      const [paragraphIndex, tokenIndex] = node.dataset.wordId.split("-").map(Number);
+      const token = lesson[paragraphIndex]?.[tokenIndex];
+      if (token?.kind === "new" && !node.closest(".phrase-range")) observer.observe(node);
+    });
+    return () => observer.disconnect();
+  }, [theater, mode, lesson, textLayout, showTranslation, textSize]);
 
   useEffect(() => {
     if (!reviewMenu) return undefined;
@@ -2075,7 +2405,7 @@ export default function Reader() {
     if (!playerShown) return undefined;
     function onKeyDown(event) {
       if (event.key !== "Escape") return;
-      if (modeMenu || reviewMenu || playerMenu || playMenu || chromeMenu || demoSettings || phrasePick || active || termMenu || reviewCard || lynxOpen) return;
+      if (modeMenu || reviewMenu || playerMenu || playMenu || chromeMenu || demoSettings || phrasePick || active || termMenu || reviewCard || lynxOpen || progressPrompt || termsList || readerSettings || celebration || exitHint) return;
       if (theater) {
         runTheater(() => setTheater(false));
         return;
@@ -2084,7 +2414,7 @@ export default function Reader() {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [playerShown, theater, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, phrasePick, active, termMenu, reviewCard, lynxOpen]);
+  }, [playerShown, theater, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, phrasePick, active, termMenu, reviewCard, lynxOpen, progressPrompt, termsList, readerSettings, celebration, exitHint]);
 
   function openLynx() {
     transition(() => {
@@ -2117,7 +2447,7 @@ export default function Reader() {
   }
 
   function undoSnackbar() {
-    if (!snackbar) return;
+    if (!snackbar?.undo) return;
     snackbar.undo();
     setSnackbar(null);
   }
@@ -2177,6 +2507,7 @@ export default function Reader() {
         return { ...item, kind: "lingq", level: 1, status: "New" };
       });
     }));
+    releaseTerm(token.value.toLowerCase());
     showSnackbar("New", () => restoreToken(paragraphIndex, tokenIndex, previous));
   }
 
@@ -2432,6 +2763,8 @@ export default function Reader() {
       meaning: token.meaning,
     };
     const { paragraphIndex, tokenIndex } = active;
+    if (termsList) setListEdited(true);
+    releaseTerm(token.value.toLowerCase());
     setLesson((current) => current.map((paragraph, pIndex) => {
       if (pIndex !== paragraphIndex) return paragraph;
       return paragraph.map((item, tIndex) => {
@@ -2486,6 +2819,7 @@ export default function Reader() {
         level: token.level ?? null,
         meaning: token.meaning,
       };
+      releaseTerm(token.value.toLowerCase());
       setLesson((current) => current.map((paragraph, pIndex) => {
         if (pIndex !== paragraphIndex) return paragraph;
         return paragraph.map((item, tIndex) => {
@@ -3088,7 +3422,7 @@ export default function Reader() {
             <div className="progress-track" />
             <div className="progress-fill" />
           </div>
-          <button type="button" className="icon-button chrome-exit" aria-label="Exit lesson">
+          <button type="button" className="icon-button chrome-exit" aria-label="Exit lesson" onClick={requestExit}>
             <LogOut className="chrome-exit-icon" size={24} strokeWidth={1.5} absoluteStrokeWidth />
           </button>
           <div className="chrome-actions">
@@ -3134,6 +3468,7 @@ export default function Reader() {
                     setChromeMenu(null);
                     setDemoSettings(true);
                   }}
+                  onOpenSettings={openAccumulatorSettings}
                   onOpenLynx={() => {
                     setChromeMenu(null);
                     openLynx();
@@ -3390,11 +3725,10 @@ export default function Reader() {
             })()}
             {theater || mode !== "scroll" ? null : (
               <div className={`finish-lesson${atScrollEnd ? " is-visible" : ""}`}>
-                <button type="button" className="complete-lesson-button" onClick={completeLesson}>
+                <button type="button" className="complete-lesson-button" onClick={requestFinish}>
                   <CircleCheck size={20} strokeWidth={1.5} absoluteStrokeWidth />
                   Finish Lesson
                 </button>
-                {completeHint ? <p className="complete-hint" role="status">goes to lesson complete page</p> : null}
               </div>
             )}
             {activeToken && active.size !== "medium" && active.size !== "large" && (!sidePanel || showMini) ? (
@@ -3440,11 +3774,10 @@ export default function Reader() {
           {showComplete ? (
             <div className={`complete-lesson${mode === "sentence" ? " is-float" : ""}`}>
               <div className="complete-lesson-anchor">
-                <button type="button" className="complete-lesson-button" onClick={completeLesson}>
+                <button type="button" className="complete-lesson-button" onClick={requestFinish}>
                   <CircleCheck size={20} strokeWidth={1.5} absoluteStrokeWidth />
                   Finish Lesson
                 </button>
-                {completeHint ? <p className="complete-hint" role="status">goes to lesson complete page</p> : null}
               </div>
             </div>
           ) : null}
@@ -3475,7 +3808,9 @@ export default function Reader() {
               onTogglePanel={toggleSidePanel}
             />
           ) : null}
-          {snackbar ? (
+          {snackbar?.message ? (
+            <div className={`status-snackbar is-message${snackbar.leaving ? " is-leaving" : ""}`} role="status">{snackbar.message}</div>
+          ) : snackbar ? (
             <button type="button" className={`status-snackbar${snackbar.leaving ? " is-leaving" : ""}`} onClick={undoSnackbar}>
               <StatusButton status={snackbar.status} state="focus" />
               <span className="status-snackbar-label">{snackbar.status}</span>
@@ -3815,9 +4150,91 @@ export default function Reader() {
         <DemoSettings
           lessonType={lessonType}
           onLessonType={chooseLessonType}
+          onResetPassed={() => {
+            passedRef.current = [];
+            savePassed([]);
+            setPassedKeys([]);
+          }}
+          onResetHint={() => {
+            saveSwipeSeen(false);
+            setSwipeSeen(false);
+          }}
           onClose={() => setDemoSettings(false)}
         />
       ) : null}
+      <ProgressPopover
+        open={Boolean(progressPrompt)}
+        terms={passedTerms}
+        prefs={accumulatorPrefs}
+        status={moveChoice || accumulatorPrefs.splitDefault}
+        onApply={applyFromPopover}
+        onSelect={setMoveChoice}
+        onContinue={() => continueProgress(progressPrompt, { total: lessonCoins, blue: blueCoins, terms: blueCoinTerms })}
+        onClose={() => setProgressPrompt(null)}
+        onOpenList={() => {
+          listEnding.current = false;
+          morphAccumulator(() => setTermsList("progress"));
+        }}
+        covered={Boolean(termsList)}
+        onOpenSettings={openAccumulatorSettings}
+        settingsOpen={readerSettings}
+        action={progressPrompt === "finish" ? "finish" : "exit"}
+      />
+      <BlueTermsModal
+        open={Boolean(termsList) && !active}
+        terms={passedTerms}
+        status={moveChoice || accumulatorPrefs.splitDefault}
+        swipeSeen={swipeSeen}
+        onSelect={setMoveChoice}
+        onStatus={(term, status) => {
+          setListEdited(true);
+          applyPassed([term.key], status);
+        }}
+        onLeave={() => continueProgress(progressPrompt, { total: lessonCoins, blue: blueCoins, terms: blueCoinTerms })}
+        edited={listEdited}
+        onBulk={finishListed}
+        onOpenTerm={(term) => openTerm(term.paragraphIndex, term.tokenIndex, null)}
+        onPeekSeen={() => {
+          saveSwipeSeen(true);
+          setSwipeSeen(true);
+        }}
+        onClose={() => morphAccumulator(() => setTermsList(null))}
+        action={progressPrompt === "finish" ? "finish" : "exit"}
+      />
+      <AutoMoveSettings
+        open={readerSettings}
+        prefs={accumulatorPrefs}
+        onAutoMove={(on) => {
+          setAccumulatorPrefs((current) => {
+            const next = { ...current, autoMove: on };
+            savePrefs(next);
+            return next;
+          });
+        }}
+        onMoveTo={(status) => {
+          setAccumulatorPrefs((current) => {
+            const next = {
+              ...current,
+              moveTo: status,
+              splitDefault: status === "Leave Blue" ? current.splitDefault : status,
+            };
+            savePrefs(next);
+            return next;
+          });
+        }}
+        onClose={() => setReaderSettings(false)}
+      />
+      <OutcomeDialog
+        open={exitHint}
+        title="Left the lesson"
+        onClose={() => setExitHint(false)}
+      />
+      <OutcomeDialog
+        open={Boolean(celebration)}
+        title="Completed the lesson"
+        coins={celebration}
+        onClose={() => setCelebration(null)}
+      />
 
       {reviewCard ? createPortal(
         <div className={`review-card-layer${theater ? " is-theater" : ""}${reviewDocked ? " is-docked" : ""}${reviewDocked && !reviewDockHost ? " is-moving" : ""}`}>

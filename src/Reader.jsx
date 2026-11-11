@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync, createPortal } from "react-dom";
 import {
   ArrowDownNarrowWide,
@@ -7,14 +7,12 @@ import {
   BellPlus,
   BookCheck,
   BookOpen,
-  BookOpenText,
   CaseSensitive,
   Captions,
   ChartColumn,
   ChevronDown,
   Clock,
   FileCheck,
-  FileText,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
@@ -62,7 +60,7 @@ import WidgetSmall from "./WidgetSmall.jsx";
 import WidgetMedium from "./WidgetMedium.jsx";
 import WidgetLarge from "./WidgetLarge.jsx";
 import LynxChat from "./LynxChat.jsx";
-import ReviewPanel, { reviewTermsFrom } from "./ReviewPanel.jsx";
+import ReviewPanel, { ReviewFilter, cloneFilters, defaultFilters, extraFilterCount, reviewTermsFrom, reviewWordsFrom } from "./ReviewPanel.jsx";
 import { formatMeanings, meaningsFor } from "./meanings.js";
 import { describePhrase, phraseCovers } from "./phrases.js";
 import { pastSentences, sentenceFor, sentenceWords } from "./sentences.js";
@@ -212,49 +210,51 @@ function modeIcon(id, size = 24) {
 const REVIEW_CARDS = {
   page: "Page Vocabulary Review",
   sentence: "Sentence Vocabulary Review",
-  due: "Due Vocabulary Review",
   lesson: "Lesson Vocabulary Review",
 };
 
 const REVIEW_ACTIONS = [
-  { id: "page", label: "Review Page", icon: FileText },
-  { id: "due", label: "Review Due", icon: Timer },
-  { id: "lesson", label: "Review Lesson", icon: BookOpenText },
-  { id: "list", label: "Vocabulary List", icon: List },
+  { id: "page", label: "Review Page" },
+  { id: "sentence", label: "Review Sentence" },
+  { id: "lesson", label: "Review Lesson" },
+  { id: "list", label: "Vocabulary List" },
 ];
 
-function ReviewActionsMenu({ onChoose, showList = true, showSettings = false }) {
-  const actions = showList ? REVIEW_ACTIONS : REVIEW_ACTIONS.filter((item) => item.id !== "list");
+function ReviewActionsMenu({ onChoose, toolsOnly = false }) {
+  const actions = (
+    <div className="reader-menu-group">
+      <MenuRow role="menuitem" label="Manage Vocabulary" onClick={() => onChoose("manage")}>
+        <ArrowUpRight className="reader-menu-chevron" size={12} strokeWidth={1.5} absoluteStrokeWidth />
+      </MenuRow>
+      <MenuRow
+        role="menuitem"
+        icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />}
+        label="Settings"
+        onClick={() => onChoose("settings")}
+      />
+    </div>
+  );
+  if (toolsOnly) {
+    return (
+      <div className="reader-menu vocab-menu" role="menu">
+        {actions}
+      </div>
+    );
+  }
   return (
     <div className="reader-menu vocab-menu" role="menu">
       <div className="reader-menu-group">
-        {actions.map((item) => {
-          const Icon = item.icon;
-          return (
-            <MenuRow
-              key={item.id}
-              role="menuitem"
-              icon={<Icon size={16} strokeWidth={1.5} absoluteStrokeWidth />}
-              label={item.label}
-              onClick={() => onChoose(item.id)}
-            />
-          );
-        })}
+        {REVIEW_ACTIONS.map((item) => (
+          <MenuRow
+            key={item.id}
+            role="menuitem"
+            label={item.label}
+            onClick={() => onChoose(item.id)}
+          />
+        ))}
       </div>
       <div className="reader-menu-divider" />
-      <div className="reader-menu-group">
-        <MenuRow role="menuitem" icon={<img src={lingqIcon} alt="" width={16} height={16} />} label="Manage Vocabulary" onClick={() => onChoose("manage")}>
-          <ArrowUpRight className="reader-menu-chevron" size={12} strokeWidth={1.5} absoluteStrokeWidth />
-        </MenuRow>
-        {showSettings ? (
-          <MenuRow
-            role="menuitem"
-            icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />}
-            label="Settings"
-            onClick={() => onChoose("settings")}
-          />
-        ) : null}
-      </div>
+      {actions}
     </div>
   );
 }
@@ -1206,28 +1206,77 @@ function fitPlaybackActions(row, hasVideo) {
   return hidden;
 }
 
+function ReviewFilterPopover({ anchorRef, children }) {
+  const [pos, setPos] = useState(null);
+
+  useLayoutEffect(() => {
+    function place() {
+      const button = anchorRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      const width = 380;
+      const top = rect.bottom + 8;
+      const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+      const maxHeight = Math.max(240, Math.min(560, window.innerHeight - top - 8));
+      setPos({ top, left, maxHeight });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [anchorRef]);
+
+  if (!pos) return null;
+  return createPortal(
+    <div className="review-filter-popover" style={{ top: pos.top, left: pos.left, maxHeight: pos.maxHeight }}>
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
+function ReviewFilterSheet({ tall, onExpand, onCollapse, onClose, children }) {
+  return createPortal(
+    <div className="review-filter-sheet-layer">
+      <button type="button" className="review-filter-scrim" aria-label="Close filters" onClick={onClose} />
+      <div className={`review-filter-sheet${tall ? " is-tall" : ""}`} role="dialog" aria-modal="true" aria-label="Filter">
+        <PlayerDragHandle
+          label={tall ? "Collapse filters" : "Close filters"}
+          onDragUp={onExpand}
+          onDragDown={tall ? onCollapse : onClose}
+        />
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function ReviewToggle({ listView, iconSize, onList, onReview }) {
   return (
     <div className="review-card-toggle" role="tablist" aria-label="Review display">
       <button
         type="button"
         role="tab"
+        aria-label="Vocabulary List"
         aria-selected={listView}
         className={listView ? "is-on" : ""}
         onClick={onList}
       >
         <List size={iconSize} strokeWidth={1.5} absoluteStrokeWidth />
-        <span>Vocabulary List</span>
       </button>
       <button
         type="button"
         role="tab"
+        aria-label="Review"
         aria-selected={!listView}
         className={listView ? "" : "is-on"}
         onClick={onReview}
       >
         <FileCheck size={iconSize} strokeWidth={1.5} absoluteStrokeWidth />
-        <span>Review</span>
       </button>
     </div>
   );
@@ -1336,6 +1385,16 @@ export default function Reader() {
   const [reviewMenu, setReviewMenu] = useState(false);
   const [reviewCardMenu, setReviewCardMenu] = useState(false);
   const [reviewCard, setReviewCard] = useState(null);
+  const [reviewFilters, setReviewFilters] = useState(defaultFilters);
+  const [reviewFilterOpen, setReviewFilterOpen] = useState(false);
+  const [filterSheetTall, setFilterSheetTall] = useState(false);
+  const reviewFilterButtonRef = useRef(null);
+  const [reviewScopeKey, setReviewScopeKey] = useState(null);
+  const reviewTerms = useMemo(
+    () => reviewTermsFrom(lesson, savedPhrases, reviewScopeKey == null ? null : new Set(reviewScopeKey.split(",").filter(Boolean))),
+    [lesson, savedPhrases, reviewScopeKey],
+  );
+  const reviewWords = useMemo(() => reviewWordsFrom(reviewTerms, reviewFilters), [reviewTerms, reviewFilters]);
   const [reviewDocked, setReviewDocked] = useState(false);
   const [reviewDockHost, setReviewDockHost] = useState(null);
   const [reviewPortalNode] = useState(() => {
@@ -1799,6 +1858,28 @@ export default function Reader() {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [reviewCardMenu]);
+
+  useEffect(() => {
+    if (!reviewFilterOpen) setFilterSheetTall(false);
+  }, [reviewFilterOpen]);
+
+  useEffect(() => {
+    if (!reviewFilterOpen) return undefined;
+    function onPointerDown(event) {
+      if (mobile) return;
+      if (event.target.closest?.(".review-filter-popover, .review-scope-filter")) return;
+      setReviewFilterOpen(false);
+    }
+    function onKeyDown(event) {
+      if (event.key === "Escape") setReviewFilterOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [reviewFilterOpen, mobile]);
 
   useEffect(() => {
     if (!modeMenu) return undefined;
@@ -2528,6 +2609,7 @@ export default function Reader() {
 
   function closeReview() {
     setReviewCardMenu(false);
+    setReviewFilterOpen(false);
     setReviewCard(null);
     setReviewListView(false);
     setReviewDocked(false);
@@ -2568,6 +2650,7 @@ export default function Reader() {
   function chooseReviewAction(action) {
     setReviewMenu(false);
     setReviewCardMenu(false);
+    setReviewFilterOpen(false);
     if (action === "list") {
       if (reviewCard) {
         setReviewListView(true);
@@ -2594,6 +2677,51 @@ export default function Reader() {
     });
     return visible ? Number(visible.dataset.sentence) : sentenceIndex;
   }
+
+  useLayoutEffect(() => {
+    function keysForParagraph(index) {
+      return (lesson[index] || []).flatMap((token, tokenIndex) => (
+        token.type === "word" ? [`${index}-${tokenIndex}`] : []
+      )).join(",");
+    }
+
+    function visibleWordKeys() {
+      const root = textRef.current;
+      if (!root) return "";
+      const frame = root.querySelector(".page-flow") || root;
+      const box = frame.getBoundingClientRect();
+      const view = root.getBoundingClientRect();
+      const top = Math.max(box.top, view.top);
+      const bottom = Math.min(box.bottom, view.bottom);
+      const keys = [];
+      frame.querySelectorAll("[data-word-id]").forEach((node) => {
+        const rect = node.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        if (rect.bottom > top + 1 && rect.top < bottom - 1) keys.push(node.dataset.wordId);
+      });
+      return keys.join(",");
+    }
+
+    function apply() {
+      let next = null;
+      if (reviewCard === "sentence") {
+        const visible = mode === "page" || mode === "scroll" ? visibleWordKeys() : "";
+        const paragraph = Number(visible.split(",").find(Boolean)?.split("-")[0]);
+        const index = mode === "sentence" ? sentenceIndex : Number.isNaN(paragraph) ? sentenceIndex : paragraph;
+        next = keysForParagraph(index);
+      } else if (reviewCard === "page") {
+        next = mode === "sentence" ? keysForParagraph(sentenceIndex) : visibleWordKeys();
+      }
+      setReviewScopeKey((current) => (current === next ? current : next));
+    }
+
+    apply();
+    if (!reviewCard || reviewCard === "lesson" || mode !== "scroll") return undefined;
+    const node = textRef.current;
+    if (!node) return undefined;
+    node.addEventListener("scroll", apply, { passive: true });
+    return () => node.removeEventListener("scroll", apply);
+  }, [reviewCard, mode, sentenceIndex, pageIndex, pageStarts, lesson, textLayout, showTranslation, textSize]);
 
   function startDefaultReview() {
     if (reviewCard) {
@@ -3700,6 +3828,7 @@ export default function Reader() {
             aria-labelledby={reviewListView ? undefined : "review-card-title"}
             aria-label={reviewListView ? "Vocabulary" : undefined}
           >
+            <>
             <div className="review-card-header">
               <div className={`review-card-header-bar${mobile && !reviewDocked ? " is-compact" : ""}`}>
                 <div className="review-card-header-start">
@@ -3711,8 +3840,8 @@ export default function Reader() {
                   <ReviewToggle
                     listView={reviewListView}
                     iconSize={20}
-                    onList={() => { setReviewCardMenu(false); setReviewListView(true); }}
-                    onReview={() => { setReviewCardMenu(false); setReviewListView(false); }}
+                    onList={() => { setReviewCardMenu(false); setReviewFilterOpen(false); setReviewListView(true); }}
+                    onReview={() => { setReviewCardMenu(false); setReviewFilterOpen(false); setReviewListView(false); }}
                   />
                 </div>
                 <div className="review-card-tools">
@@ -3729,10 +3858,10 @@ export default function Reader() {
                     </button>
                   ) : null}
                   <span className="review-card-options">
-                    <button type="button" className={reviewDocked || mobile ? "widget-large-icon-button" : "icon-button"} aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => setReviewCardMenu((open) => !open)}>
+                    <button type="button" className={reviewDocked || mobile ? "widget-large-icon-button" : "icon-button"} aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => { setReviewFilterOpen(false); setReviewCardMenu((open) => !open); }}>
                       <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
-                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} showSettings /> : null}
+                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} toolsOnly /> : null}
                   </span>
                   {reviewDocked ? (
                     <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={closeReview}>
@@ -3745,25 +3874,81 @@ export default function Reader() {
             <div className="review-card-stage">
               {reviewListView ? (
                 <ReviewPanel
-                  terms={reviewTermsFrom(lesson, savedPhrases)}
+                  terms={reviewTerms}
+                  filters={reviewFilters}
                   onStatus={changeReviewStatus}
                   onClose={closeReview}
                   embedded
                   compact={lynxOpen}
+                  onFilter={() => {
+                    setReviewCardMenu(false);
+                    setReviewFilterOpen((open) => !open);
+                  }}
+                  filterAnchorRef={reviewFilterButtonRef}
+                  scopeLabel={reviewCard === "sentence" ? "Sentence" : reviewCard === "lesson" ? "Lesson" : "Page"}
+                  filterExtra={extraFilterCount(reviewFilters)}
+                  filterCompact={false}
+                  filterOpen={reviewFilterOpen}
                 />
               ) : null}
               <ReviewSession
-                key={reviewCard}
+                key={`${reviewCard}:${reviewScopeKey ?? "lesson"}:${reviewFilters.terms}:${reviewFilters.srsDue}:${reviewFilters.statuses.join(",")}`}
                 kind={reviewCard}
                 title={REVIEW_CARDS[reviewCard]}
+                words={reviewWords}
                 hidden={reviewListView}
                 compact={lynxOpen && reviewDocked}
                 onClose={closeReview}
+                onFilter={() => {
+                  setReviewCardMenu(false);
+                  setReviewFilterOpen((open) => !open);
+                }}
+                filterAnchorRef={reviewListView ? null : reviewFilterButtonRef}
+                scopeLabel={reviewCard === "sentence" ? "Sentence" : reviewCard === "lesson" ? "Lesson" : "Page"}
+                filterExtra={extraFilterCount(reviewFilters)}
+                filterCompact={mobile || reviewDocked}
+                filterOpen={reviewFilterOpen}
               />
             </div>
+            {!mobile && reviewFilterOpen ? (
+              <ReviewFilterPopover anchorRef={reviewFilterButtonRef}>
+                <ReviewFilter
+                  initial={{
+                    ...cloneFilters(reviewFilters),
+                    context: reviewCard === "sentence" || reviewCard === "lesson" ? reviewCard : "page",
+                  }}
+                  onApply={(next) => {
+                    setReviewFilters(cloneFilters(next));
+                    setReviewCard(next.context);
+                    setReviewFilterOpen(false);
+                  }}
+                />
+              </ReviewFilterPopover>
+            ) : null}
+            </>
           </div>
         </div>,
         reviewPortalNode,
+      ) : null}
+      {mobile && reviewCard && reviewFilterOpen ? (
+        <ReviewFilterSheet
+          tall={filterSheetTall}
+          onExpand={() => setFilterSheetTall(true)}
+          onCollapse={() => setFilterSheetTall(false)}
+          onClose={() => setReviewFilterOpen(false)}
+        >
+          <ReviewFilter
+            initial={{
+              ...cloneFilters(reviewFilters),
+              context: reviewCard === "sentence" || reviewCard === "lesson" ? reviewCard : "page",
+            }}
+            onApply={(next) => {
+              setReviewFilters(cloneFilters(next));
+              setReviewCard(next.context);
+              setReviewFilterOpen(false);
+            }}
+          />
+        </ReviewFilterSheet>
       ) : null}
     </div>
   );

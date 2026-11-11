@@ -245,7 +245,7 @@ On the default bar, while the player is closed, vocabulary is a split button on 
 - The chevron opens Review actions and rotates 180° while that menu is open. 150ms ease. No transition when reduced motion is on. The search-type chevron in the vocabulary search field uses the same flip.
 - Opening the mode menu or the review menu closes the other. Outside click or Escape closes it.
 
-[Review actions](https://www.figma.com/design/dROMt3II5ySPNXRqUZrbjQ?node-id=530-8308) matches that frame’s items. The rows use the reader-menu row, in two groups split by a divider. It opens upward, 16px above the split button on the default bar, aligned to the button’s right edge. There is no lesson header.
+The chevron menu uses the reader-menu row, in two groups split by a divider. It opens upward, 16px above the split button on the default bar, aligned to the button’s right edge. There is no lesson header. The first group is Review Page, Review Sentence, Review Lesson, and Vocabulary List. The second group is Manage Vocabulary and Settings. Those rows have no leading icons. Manage Vocabulary keeps the 12px up-right arrow. Settings keeps a 16px settings icon. The review ellipsis uses only the second group.
 
 **Default for the cards icon on the default bar and in the players:**
 
@@ -255,9 +255,10 @@ On the default bar, while the player is closed, vocabulary is a split button on 
 
 A menu choice overrides the mode.
 
-- **Review Page**, **Review Due**, and **Review Lesson** open that review: Page Vocabulary Review, Due Vocabulary Review, or Lesson Vocabulary Review.
+- **Review Page**, **Review Sentence**, and **Review Lesson** open that review: Page Vocabulary Review, Sentence Vocabulary Review, or Lesson Vocabulary Review.
 - **Vocabulary List** opens the list in the side panel.
 - **Manage Vocabulary** opens Manage Vocabulary.
+- **Settings** closes the menu. It does not open a settings page.
 
 ## Side panel
 
@@ -273,28 +274,28 @@ The panel button docks the large widget on the right and shifts the lesson text 
 
 Saved phrases, plus lesson words that are a LingQ, Known, Ignored, or still blue. Blue words are listed as Blue, not as New. A word that is already a LingQ is not also listed as blue. Duplicates collapse by lowercase text.
 
-Default filter: All terms, SRS Due off, statuses Blue, New, Recognized, and Familiar. Learned, Known, and Ignored are off. The filter button is pressed only when the applied filter differs from that. Choosing every status, including Known and Ignored, is still an active filter.
+Default filter: All terms, SRS Due off, statuses Blue, New, Recognized, and Familiar. Learned, Known, and Ignored are off. The filter is not in the review header. The ellipsis is a plain header icon and sits to the right of expand and minimize. Vocabulary List and Review are a matching 48px pill: `#F8F9FA` like the audio actions, padding 4px, gap 4px. In the expanded overlay and below 767px, that pill is centered in the header. Each side is a 40px button with a 20px icon, the same size as the other header icons. The selected side is white with a blue icon. The other icon is muted. Choosing every status, including Known and Ignored, is still an active filter. The same filter applies to the vocabulary list and the review. Page, Sentence, and Lesson in the filter choose which review runs, and which terms that review includes. Page uses the words on the current page. Sentence uses the words in the current sentence. Lesson uses the whole lesson. Turning the page, or moving to another sentence, updates the list.
 
-- The count is the filtered list before search. All uses “terms”, Words uses “words”, and Phrases uses “phrases”. Singular at 1. Search does not change the count.
-- **Cancel** drops the draft and returns to the list. **Apply** commits it. **Clear** restores the draft to the default. It is disabled when the draft already matches the default, including right after a clear. The refresh icon spins once first.
+- The count is the filtered list before search, shown as “43 terms”. Words uses “words”, and Phrases uses “phrases”. Singular at 1. Search does not change the count.
+- The check applies the draft and closes the filter. It stays disabled, the same grey as reset, until the draft differs from the filters that were open. Then it is a blue circle with a white check. Reset puts the draft back to that opened state, and it is disabled until something has changed.
 - **Select all** turns every status on, including Blue Words. When every status is already on, it turns them all off. Some selected shows the mixed checkbox. Chips toggle one status at a time.
-- Words and Phrases split the list by saved phrase. SRS Due shows the terms that are due.
-- Search fills the header on its own row, above filter, sort, and the count.
+- Tags stays on None. Page, Sentence, and Lesson switch the review and limit the terms to the current page, the current sentence, or the whole lesson. Words and Phrases split the list by saved phrase. SRS Due shows the terms that are due.
+- Search fills its own row above sort and the count. The filter is not in that row. In the side panel and below 767px, that row sits 16px under search. The filter sits on the left. Sort, a divider, and the term count sit together on the right. The count is muted. In the expanded list, the filter sits 12px to the left of sort, in that same right-hand group.
 - Search narrows the rows only. Contains matches the term or the meaning. Starts With and Ends With match the term. Source Text Containing matches the term. Meaning Containing matches the meaning. The match control hides once the field has text, and its chevron points up while the menu is open.
 - Sort: Importance and Creation Date keep list order. Status runs Blue, New, Recognized, Familiar, Learned, Known, Ignored. A–Z and Z–A use German sort.
 - A row is the 32px status, the term, the meaning underneath, and play on the right, with 18px of vertical padding. Several meanings show together, separated by ` ; `. The list has no floating Review button.
 - A row’s status chip opens the vertical status menu and writes that status onto the phrase, or onto every lesson copy of the word. Choosing the current status leaves it unchanged. The row’s audio plays that term.
-- Course, Lesson, and Tags open those filters. Search submit runs the search.
+- Course and Lesson are not in this filter. Tags stays None.
 
 ### Filters
 
 Status is chips, not a slider. Order: Blue Words (circle-plus), Ignored (eye-off), New 1, Recognized 2, Familiar 3, Learned 4, Known (check).
 
 - Blue Words uses the same chip as the others. The filter chip icon is Lucide circle-plus. In the list, and on the status button, Blue uses Lucide plus, so the round status control is not a circle inside a circle.
-- Chip: pill, padding 8px 12px, 14/500/18. Unselected is white, `1px #D1D6D9`, muted text. Selected is border and text `--fg-secondary`, fill `#F1F7FE`.
+- Chip: pill, padding 8px 12px, 14/500/18. Unselected is `#F8F9FA`, `1px #F1F3F4`, muted text. Selected is border and text `--fg-secondary`, fill `#F1F7FE`.
 - Select all sits in the Status heading, opposite the label, space-between. Text first, then an 18px checkbox. Checked is `--fg-secondary` with a white check. Mixed is a blue dash on `#F1F7FE`. Empty is white with a `#D1D6D9` stroke. The label stays “Select all”.
-- No back chevron. The header is the title, Clear, then the panel button. On the mobile sheet that last control is an X. Cancel is the way back.
-- Clear is the text pill from [Filters, Clear](https://www.figma.com/design/dROMt3II5ySPNXRqUZrbjQ?node-id=524-7560): “Clear” plus a 16px refresh icon, gap 6px, padding 8px 12px, radius 999, `1px var(--border)`, 14/500/18, color `--fg-muted`. Hover `#F8F9FA`. Disabled text and icon are `#D1D6D9`. On press the icon spins one full turn (500ms), then the button shows disabled. Reduced motion skips the spin.
+- The filter sits on the left of the list toolbar, and in the review to the left of the progress bar. It has an elevated fill, no border, and blue text and icon, with 6px between the icon and the label. The list always shows the scope, Page, Sentence, or Lesson, then `+N` in a light blue pill, 12px text on a 16px line, when terms, SRS Due, or status differ from the default. Each of those counts as one. In the side panel, and below 767px, the review control is only that same 16px icon so the progress bar keeps its space, plus the active-filter count with no plus sign, in the same light blue pill. The list count reads “43 terms”. The review count reads `1/20`, 12px medium.
+- The filter opens as a bottom sheet below 767px, over a 35% scrim. It starts at 70% of the screen. Dragging the handle up expands it. Dragging it down collapses it, and dragging down again, pressing the handle, or tapping the scrim closes it without applying. Wider than that, it opens under the filter button: a 380px white panel, radius 16, shadow `0 8px 24px rgba(0,0,0,0.1)`. It stops at 560px, or at the viewport minus 140px, and the options scroll under the header. Clicking outside or pressing Escape closes it without applying. Its header is a 20px filter icon, the title Review, a reset icon, and a check. The check applies and is disabled, the same grey as reset, until the draft has changed. Then it is a blue circle with a white check. Reset restores the filters from when the menu opened.
 
 ## Lynx
 

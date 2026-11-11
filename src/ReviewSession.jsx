@@ -1,6 +1,7 @@
-import { Children, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Children, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Check, Info, Mic, RefreshCw, Square, Volume2, X } from "lucide-react";
 import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
+import { ScopeFilterButton } from "./ReviewPanel.jsx";
 
 const WORDS = [
   {
@@ -45,8 +46,8 @@ const WORDS = [
   },
 ];
 
-const CARD_STEPS = ["flashcard", "reverse", "cloze", "choice", "dictation"];
-const SENTENCE_STEPS = ["matching", "flashcard", "unscramble", "speaking", "flashcard"];
+const CARD_ACTIVITIES = ["flashcard", "reverse", "cloze", "choice", "dictation"];
+const SENTENCE_ACTIVITIES = ["matching", "flashcard", "unscramble", "speaking"];
 
 const UNSCRAMBLE_CHUNKS = ["Das", "würde", "ich", "nicht", "empfehlen."];
 const UNSCRAMBLE_SHUFFLED = ["empfehlen.", "ich", "Das", "nicht", "würde"];
@@ -56,17 +57,19 @@ const UNSCRAMBLE_TRANSLATION = "I wouldn't recommend that.";
 
 const MEANING_CHOICES = ["progress", "time", "language", "minutes"];
 
-function stepsFor(kind) {
-  return kind === "sentence" ? SENTENCE_STEPS : CARD_STEPS;
+function activitiesFor(kind, words) {
+  const types = kind === "sentence" ? SENTENCE_ACTIVITIES : CARD_ACTIVITIES;
+  return types.slice(0, words.length).map((type, index) => ({ type, word: words[index] }));
 }
 
-function wordFor(kind, index) {
-  if (kind === "sentence") {
-    if (index === 1) return WORDS[3];
-    if (index === 4) return WORDS[4];
-    return WORDS[0];
-  }
-  return WORDS[index];
+function uniqueChoices(correct, others, limit = 4) {
+  const list = [];
+  [correct, ...others].forEach((choice) => {
+    if (!choice || list.length >= limit) return;
+    if (list.some((item) => item.toLocaleLowerCase() === choice.toLocaleLowerCase())) return;
+    list.push(choice);
+  });
+  return list;
 }
 
 function ReviewInProgress({ index, total, done }) {
@@ -92,11 +95,12 @@ function ReviewInProgress({ index, total, done }) {
   );
 }
 
-export default function ReviewSession({ kind, title, hidden = false, compact = false, onClose }) {
-  const steps = stepsFor(kind);
+export default function ReviewSession({ kind, title, words = [], hidden = false, compact = false, onClose, onFilter, filterAnchorRef = null, scopeLabel = "Page", filterExtra = 0, filterCompact = false, filterOpen = false }) {
+  const activities = useMemo(() => activitiesFor(kind, words), [kind, words]);
+  const steps = activities.map((item) => item.type);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState("ask");
-  const [status, setStatus] = useState(WORDS[0].status);
+  const [status, setStatus] = useState(words[0]?.status || "New");
   const [selected, setSelected] = useState(null);
   const [picked, setPicked] = useState([]);
   const [pool, setPool] = useState(UNSCRAMBLE_SHUFFLED);
@@ -107,12 +111,12 @@ export default function ReviewSession({ kind, title, hidden = false, compact = f
   const [speech, setSpeech] = useState("idle");
   const [miss, setMiss] = useState([]);
   const missTimer = useRef(0);
-  const done = index >= steps.length;
+  const done = words.length > 0 && index >= steps.length;
   const step = steps[index];
-  const word = wordFor(kind, Math.min(index, steps.length - 1));
+  const word = activities[Math.min(index, Math.max(steps.length - 1, 0))]?.word;
 
   useEffect(() => {
-    setStatus(word.status);
+    if (word) setStatus(word.status);
   }, [word]);
 
   useEffect(() => () => window.clearTimeout(missTimer.current), []);
@@ -223,14 +227,14 @@ export default function ReviewSession({ kind, title, hidden = false, compact = f
     }, 450);
   }
 
-  const matchingTiles = [
-    { id: "w1", pair: "a", side: "word", label: WORDS[0].word },
-    { id: "m2", pair: "b", side: "meaning", label: WORDS[1].meaning },
-    { id: "w3", pair: "c", side: "word", label: WORDS[2].word },
-    { id: "m1", pair: "a", side: "meaning", label: WORDS[0].meaning },
-    { id: "w2", pair: "b", side: "word", label: WORDS[1].word },
-    { id: "m3", pair: "c", side: "meaning", label: WORDS[2].meaning },
-  ];
+  const matchWords = words.slice(0, 3);
+  const matchingTiles = matchWords.flatMap((item, itemIndex) => {
+    const pair = String.fromCharCode(97 + itemIndex);
+    return [
+      { id: `w${itemIndex}`, pair, side: "word", label: item.word },
+      { id: `m${itemIndex}`, pair, side: "meaning", label: item.meaning },
+    ];
+  });
   const matchingDone = matched.length === matchingTiles.length;
 
   useEffect(() => {
@@ -247,7 +251,8 @@ export default function ReviewSession({ kind, title, hidden = false, compact = f
     return () => window.clearTimeout(timer);
   }, [unscrambleSolved]);
 
-  const clozeChoices = [WORDS[2].word, WORDS[0].word, WORDS[1].word, WORDS[4].word];
+  const clozeChoices = word ? uniqueChoices(word.word, [...words.map((item) => item.word), ...WORDS.map((item) => item.word)]) : [];
+  const meaningChoices = word ? uniqueChoices(word.meaning, [...words.map((item) => item.meaning), ...MEANING_CHOICES]) : [];
   const feedback = answerFeedback();
 
   function answerFeedback() {
@@ -275,6 +280,17 @@ export default function ReviewSession({ kind, title, hidden = false, compact = f
       : step === "matching" && matchingDone
         ? <AnswerFeedback correct />
         : null;
+  const filterButton = (
+    <ScopeFilterButton
+      anchorRef={filterAnchorRef}
+      compact={filterCompact}
+      label={scopeLabel}
+      extra={filterExtra}
+      countPrefix=""
+      expanded={filterOpen}
+      onClick={onFilter}
+    />
+  );
 
   return (
     <section className={`review-session${hidden ? " is-hidden" : ""}${compact ? " is-compact" : ""}`} aria-hidden={hidden || undefined}>
@@ -282,18 +298,24 @@ export default function ReviewSession({ kind, title, hidden = false, compact = f
       <div className="review-session-body">
         {compact ? (
           <ReviewInProgress index={index} total={steps.length} done={done} />
+        ) : !words.length ? (
+          <div className="review-session-lead">
+            {filterButton}
+            <p className="review-session-empty">No terms match this filter.</p>
+          </div>
         ) : done ? null : (
           <div className="review-session-lead">
             <div className="review-session-progress">
+              {filterButton}
               <div className="review-session-track" aria-hidden="true">
                 <div style={{ width: `${((index + 1) / steps.length) * 100}%` }} />
               </div>
-              <span>{index + 1} / {steps.length}</span>
+              <span>{index + 1}/{steps.length}</span>
             </div>
             <MessageReveal notice={notice} />
           </div>
         )}
-        {compact ? null : done ? (
+        {compact || !words.length ? null : done ? (
           <Results onClose={onClose} onAgain={reviewAgain} />
         ) : phase === "result" && step !== "unscramble" ? (
           <ResultFace
@@ -334,7 +356,7 @@ export default function ReviewSession({ kind, title, hidden = false, compact = f
             notice={notice}
             mode={step}
             word={word}
-            choices={step === "cloze" ? clozeChoices : MEANING_CHOICES}
+            choices={step === "cloze" ? clozeChoices : meaningChoices}
             selected={selected}
             onSubmit={(choice) => {
               setSelected(choice || null);
@@ -372,6 +394,7 @@ export default function ReviewSession({ kind, title, hidden = false, compact = f
         ) : (
           <Speaking
             notice={notice}
+            word={word}
             speech={speech}
             onStart={() => setSpeech("recording")}
             onStop={() => setSpeech("rated")}
@@ -626,7 +649,7 @@ function Choices({ notice, mode, word, choices, selected, onSubmit }) {
             ) : (
               <div className="review-session-term">
                 <Speak />
-                <p className="review-session-word">{WORDS[3].word}</p>
+                <p className="review-session-word">{word.word}</p>
               </div>
             )}
           </div>
@@ -820,9 +843,9 @@ function CorrectedChips({ from }) {
   );
 }
 
-function Speaking({ notice, speech, onStart, onStop, onRetry, onSkip, onNext }) {
-  const sentence = WORDS[0].sentence;
-  const heardSentence = "Also der erste, würde ich sagen, ist erst die Zeit.";
+function Speaking({ notice, word, speech, onStart, onStop, onRetry, onSkip, onNext }) {
+  const sentence = word?.sentence || WORDS[0].sentence;
+  const heardSentence = sentence;
   const recording = speech === "recording";
   const rated = speech === "rated";
   const [heard, setHeard] = useState("");
@@ -858,7 +881,7 @@ function Speaking({ notice, speech, onStart, onStop, onRetry, onSkip, onNext }) 
                 </button>
               </div>
               <div className="review-session-speak-lines">
-                <SentenceQuote sentence={sentence} term={WORDS[0].word} />
+                <SentenceQuote sentence={sentence} term={word?.word || WORDS[0].word} />
                 {(recording || rated) && heard ? (
                   <p className="review-session-transcript">{heard}</p>
                 ) : null}

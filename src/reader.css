@@ -4867,30 +4867,36 @@ button:focus-visible {
 .review-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 12px;
+  width: 100%;
   height: 40px;
+  min-width: 0;
 }
 
-.review-toolbar-actions {
+.review-toolbar-trailing {
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 100%;
-}
-
-.review-toolbar p {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 18px;
+  min-width: 0;
+  margin-left: auto;
 }
 
 .review-toolbar-divider {
-  display: none;
   width: 1px;
   height: 16px;
   background: #d1d6d9;
   flex-shrink: 0;
+}
+
+.review-toolbar-count {
+  margin: 0;
+  flex-shrink: 0;
+  color: var(--fg-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+  white-space: nowrap;
 }
 
 .review-icon-button,
@@ -4916,12 +4922,19 @@ button:focus-visible {
 }
 
 .review-sort {
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 0;
   border-radius: 6px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 18px;
+}
+
+.review-sort span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .review-sort-anchor {
@@ -5313,10 +5326,6 @@ button:focus-visible {
   filter: none;
 }
 
-.review-card-layer.is-docked .review-card-toggle button span {
-  display: none;
-}
-
 .review-card {
   position: relative;
   display: flex;
@@ -5367,47 +5376,55 @@ button:focus-visible {
 }
 
 .review-card-toggle {
-  position: relative;
   display: flex;
-  align-items: stretch;
-  align-self: stretch;
-  gap: 12px;
-  height: 100%;
-  padding: 0;
-  background: transparent;
+  align-items: center;
+  align-self: center;
+  gap: 4px;
+  height: 48px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+}
+
+.review-card-layer:not(.is-docked) .review-card-header-bar {
+  position: relative;
+}
+
+.review-card-layer:not(.is-docked) .review-card-toggle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .review-card-toggle button {
-  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 100%;
-  padding: 0 12px;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border: 0;
-  border-radius: 0;
+  border-radius: 999px;
   background: transparent;
   color: var(--fg-muted);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 18px;
-  white-space: nowrap;
   cursor: pointer;
 }
 
-.review-card-toggle button.is-on {
-  color: var(--fg-secondary);
+.review-card-toggle button:hover {
+  background: var(--surface-default);
+  color: var(--fg-default);
 }
 
-.review-card-toggle button.is-on::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 1.5px;
-  background: var(--fg-secondary);
+.review-card-toggle button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.review-card-toggle button.is-on,
+.review-card-toggle button.is-on:hover {
+  background: var(--bg-page);
+  color: var(--fg-secondary);
 }
 
 .review-card-tools {
@@ -5443,16 +5460,6 @@ button:focus-visible {
   align-items: center;
 }
 
-.review-card-header-bar.is-compact .review-card-toggle {
-  align-self: stretch;
-  height: 100%;
-}
-
-.review-card-header-bar.is-compact .review-card-toggle button.is-on::after,
-.review-card-layer.is-docked .review-card-toggle button.is-on::after {
-  height: 2px;
-}
-
 .review-card-layer.is-docked .review-card-toggle svg {
   width: 20px;
   height: 20px;
@@ -5460,6 +5467,14 @@ button:focus-visible {
 
 .review-card-options {
   position: relative;
+}
+
+.review-card-filter.is-active {
+  color: var(--fg-secondary);
+}
+
+.review-card.is-filter {
+  gap: 0;
 }
 
 .review-card.is-list {
@@ -5527,6 +5542,20 @@ button:focus-visible {
   background: var(--bg-page);
 }
 
+.review-card-layer.is-docked .review-header-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 767px) {
+  .review-header-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
 @media (min-width: 1025px) {
   .review-card-layer:not(.is-docked) .review-header-tools {
     display: flex;
@@ -5542,14 +5571,16 @@ button:focus-visible {
   }
 
   .review-card-layer:not(.is-docked) .review-toolbar {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     height: auto;
-    margin-left: auto;
+    min-width: 0;
+    margin-left: 0;
     gap: 12px;
+    justify-content: flex-end;
   }
 
-  .review-card-layer:not(.is-docked) .review-toolbar-divider {
-    display: block;
+  .review-card-layer:not(.is-docked) .review-toolbar-trailing {
+    margin-left: 0;
   }
 }
 
@@ -5638,131 +5669,226 @@ button:focus-visible {
   bottom: auto;
 }
 
+.review-filter-sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+
+.review-filter-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.review-filter-sheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  height: min(70dvh, 640px);
+  overflow: hidden;
+  border-radius: 16px 16px 0 0;
+  background: var(--bg-page);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+  transition: height 180ms ease;
+}
+
+.review-filter-sheet.is-tall {
+  height: min(92dvh, 100%);
+}
+
+.review-filter-sheet > .player-drag-handle {
+  display: flex;
+  flex-shrink: 0;
+  height: 20px;
+  margin: 0;
+  background: var(--bg-page);
+}
+
+.review-filter-sheet .review-filter {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .review-filter-sheet {
+    transition: none;
+  }
+}
+
+.review-filter-popover {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  max-height: min(560px, calc(100dvh - 140px));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-page);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.review-filter-popover .review-filter {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.review-filter-popover .review-filter-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .review-filter {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
+  background: var(--bg-page);
+}
+
+.review-filter-bar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 72px;
+  padding: 0 16px;
+  border-bottom: 1px solid #e3e5e7;
+}
+
+.review-filter-title,
+.review-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-filter-title p {
+  margin: 0;
+  color: var(--fg-default);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.review-filter-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.review-filter-icon:disabled {
+  color: #d1d6d9;
+  cursor: default;
+}
+
+.review-filter-icon.is-dirty:not(:disabled) {
+  background: var(--fg-secondary);
+  color: #fff;
 }
 
 .review-filter-body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   min-height: 0;
   overflow: auto;
-  padding: 12px 12px 16px;
+  padding: 12px;
+}
+
+.review-filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .review-filter-section h3 {
   margin: 0;
-  padding: 12px 0;
-  color: var(--fg-muted);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 16px;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.review-filter-section.is-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.review-filter-card,
-.review-filter-srs {
-  border-radius: 12px;
-  background: var(--surface);
-}
-
-.review-filter-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 16px;
-}
-
-.review-filter-name,
-.review-filter-value {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.review-filter-name {
-  flex-shrink: 0;
-  gap: 8px;
-  color: var(--fg-default);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 18px;
-}
-
-.review-filter-name.is-muted {
-  color: var(--fg-muted);
-}
-
-.review-filter-value {
-  flex: 1;
-  justify-content: flex-end;
-  gap: 4px;
-  max-width: 150px;
   color: var(--fg-muted);
   font-size: 12px;
   font-weight: 500;
   line-height: 16px;
-}
-
-.review-filter-value svg {
-  flex-shrink: 0;
-}
-
-.review-filter-value span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.review-filter-divider {
-  height: 1px;
-  background: var(--border);
 }
 
 .review-filter-segment {
   display: flex;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 4px;
+  border: 1px solid #f1f3f4;
+  border-radius: 12px;
   background: var(--bg-elevated);
 }
 
 .review-filter-segment button {
   flex: 1;
+  height: 38px;
   padding: 10px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 12px;
   background: transparent;
   color: var(--fg-muted);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 18px;
   cursor: pointer;
 }
 
 .review-filter-segment button.is-selected {
   background: var(--bg-page);
-  color: var(--fg-default);
+  color: var(--fg-secondary);
+  font-weight: 500;
 }
 
+.review-filter-tags,
 .review-filter-srs {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  border: 1px solid #f1f3f4;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+}
+
+.review-filter-tags {
+  padding: 12px;
+  color: var(--fg-default);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.review-filter-tags span,
+.review-filter-tags span + span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.review-filter-tags span + span {
+  gap: 4px;
+  color: var(--fg-muted);
+}
+
+.review-filter-srs {
   padding: 8px;
 }
 
@@ -5824,7 +5950,7 @@ button:focus-visible {
   flex-shrink: 0;
   align-items: center;
   gap: 8px;
-  padding: 12px 0;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--fg-default);
@@ -5869,7 +5995,6 @@ button:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 16px;
 }
 
 .review-filter-chip {
@@ -5877,9 +6002,9 @@ button:focus-visible {
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  border: 1px solid #d1d6d9;
+  border: 1px solid #f1f3f4;
   border-radius: 999px;
-  background: #fff;
+  background: var(--bg-elevated);
   color: var(--fg-muted);
   font-size: 14px;
   font-weight: 500;
@@ -6791,6 +6916,18 @@ button:focus-visible {
   pointer-events: none;
 }
 
+.review-session-empty {
+  margin: 24px 16px;
+  color: var(--fg-muted);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.review-session-lead .review-session-empty {
+  margin: 0;
+}
+
 .review-session-sr {
   position: absolute;
   width: 1px;
@@ -6811,11 +6948,50 @@ button:focus-visible {
   width: min(600px, 100%);
 }
 
+.review-scope-filter {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--fg-secondary);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.review-scope-filter:hover {
+  background: var(--surface-default);
+}
+
+.review-scope-filter.is-icon {
+  justify-content: center;
+  padding: 8px;
+}
+
+.review-scope-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #f1f7fe;
+  color: var(--fg-secondary);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
 .review-session-progress {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
+  justify-content: flex-start;
+  gap: 12px;
   width: 100%;
   margin: 0;
   color: var(--fg-muted);
@@ -6823,6 +6999,14 @@ button:focus-visible {
   font-weight: 500;
   line-height: 18px;
   white-space: nowrap;
+}
+
+.review-session-progress > span {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  text-align: center;
 }
 
 .review-session-track {
@@ -7740,33 +7924,24 @@ button.review-session-affordance {
 
 @media (max-width: 1024px) {
   .review-card-header-bar {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    display: flex;
     align-items: stretch;
+    justify-content: space-between;
   }
 
   .review-card-header-start {
-    display: contents;
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
   }
 
   .review-card-close {
-    justify-self: start;
-  }
-
-  .review-card-toggle {
-    justify-self: center;
+    align-self: center;
   }
 
   .review-card-tools {
-    justify-self: end;
-  }
-
-  .review-card-toggle button span {
-    display: none;
-  }
-
-  .review-card-layer:not(.is-docked) .review-card-toggle button.is-on::after {
-    height: 2px;
+    align-self: center;
+    flex-shrink: 0;
   }
 
   .review-card-layer:not(.is-docked) {

@@ -2,17 +2,14 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowUpDown,
-  BookOpen,
   Check,
   ChevronDown,
   CirclePlus,
   ChevronRight,
   EyeOff,
-  Library,
   ListFilter,
-  Lock,
   PanelRight,
-  RotateCw,
+  RotateCcw,
   Search,
   Tags,
   Volume2,
@@ -20,7 +17,8 @@ import {
 } from "lucide-react";
 import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
 import { meaningsFor } from "./meanings.js";
-import { termSnippet } from "./sentences.js";
+import { phraseCovers } from "./phrases.js";
+import { sentenceFor, termSnippet } from "./sentences.js";
 
 const SORTS = ["Importance", "Status", "Creation Date", "A-Z", "Z-A"];
 const MATCHES = ["Contains", "Starts With", "Ends With", "Source Text Containing", "Meaning Containing"];
@@ -42,31 +40,58 @@ const FILTER_STATUSES = [
   { id: "Learned", numeral: "4" },
   { id: "Known", icon: Check },
 ];
-const COURSE_NAME = "YouTube auf Deutsch";
-const LESSON_NAME = "Mehrere Sprachen auf einmal lernen?! Wie lange jeden Tag lernen?";
 
-function defaultFilters() {
+export function defaultFilters() {
   return { terms: "All", srsDue: false, statuses: ["Blue", "New", "Recognized", "Familiar"] };
 }
 
-function cloneFilters(filters) {
+export function cloneFilters(filters) {
   return { terms: filters.terms, srsDue: filters.srsDue, statuses: [...filters.statuses] };
 }
 
-function passesFilter(item, filters) {
+export function passesFilter(item, filters) {
   if (filters.terms === "Words" && item.phraseId) return false;
   if (filters.terms === "Phrases" && !item.phraseId) return false;
   if (filters.srsDue) return false;
   return filters.statuses.includes(item.status);
 }
 
-function filtersMatch(left, right) {
+export function filtersMatch(left, right) {
   if (left.terms !== right.terms || left.srsDue !== right.srsDue) return false;
   if (left.statuses.length !== right.statuses.length) return false;
   return left.statuses.every((status) => right.statuses.includes(status));
 }
 
-function filtersAreActive(filters) {
+export function extraFilterCount(filters) {
+  const base = defaultFilters();
+  let count = 0;
+  if (filters.terms !== base.terms) count += 1;
+  if (Boolean(filters.srsDue) !== Boolean(base.srsDue)) count += 1;
+  const statusesMatch = filters.statuses.length === base.statuses.length
+    && base.statuses.every((status) => filters.statuses.includes(status));
+  if (!statusesMatch) count += 1;
+  return count;
+}
+
+export function ScopeFilterButton({ anchorRef, compact, label, extra, expanded, onClick, countPrefix = "+" }) {
+  const showCount = extra > 0 && (countPrefix === "" || !compact);
+  return (
+    <button
+      ref={anchorRef || undefined}
+      type="button"
+      className={`review-scope-filter${compact && !showCount ? " is-icon" : ""}`}
+      aria-label={extra > 0 ? `Filter, ${label}, ${extra} more` : `Filter, ${label}`}
+      aria-expanded={expanded}
+      onClick={onClick}
+    >
+      <ListFilter size={16} strokeWidth={1.5} absoluteStrokeWidth />
+      {compact ? null : <span>{label}</span>}
+      {showCount ? <span className="review-scope-filter-count">{countPrefix}{extra}</span> : null}
+    </button>
+  );
+}
+
+export function filtersAreActive(filters) {
   if (!filters) return false;
   return !filtersMatch(filters, defaultFilters());
 }
@@ -86,37 +111,57 @@ function joinedMeanings(values, fallback) {
   return fallback || "";
 }
 
-export function reviewTermsFrom(lesson, savedPhrases) {
+function phraseInScope(phrase, scope) {
+  if (!scope) return true;
+  if (!phrase.start || !phrase.end) return false;
+  for (const key of scope) {
+    const [paragraphIndex, tokenIndex] = key.split("-").map(Number);
+    if (phraseCovers(phrase, paragraphIndex, tokenIndex)) return true;
+  }
+  return false;
+}
+
+export function reviewTermsFrom(lesson, savedPhrases, scope = null) {
   const items = [];
   const seen = new Set();
 
   savedPhrases.forEach((phrase) => {
+    if (!phraseInScope(phrase, scope)) return;
     const key = phrase.text.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
     const context = phrase.start
       ? termSnippet(lesson[phrase.start.paragraphIndex], phrase.start.tokenIndex, phrase.end?.tokenIndex ?? phrase.start.tokenIndex)
       : null;
+    const spoken = phrase.start
+      ? sentenceFor(lesson, phrase.start.paragraphIndex, phrase.start.tokenIndex)
+      : { text: phrase.text, translation: "" };
     items.push({
       id: `phrase-${phrase.id}`,
       phraseId: phrase.id,
       term: phrase.text,
       meaning: joinedMeanings(phrase.meanings, phrase.meaning),
       context,
+      sentence: spoken.text,
+      translation: spoken.translation,
       status: phrase.status || "New",
     });
   });
 
   function pushWord(token, paragraphIndex, tokenIndex) {
+    if (scope && !scope.has(`${paragraphIndex}-${tokenIndex}`)) return;
     const key = token.value.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
+    const spoken = sentenceFor(lesson, paragraphIndex, tokenIndex);
     items.push({
       id: `${paragraphIndex}-${tokenIndex}-${key}`,
       phraseId: null,
       term: token.value,
       meaning: joinedMeanings(token.meanings, token.meaning || meaningsFor(token.value).join(" ; ")),
       context: termSnippet(lesson[paragraphIndex], tokenIndex),
+      sentence: spoken.text,
+      translation: spoken.translation,
       status: token.kind === "new" ? "Blue" : token.status,
     });
   }
@@ -131,6 +176,17 @@ export function reviewTermsFrom(lesson, savedPhrases) {
   });
 
   return items;
+}
+
+export function reviewWordsFrom(terms, filters) {
+  return terms.filter((item) => passesFilter(item, filters)).map((item) => ({
+    word: item.term,
+    meaning: item.meaning,
+    status: item.status === "Blue" ? "New" : item.status,
+    sentence: item.sentence || item.term,
+    translation: item.translation || "",
+    tags: [],
+  }));
 }
 
 function ReviewStatusMenu({ anchorId, status, onStatus, onClose }) {
@@ -290,21 +346,25 @@ function PanelClose({ sheet, onClose, closeIcon = "panel" }) {
   );
 }
 
-function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet, embedded = false, closeIcon = "panel" }) {
-  const [clearing, setClearing] = useState(false);
+const CONTEXTS = [
+  { id: "page", label: "Page" },
+  { id: "sentence", label: "Sentence" },
+  { id: "lesson", label: "Lesson" },
+];
+
+export function ReviewFilter({ initial, onApply }) {
+  const [opened] = useState(() => ({ ...cloneFilters(initial), context: initial.context }));
+  const [draft, setDraft] = useState(opened);
+  const dirty = !filtersMatch(draft, opened) || draft.context !== opened.context;
   const allStatusesSelected = FILTER_STATUSES.every((status) => draft.statuses.includes(status.id));
   const someStatusesSelected = draft.statuses.length > 0 && !allStatusesSelected;
-  const clearDisabled = !clearing && filtersMatch(draft, defaultFilters());
 
-  function clearFilters() {
-    if (clearDisabled || clearing) return;
-    onReset();
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    setClearing(true);
+  function reset() {
+    setDraft(opened);
   }
 
   function toggleStatus(status) {
-    onDraft((current) => ({
+    setDraft((current) => ({
       ...current,
       statuses: current.statuses.includes(status)
         ? current.statuses.filter((item) => item !== status)
@@ -313,7 +373,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet, 
   }
 
   function toggleAllStatuses() {
-    onDraft((current) => ({
+    setDraft((current) => ({
       ...current,
       statuses: FILTER_STATUSES.every((status) => current.statuses.includes(status.id))
         ? []
@@ -323,75 +383,63 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet, 
 
   return (
     <div className="review-filter">
-      <header className="review-panel-header">
-        <div className="review-header-bar">
-          <h2>Filters</h2>
-          <button type="button" className="review-filter-clear" onClick={clearFilters} disabled={clearDisabled}>
-            <span className={clearing ? "is-spinning" : ""} onAnimationEnd={() => setClearing(false)}>
-              <RotateCw size={16} strokeWidth={1.5} absoluteStrokeWidth />
-            </span>
-            Clear
+      <header className="review-filter-bar">
+        <div className="review-filter-title">
+          <ListFilter size={20} strokeWidth={1.5} absoluteStrokeWidth />
+          <p>Review</p>
+        </div>
+        <div className="review-filter-actions">
+          <button type="button" className="review-filter-icon" aria-label="Reset filters" onClick={reset} disabled={!dirty}>
+            <RotateCcw size={20} strokeWidth={1.5} absoluteStrokeWidth />
           </button>
-          {embedded ? null : <PanelClose sheet={sheet} closeIcon={closeIcon} onClose={onClose} />}
+          <button type="button" className={`review-filter-icon${dirty ? " is-dirty" : ""}`} aria-label="Apply filters" onClick={() => onApply({ ...cloneFilters(draft), context: draft.context })} disabled={!dirty}>
+            <Check size={20} strokeWidth={1.5} absoluteStrokeWidth />
+          </button>
         </div>
       </header>
       <div className="review-filter-body">
         <section className="review-filter-section">
           <h3>Context</h3>
-          <div className="review-filter-card">
-            <div className="review-filter-row">
-              <span className="review-filter-name is-muted">
-                <Library size={16} strokeWidth={1.5} absoluteStrokeWidth />
-                Course
-              </span>
-              <span className="review-filter-value">
-                <Lock size={14} strokeWidth={1.5} absoluteStrokeWidth />
-                <span>{COURSE_NAME}</span>
-                <ChevronRight size={14} strokeWidth={1.5} absoluteStrokeWidth />
-              </span>
-            </div>
-            <div className="review-filter-divider" />
-            <div className="review-filter-row">
-              <span className="review-filter-name is-muted">
-                <BookOpen size={16} strokeWidth={1.5} absoluteStrokeWidth />
-                Lesson
-              </span>
-              <span className="review-filter-value">
-                <Lock size={14} strokeWidth={1.5} absoluteStrokeWidth />
-                <span>{LESSON_NAME}</span>
-                <ChevronRight size={14} strokeWidth={1.5} absoluteStrokeWidth />
-              </span>
-            </div>
-            <div className="review-filter-divider" />
-            <div className="review-filter-row">
-              <span className="review-filter-name">
-                <Tags size={16} strokeWidth={1.5} absoluteStrokeWidth />
-                Tags
-              </span>
-              <span className="review-filter-value">
-                <span>None</span>
-                <ChevronRight size={14} strokeWidth={1.5} absoluteStrokeWidth />
-              </span>
-            </div>
+          <div className="review-filter-segment" role="radiogroup" aria-label="Context">
+            {CONTEXTS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={draft.context === option.id}
+                className={draft.context === option.id ? "is-selected" : ""}
+                onClick={() => setDraft((current) => ({ ...current, context: option.id }))}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="review-filter-tags">
+            <span>
+              <Tags size={16} strokeWidth={1.5} absoluteStrokeWidth />
+              Tags
+            </span>
+            <span>
+              None
+              <ChevronRight size={16} strokeWidth={1.5} absoluteStrokeWidth />
+            </span>
           </div>
         </section>
-        <section className="review-filter-section is-stack">
-          <div>
-            <h3>Terms</h3>
-            <div className="review-filter-segment" role="radiogroup" aria-label="Terms">
-              {["All", "Words", "Phrases"].map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  role="radio"
-                  aria-checked={draft.terms === option}
-                  className={draft.terms === option ? "is-selected" : ""}
-                  onClick={() => onDraft((current) => ({ ...current, terms: option }))}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
+        <section className="review-filter-section">
+          <h3>Terms</h3>
+          <div className="review-filter-segment" role="radiogroup" aria-label="Terms">
+            {["All", "Words", "Phrases"].map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={draft.terms === option}
+                className={draft.terms === option ? "is-selected" : ""}
+                onClick={() => setDraft((current) => ({ ...current, terms: option }))}
+              >
+                {option}
+              </button>
+            ))}
           </div>
           <div className="review-filter-srs">
             <div>
@@ -404,7 +452,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet, 
               role="switch"
               aria-checked={draft.srsDue}
               aria-label="SRS Due"
-              onClick={() => onDraft((current) => ({ ...current, srsDue: !current.srsDue }))}
+              onClick={() => setDraft((current) => ({ ...current, srsDue: !current.srsDue }))}
             >
               <span />
             </button>
@@ -426,8 +474,7 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet, 
               </i>
             </button>
           </div>
-          <div className="review-filter-status">
-            <div className="review-filter-chips">
+          <div className="review-filter-chips">
             {FILTER_STATUSES.map((status) => {
               const Icon = status.icon;
               const selected = draft.statuses.includes(status.id);
@@ -444,19 +491,14 @@ function FilterPage({ draft, onDraft, onBack, onReset, onApply, onClose, sheet, 
                 </button>
               );
             })}
-            </div>
           </div>
         </section>
       </div>
-      <footer className="review-filter-footer">
-        <button type="button" className="review-filter-cancel" onClick={onBack}>Cancel</button>
-        <button type="button" className="review-filter-apply" onClick={onApply}>Apply</button>
-      </footer>
     </div>
   );
 }
 
-export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, compact = false, embedded = false, closeIcon = "panel" }) {
+export default function ReviewPanel({ terms, filters, onStatus, onClose, sheet = false, compact = false, embedded = false, closeIcon = "panel", onFilter, filterAnchorRef = null, scopeLabel = "Page", filterExtra = 0, filterCompact = false, filterOpen = false }) {
   const matchButtonRef = useRef(null);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState(null);
@@ -464,12 +506,9 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
   const [sortOpen, setSortOpen] = useState(false);
   const [match, setMatch] = useState("Contains");
   const [matchOpen, setMatchOpen] = useState(false);
-  const [page, setPage] = useState("list");
-  const [appliedFilters, setAppliedFilters] = useState(null);
-  const [draftFilters, setDraftFilters] = useState(defaultFilters);
-  const filtersActive = filtersAreActive(appliedFilters);
+  const appliedFilters = filters ?? defaultFilters();
   const listed = useMemo(
-    () => terms.filter((item) => passesFilter(item, appliedFilters ?? defaultFilters())),
+    () => terms.filter((item) => passesFilter(item, appliedFilters)),
     [terms, appliedFilters],
   );
   const visible = useMemo(() => {
@@ -505,8 +544,7 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
       onStatus?.(item, status);
       return;
     }
-    const filters = appliedFilters ?? defaultFilters();
-    const stays = passesFilter({ ...item, status }, filters)
+    const stays = passesFilter({ ...item, status }, appliedFilters)
       && termMatches(item, query.trim().toLowerCase(), match);
     setOpenId(null);
     setArrivedTerm(null);
@@ -544,34 +582,8 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
     };
   }, [sortOpen]);
 
-  function openFilters() {
-    setSortOpen(false);
-    setMatchOpen(false);
-    setOpenId(null);
-    setDraftFilters(appliedFilters ? cloneFilters(appliedFilters) : defaultFilters());
-    setPage("filters");
-  }
-
   return (
-    <section className={`review-panel${compact ? " is-compact" : ""}${embedded ? " is-embedded" : ""}`} aria-label={page === "filters" ? "Filters" : "Vocabulary"}>
-      {page === "filters" && !compact ? (
-        <FilterPage
-          draft={draftFilters}
-          onDraft={setDraftFilters}
-          onBack={() => setPage("list")}
-          onReset={() => setDraftFilters(defaultFilters())}
-          onApply={() => {
-            setAppliedFilters(cloneFilters(draftFilters));
-            setPage("list");
-          }}
-          onClose={onClose}
-          sheet={sheet}
-          embedded={embedded}
-          closeIcon={closeIcon}
-        />
-      ) : null}
-      {page === "filters" && !compact ? null : (
-      <>
+    <section className={`review-panel${compact ? " is-compact" : ""}${embedded ? " is-embedded" : ""}`} aria-label="Vocabulary">
       <header className="review-panel-header">
         {embedded ? null : (
         <div className="review-header-bar">
@@ -634,10 +646,15 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
           />
         ) : null}
         <div className="review-toolbar">
-          <div className="review-toolbar-actions">
-            <button type="button" className={`review-icon-button${filtersActive ? " is-active" : ""}`} aria-label="Filter" aria-pressed={filtersActive} onClick={openFilters}>
-              <ListFilter size={16} strokeWidth={1.5} absoluteStrokeWidth />
-            </button>
+          <ScopeFilterButton
+            anchorRef={filterAnchorRef}
+            compact={filterCompact}
+            label={scopeLabel}
+            extra={filterExtra}
+            expanded={filterOpen}
+            onClick={onFilter}
+          />
+          <div className="review-toolbar-trailing">
             <div className="review-sort-anchor">
               <button
                 type="button"
@@ -651,7 +668,7 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
                 }}
               >
                 <ArrowUpDown size={16} strokeWidth={1.5} absoluteStrokeWidth />
-                {sort}
+                <span>{sort}</span>
               </button>
               {sortOpen ? (
                 <div className="review-menu review-sort-menu" role="menu" aria-label="Sort">
@@ -674,9 +691,9 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
                 </div>
               ) : null}
             </div>
+            <span className="review-toolbar-divider" aria-hidden="true" />
+            <p className="review-toolbar-count">{termCountLabel(listed.length, appliedFilters.terms)}</p>
           </div>
-          <span className="review-toolbar-divider" aria-hidden="true" />
-          <p>{termCountLabel(listed.length, (appliedFilters ?? defaultFilters()).terms)}</p>
         </div>
         </div>
         )}
@@ -774,8 +791,6 @@ export default function ReviewPanel({ terms, onStatus, onClose, sheet = false, c
           onClose={() => setOpenId(null)}
         />
       ) : null}
-      </>
-      )}
     </section>
   );
 }

@@ -13,6 +13,7 @@ import {
   Tags,
   TextSearch,
   Volume2,
+  PanelRight,
   X,
 } from "lucide-react";
 import flagIcon from "../assets/language_flag_icon.png";
@@ -428,6 +429,7 @@ export default function WidgetLarge({
   onChooseMeaning,
   onUpdateMeanings = () => {},
   onClose,
+  onTogglePanel = null,
   docked = false,
   compact = false,
 }) {
@@ -506,6 +508,11 @@ export default function WidgetLarge({
             <ChevronLeft size={16} strokeWidth={1.33} absoluteStrokeWidth />
           </button>
           <p className="widget-large-dict-title">Dictionaries</p>
+          {docked && onTogglePanel ? (
+            <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={onTogglePanel}>
+              <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
+            </button>
+          ) : null}
         </header>
       ) : (
         <header className="widget-large-header">
@@ -515,6 +522,11 @@ export default function WidgetLarge({
               <button type="button" className="widget-large-icon-button" aria-label="Play audio">
                 <Volume2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
               </button>
+              {docked && onTogglePanel ? (
+                <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={onTogglePanel}>
+                  <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                </button>
+              ) : null}
             </div>
           </div>
         </header>

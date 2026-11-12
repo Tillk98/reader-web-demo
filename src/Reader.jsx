@@ -101,7 +101,6 @@ import skipForwardIcon from "../assets/skip_forward_5.svg";
 import reviewIcon from "../assets/review_icon_light.png";
 import reviewIconOnDark from "../assets/review-icon-on-dark.png";
 import lingqIcon from "../assets/LingQ-Icon.png";
-import lingqMark from "../assets/lingq-icon-mark.png";
 import thumbnail from "../assets/lesson-thumbnail.jpg";
 
 const LESSON_TITLE = "Mehrere Sprachen auf einmal lernen?! Wie lange jeden Tag lernen?";
@@ -452,9 +451,9 @@ function menuChevron(Icon) {
 const READER_PLAYLISTS = ["Active Playlist", "YouTube auf Deutsch", "Deutsche Nachrichten"];
 
 const PANEL_TABS = [
-  { id: "term", label: "Term", icon: lingqMark },
-  { id: "review", label: "Review", icon: reviewIcon },
-  { id: "lynx", label: "Lynx", icon: lynxIcon },
+  { id: "term", label: "Term" },
+  { id: "review", label: "Review" },
+  { id: "lynx", label: "Lynx" },
 ];
 
 function SidePanelTabs({ tab, onSelect }) {
@@ -479,7 +478,6 @@ function SidePanelTabs({ tab, onSelect }) {
           tabIndex={tab === item.id ? 0 : -1}
           onClick={() => onSelect(item.id)}
         >
-          <img src={item.icon} alt="" width={16} height={16} />
           {item.label}
         </button>
       ))}
@@ -3898,6 +3896,7 @@ export default function Reader() {
                 />
               ) : null}
             </span>
+            {panelTabs || !sideColumn ? (
             <button
               type="button"
               className="icon-button panel-button"
@@ -3907,6 +3906,7 @@ export default function Reader() {
             >
               <PanelRight size={24} strokeWidth={1.5} absoluteStrokeWidth />
             </button>
+            ) : null}
           </div>
         </div>
 
@@ -4591,10 +4591,11 @@ export default function Reader() {
               onChooseMeaning={chooseMeaning}
               onUpdateMeanings={updateMeanings}
               onClose={() => setActive(null)}
+              onTogglePanel={toggleSidePanel}
               docked
             />
             ) : lynxOpen && !mobile ? (
-              <LynxChat onClose={closeLynx} lesson={LESSON_IDENTITY} />
+              <LynxChat onClose={closeLynx} lesson={LESSON_IDENTITY} onTogglePanel={toggleSidePanel} />
             ) : null}
           </aside>
             ) : null}
@@ -4749,6 +4750,11 @@ export default function Reader() {
                       onClick={expandReview}
                     >
                       <Maximize2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                  ) : null}
+                  {reviewInPanel && !panelTabs ? (
+                    <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={toggleSidePanel}>
+                      <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
                   ) : null}
                 </div>

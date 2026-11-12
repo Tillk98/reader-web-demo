@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUp, CornerDownRight, Mic, X } from "lucide-react";
+import { ArrowUp, CornerDownRight, Mic, PanelRight, X } from "lucide-react";
 import lynxIcon from "../assets/lynx_icon_light.png";
 
 const SUGGESTIONS = [
@@ -19,7 +19,7 @@ function LessonIdentity({ lesson }) {
   );
 }
 
-export default function LynxChat({ onClose, sheet = false, lesson = null, replaceTitle = false }) {
+export default function LynxChat({ onClose, sheet = false, lesson = null, replaceTitle = false, onTogglePanel = null }) {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState([]);
 
@@ -50,6 +50,11 @@ export default function LynxChat({ onClose, sheet = false, lesson = null, replac
               <img src={lynxIcon} alt="" width={20} height={20} />
               <p>Lynx AI</p>
             </div>
+            {onTogglePanel ? (
+              <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={onTogglePanel}>
+                <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
+              </button>
+            ) : null}
           </header>
           {lesson ? <LessonIdentity lesson={lesson} /> : null}
         </>

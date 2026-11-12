@@ -9,7 +9,6 @@ import {
   History,
   Info,
   NotebookPen,
-  PanelRight,
   Plus,
   Tags,
   TextSearch,
@@ -431,8 +430,6 @@ export default function WidgetLarge({
   onClose,
   docked = false,
   compact = false,
-  closeIcon = "panel",
-  onTogglePanel,
 }) {
   const cardRef = useRef(null);
   const [page, setPage] = useState("default");
@@ -449,6 +446,7 @@ export default function WidgetLarge({
       if (docked) return;
       if (cardRef.current?.contains(event.target)) return;
       if (event.target.closest?.(".status-snackbar")) return;
+      if (event.target.closest?.(".panel-button")) return;
       onClose();
     }
 
@@ -508,13 +506,6 @@ export default function WidgetLarge({
             <ChevronLeft size={16} strokeWidth={1.33} absoluteStrokeWidth />
           </button>
           <p className="widget-large-dict-title">Dictionaries</p>
-          {docked ? (
-            <button type="button" className="widget-large-icon-button" aria-label={closeIcon === "x" ? "Close" : "Close side panel"} onClick={onTogglePanel}>
-              {closeIcon === "x"
-                ? <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                : <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />}
-            </button>
-          ) : null}
         </header>
       ) : (
         <header className="widget-large-header">
@@ -524,13 +515,6 @@ export default function WidgetLarge({
               <button type="button" className="widget-large-icon-button" aria-label="Play audio">
                 <Volume2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
               </button>
-              {docked ? (
-                <button type="button" className="widget-large-icon-button" aria-label={closeIcon === "x" ? "Close" : "Close side panel"} onClick={onTogglePanel}>
-                  {closeIcon === "x"
-                    ? <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                    : <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />}
-                </button>
-              ) : null}
             </div>
           </div>
         </header>

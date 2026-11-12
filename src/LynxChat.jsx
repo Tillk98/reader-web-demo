@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUp, CornerDownRight, Mic, PanelRight, X } from "lucide-react";
+import { ArrowUp, CornerDownRight, Mic, X } from "lucide-react";
 import lynxIcon from "../assets/lynx_icon_light.png";
 
 const SUGGESTIONS = [
@@ -7,7 +7,19 @@ const SUGGESTIONS = [
   "Wiederhole die Wörter, die ich falsch hatte.",
 ];
 
-export default function LynxChat({ onClose, sheet = false, closeIcon = "panel" }) {
+function LessonIdentity({ lesson }) {
+  return (
+    <div className="lynx-chat-lesson">
+      <img src={lesson.image} alt="" width={40} height={40} />
+      <div className="lynx-chat-lesson-copy">
+        <p className="lynx-chat-lesson-title">{lesson.title}</p>
+        <p className="lynx-chat-lesson-course">{lesson.course}</p>
+      </div>
+    </div>
+  );
+}
+
+export default function LynxChat({ onClose, sheet = false, lesson = null, replaceTitle = false }) {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState([]);
 
@@ -29,18 +41,18 @@ export default function LynxChat({ onClose, sheet = false, closeIcon = "panel" }
             </button>
           </div>
         </header>
+      ) : replaceTitle ? (
+        lesson ? <LessonIdentity lesson={lesson} /> : null
       ) : (
-        <header className="lynx-chat-header">
-          <div className="lynx-chat-title">
-            <img src={lynxIcon} alt="" width={20} height={20} />
-            <p>Lynx AI</p>
-          </div>
-          <button type="button" className="lynx-chat-close" aria-label={closeIcon === "x" ? "Close Lynx" : "Close side panel"} onClick={onClose}>
-            {closeIcon === "x"
-              ? <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
-              : <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />}
-          </button>
-        </header>
+        <>
+          <header className="lynx-chat-header">
+            <div className="lynx-chat-title">
+              <img src={lynxIcon} alt="" width={20} height={20} />
+              <p>Lynx AI</p>
+            </div>
+          </header>
+          {lesson ? <LessonIdentity lesson={lesson} /> : null}
+        </>
       )}
       <div className="lynx-chat-thread">
         {messages.map((message, index) => (

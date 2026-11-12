@@ -229,7 +229,7 @@ img {
 .reader-stage {
   display: flex;
   flex: 1;
-  gap: 16px;
+  gap: 0;
   width: 100%;
   min-width: 0;
   min-height: 0;
@@ -245,15 +245,231 @@ img {
   min-height: 0;
 }
 
+.side-panel-slot {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 0;
+  min-width: 0;
+  margin-left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    width 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin-left 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.side-panel-slot.is-open {
+  width: 452px;
+  margin-left: 0;
+  pointer-events: auto;
+}
+
+.side-panel-slot .side-panel {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  bottom: 22px;
+  width: 420px;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transform: translateX(calc(100% + 16px));
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.side-panel-slot.is-open .side-panel {
+  transform: none;
+}
+
+.side-panel-slot.is-static {
+  width: auto;
+  margin-left: 0;
+  overflow: visible;
+  pointer-events: auto;
+  transition: none;
+}
+
+.side-panel-slot.is-static .side-panel {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  width: 420px;
+  min-width: 350px;
+  max-width: 420px;
+  height: calc(100% - 34px);
+  margin: 12px 16px 22px 0;
+  transform: none;
+  transition: none;
+}
+
+.side-panel-slot.is-arriving,
+.side-panel-slot.is-arriving .side-panel {
+  transition: none;
+}
+
+.side-panel-slot.is-arriving.is-open .side-panel {
+  animation: side-panel-arrive 200ms ease-out;
+}
+
+@keyframes side-panel-arrive {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .side-panel {
   display: flex;
-  flex: 0 0 400px;
+  flex: 0 0 420px;
   flex-direction: column;
-  width: 400px;
+  width: 420px;
   min-width: 350px;
-  max-width: 400px;
+  max-width: 420px;
   height: 100%;
-  padding: 12px 12px 16px 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 16px;
+  background: var(--bg-page);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.side-panel-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid #e3e5e7;
+  background: transparent;
+}
+
+.side-panel-tabs button {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.side-panel-tabs button + button {
+  border-left: 1px solid #e3e5e7;
+}
+
+.side-panel-tabs button img {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.side-panel-tabs button:hover {
+  color: var(--fg-default);
+}
+
+.side-panel-tabs button[aria-selected="true"],
+.side-panel-tabs button[aria-selected="true"]:hover {
+  background: var(--bg-elevated);
+  color: var(--fg-default);
+}
+
+.side-panel-tab {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.side-panel-tab.is-hidden {
+  display: none;
+}
+
+.side-panel-slot.is-tabbed.is-open {
+  margin-left: 0;
+}
+
+.side-panel.is-tabbed .side-panel-tabs {
+  margin: 0;
+}
+
+.side-panel .widget-large.is-docked,
+.side-panel .lynx-chat,
+.side-panel .review-card-layer.is-docked .review-card,
+.side-panel .review-dock-placeholder {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  filter: none;
+}
+
+.side-panel .widget-large-header,
+.side-panel .lynx-chat-header {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.side-panel .lynx-chat {
+  padding: 0 0 12px;
+}
+
+.side-panel .lynx-chat-header {
+  margin: 0;
+}
+
+.side-panel .lynx-chat-thread {
+  padding: 12px 16px;
+}
+
+.side-panel .lynx-chat-suggestions {
+  padding: 0 12px;
+}
+
+.side-panel .lynx-chat-composer {
+  margin: 10px 12px 0;
+}
+
+.side-panel > .widget-large.is-docked,
+.side-panel > .lynx-chat,
+.side-panel > .review-dock-host,
+.side-panel .side-panel-tab > .widget-large.is-docked,
+.side-panel .side-panel-tab > .lynx-chat,
+.side-panel .side-panel-tab > .review-dock-host {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
+.side-panel-empty {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 24px;
+  color: var(--fg-muted);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  text-align: center;
 }
 
 .side-panel.is-split {
@@ -367,9 +583,10 @@ img {
 }
 
 .progress {
-  --actions: calc(var(--control-size) * 3 + 4px * 2);
+  --actions-gap: 0px;
+  --actions: calc(var(--control-size) * 3 + 4px * 2 + var(--actions-gap));
   --edge-gap: calc(52px - var(--control-size));
-  --text: min(620px, calc(100% - 52px * 2));
+  --text: min(1000px, calc(100% - 52px * 2));
   position: relative;
   grid-area: 1 / 1;
   justify-self: start;
@@ -380,7 +597,7 @@ img {
 }
 
 .reader-chrome:not(:has(.chrome-actions > :nth-child(4))) .progress {
-  --actions: calc(var(--control-size) * 3 + 4px * 2);
+  --actions: calc(var(--control-size) * 3 + 4px * 2 + var(--actions-gap));
 }
 
 .progress-track,
@@ -420,6 +637,18 @@ img {
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-right: 0;
+  transition: margin-right 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reader-stage:has(.side-panel-slot.is-open) .chrome-actions,
+.reader-stage:has(.side-panel-slot.is-static) .chrome-actions {
+  margin-right: 20px;
+}
+
+.reader-stage:has(.side-panel-slot.is-open) .progress,
+.reader-stage:has(.side-panel-slot.is-static) .progress {
+  --actions-gap: 20px;
 }
 
 .chrome-menu-anchor {
@@ -992,7 +1221,7 @@ button.reader-menu-lesson:hover {
   left: 50%;
   z-index: 2;
   display: flex;
-  width: min(620px, 100%);
+  width: min(1000px, 100%);
   padding: 16px 0;
   transform: translateX(-50%);
   pointer-events: none;
@@ -1007,7 +1236,7 @@ button.reader-menu-lesson:hover {
 .lesson-area.is-side .complete-lesson {
   left: calc(50% + 12px);
   width: calc(50% - 12px);
-  max-width: 620px;
+  max-width: 1000px;
   transform: none;
 }
 
@@ -1118,7 +1347,7 @@ button.reader-menu-lesson:hover {
 .page-column {
   position: relative;
   flex: 1;
-  max-width: 982px;
+  max-width: 1000px;
   height: 100%;
   min-width: 0;
 }
@@ -1153,11 +1382,11 @@ button.reader-menu-lesson:hover {
 }
 
 .lesson-area.has-video.is-side .page-text {
-  width: 100%;
+  width: min(1000px, 100%);
   min-width: 0;
-  max-width: none;
+  max-width: 1000px;
   height: 100%;
-  margin: 0;
+  margin: 0 auto;
   align-self: stretch;
 }
 
@@ -1174,7 +1403,7 @@ button.reader-menu-lesson:hover {
 
 .page-text {
   position: relative;
-  width: min(620px, 100%);
+  width: min(1000px, 100%);
   height: 100%;
   min-width: 0;
   margin: 0 auto;
@@ -1244,7 +1473,7 @@ button.reader-menu-lesson:hover {
 
 .lesson-area.has-video .page-text {
   flex: 1;
-  width: min(620px, 100%);
+  width: min(1000px, 100%);
   height: auto;
   min-height: 0;
   padding-top: 24px;
@@ -1486,7 +1715,7 @@ button.reader-menu-lesson:hover {
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  width: min(645px, 100%);
+  width: min(1000px, 100%);
   max-width: 100%;
   text-align: center;
   pointer-events: auto;
@@ -4218,6 +4447,12 @@ html.split-motion::view-transition-new(split-text) {
   object-fit: contain;
 }
 
+.panel-button[aria-pressed="true"],
+.panel-button[aria-pressed="true"]:hover {
+  background: var(--surface-default);
+  color: var(--fg-secondary);
+}
+
 .logo-button:hover,
 .icon-button:hover,
 .page-button:hover,
@@ -4267,7 +4502,7 @@ button:focus-visible {
   }
 
   .reader-chrome .progress {
-    --actions: calc(var(--control-size) * 2 + 4px);
+    --actions: calc(var(--control-size) * 2 + 4px + var(--actions-gap));
   }
 }
 
@@ -4466,7 +4701,7 @@ button:focus-visible {
     flex-direction: column;
     align-items: center;
     gap: 0;
-    max-width: 982px;
+    max-width: 1000px;
   }
 
   .lesson-area.has-video.is-side .lesson-video {
@@ -4477,7 +4712,7 @@ button:focus-visible {
   }
 
   .lesson-area.has-video.is-side .page-text {
-    width: min(620px, 100%);
+    width: min(1000px, 100%);
     margin: 0 auto;
   }
 
@@ -5313,9 +5548,36 @@ button:focus-visible {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .side-panel-slot,
+  .side-panel-slot .side-panel,
+  .review-card-layer:not(.is-docked),
+  .review-card-layer:not(.is-docked) .review-card,
+  .chrome-actions {
+    transition: none;
+    animation: none;
+  }
+}
+
 .review-divider {
   height: 1px;
   background: var(--border);
+}
+
+.review-card-layer:not(.is-docked) .review-card {
+  transform-origin: center;
+  animation: review-overlay-in 200ms ease-out;
+}
+
+@keyframes review-overlay-in {
+  from {
+    opacity: 0;
+    transform: translateY(2%) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .review-card-layer {
@@ -5326,7 +5588,17 @@ button:focus-visible {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(32, 33, 36, 0.38);
+}
+
+@media (prefers-color-scheme: dark) {
+  .review-card-layer:not(.is-docked) {
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  .review-card-layer:not(.is-docked) .review-card {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 28px rgba(0, 0, 0, 0.5);
+  }
 }
 
 .review-card-layer.is-moving {
@@ -5347,6 +5619,16 @@ button:focus-visible {
   min-width: 0;
   min-height: 0;
   overflow: visible;
+}
+
+.review-dock-placeholder {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-page);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .review-card-layer.is-docked {
@@ -5552,8 +5834,10 @@ button:focus-visible {
     max-height: 100%;
     min-height: 0;
     overflow: hidden;
-    box-shadow: none;
-    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.1));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 28px rgba(0, 0, 0, 0.12);
+    filter: none;
   }
 
   .review-card-layer:not(.is-docked) .review-session.is-hidden {
@@ -6065,6 +6349,11 @@ button:focus-visible {
   color: var(--fg-secondary);
 }
 
+.review-filter-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .review-filter-footer {
   display: flex;
   flex-shrink: 0;
@@ -6130,6 +6419,53 @@ button:focus-visible {
   font-size: 16px;
   font-weight: 500;
   line-height: 20px;
+}
+
+.lynx-chat-lesson {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  min-height: 72px;
+  padding: 16px;
+  background: var(--bg-page);
+}
+
+.lynx-chat-lesson img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8.325px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.lynx-chat-lesson-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lynx-chat-lesson-title,
+.lynx-chat-lesson-course {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lynx-chat-lesson-title {
+  color: var(--fg-default);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.lynx-chat-lesson-course {
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
 }
 
 .lynx-chat-close {

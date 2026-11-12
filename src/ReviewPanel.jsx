@@ -40,9 +40,28 @@ const FILTER_STATUSES = [
   { id: "Learned", numeral: "4" },
   { id: "Known", icon: Check },
 ];
+const ACTIVITY_LOCKED_STATUSES = ["Blue", "Ignored"];
 
 export function defaultFilters() {
   return { terms: "All", srsDue: false, statuses: ["Blue", "New", "Recognized", "Familiar"] };
+}
+
+export function withoutActivityLocked(filters) {
+  return {
+    ...cloneFilters(filters),
+    statuses: filters.statuses.filter((status) => !ACTIVITY_LOCKED_STATUSES.includes(status)),
+  };
+}
+
+export function mergeActivityFilters(previous, next) {
+  return {
+    terms: next.terms,
+    srsDue: next.srsDue,
+    statuses: [
+      ...next.statuses.filter((status) => !ACTIVITY_LOCKED_STATUSES.includes(status)),
+      ...previous.statuses.filter((status) => ACTIVITY_LOCKED_STATUSES.includes(status)),
+    ],
+  };
 }
 
 export function cloneFilters(filters) {
@@ -62,8 +81,7 @@ export function filtersMatch(left, right) {
   return left.statuses.every((status) => right.statuses.includes(status));
 }
 
-export function extraFilterCount(filters) {
-  const base = defaultFilters();
+export function extraFilterCount(filters, base = defaultFilters()) {
   let count = 0;
   if (filters.terms !== base.terms) count += 1;
   if (Boolean(filters.srsDue) !== Boolean(base.srsDue)) count += 1;
@@ -352,18 +370,25 @@ const CONTEXTS = [
   { id: "lesson", label: "Lesson" },
 ];
 
-export function ReviewFilter({ initial, onApply }) {
-  const [opened] = useState(() => ({ ...cloneFilters(initial), context: initial.context }));
+export function ReviewFilter({ initial, onApply, lockedStatuses = [] }) {
+  const locked = new Set(lockedStatuses);
+  const enabledStatuses = FILTER_STATUSES.filter((status) => !locked.has(status.id));
+  const [opened] = useState(() => ({
+    ...cloneFilters(initial),
+    context: initial.context,
+    statuses: initial.statuses.filter((status) => !locked.has(status)),
+  }));
   const [draft, setDraft] = useState(opened);
   const dirty = !filtersMatch(draft, opened) || draft.context !== opened.context;
-  const allStatusesSelected = FILTER_STATUSES.every((status) => draft.statuses.includes(status.id));
-  const someStatusesSelected = draft.statuses.length > 0 && !allStatusesSelected;
+  const allStatusesSelected = enabledStatuses.every((status) => draft.statuses.includes(status.id));
+  const someStatusesSelected = enabledStatuses.some((status) => draft.statuses.includes(status.id)) && !allStatusesSelected;
 
   function reset() {
     setDraft(opened);
   }
 
   function toggleStatus(status) {
+    if (locked.has(status)) return;
     setDraft((current) => ({
       ...current,
       statuses: current.statuses.includes(status)
@@ -375,9 +400,9 @@ export function ReviewFilter({ initial, onApply }) {
   function toggleAllStatuses() {
     setDraft((current) => ({
       ...current,
-      statuses: FILTER_STATUSES.every((status) => current.statuses.includes(status.id))
-        ? []
-        : FILTER_STATUSES.map((status) => status.id),
+      statuses: enabledStatuses.every((status) => current.statuses.includes(status.id))
+        ? current.statuses.filter((status) => locked.has(status))
+        : [...enabledStatuses.map((status) => status.id), ...current.statuses.filter((status) => locked.has(status))],
     }));
   }
 
@@ -477,13 +502,15 @@ export function ReviewFilter({ initial, onApply }) {
           <div className="review-filter-chips">
             {FILTER_STATUSES.map((status) => {
               const Icon = status.icon;
-              const selected = draft.statuses.includes(status.id);
+              const unavailable = locked.has(status.id);
+              const selected = !unavailable && draft.statuses.includes(status.id);
               return (
                 <button
                   key={status.id}
                   type="button"
                   className={`review-filter-chip${selected ? " is-selected" : ""}`}
                   aria-pressed={selected}
+                  disabled={unavailable}
                   onClick={() => toggleStatus(status.id)}
                 >
                   {Icon ? <Icon size={16} strokeWidth={1.5} absoluteStrokeWidth /> : <span>{status.numeral}</span>}

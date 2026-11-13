@@ -157,6 +157,8 @@ export function reviewTermsFrom(lesson, savedPhrases, scope = null) {
     items.push({
       id: `phrase-${phrase.id}`,
       phraseId: phrase.id,
+      paragraphIndex: phrase.start?.paragraphIndex ?? null,
+      tokenIndex: phrase.start?.tokenIndex ?? null,
       term: phrase.text,
       meaning: joinedMeanings(phrase.meanings, phrase.meaning),
       context,
@@ -175,6 +177,8 @@ export function reviewTermsFrom(lesson, savedPhrases, scope = null) {
     items.push({
       id: `${paragraphIndex}-${tokenIndex}-${key}`,
       phraseId: null,
+      paragraphIndex,
+      tokenIndex,
       term: token.value,
       meaning: joinedMeanings(token.meanings, token.meaning || meaningsFor(token.value).join(" ; ")),
       context: termSnippet(lesson[paragraphIndex], tokenIndex),
@@ -525,7 +529,7 @@ export function ReviewFilter({ initial, onApply, lockedStatuses = [] }) {
   );
 }
 
-export default function ReviewPanel({ terms, filters, onStatus, onClose, sheet = false, compact = false, embedded = false, closeIcon = "panel", onFilter, filterAnchorRef = null, scopeLabel = "Page", filterExtra = 0, filterCompact = false, filterOpen = false }) {
+export default function ReviewPanel({ terms, filters, onStatus, onClose, onOpenTerm = null, sheet = false, compact = false, embedded = false, closeIcon = "panel", onFilter, filterAnchorRef = null, scopeLabel = "Page", filterExtra = 0, filterCompact = false, filterOpen = false }) {
   const matchButtonRef = useRef(null);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState(null);
@@ -734,7 +738,13 @@ export default function ReviewPanel({ terms, filters, onStatus, onClose, sheet =
             className={`review-row-wrap${moving && motion.phase === "leave" ? " is-leaving" : ""}${arrivedTerm === item.term.toLowerCase() ? " is-arrived" : ""}`}
           >
             <div className="review-row-clip">
-            <div className={`review-row${item.status === "Blue" ? " is-blue" : ""}${moving ? " is-updating" : ""}`}>
+            <div
+              className={`review-row${item.status === "Blue" ? " is-blue" : ""}${moving ? " is-updating" : ""}${onOpenTerm ? " is-openable" : ""}`}
+              onClick={onOpenTerm ? (event) => {
+                if (event.target.closest("button, a, input, textarea")) return;
+                onOpenTerm(item);
+              } : undefined}
+            >
               <div className="review-row-lead">
                 <span className="review-row-status" data-review-status={item.id}>
                   {item.status === "Blue" ? (

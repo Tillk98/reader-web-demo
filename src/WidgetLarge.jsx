@@ -430,6 +430,7 @@ export default function WidgetLarge({
   onUpdateMeanings = () => {},
   onClose,
   onTogglePanel = null,
+  onDismiss = null,
   docked = false,
   compact = false,
 }) {
@@ -513,6 +514,11 @@ export default function WidgetLarge({
               <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
             </button>
           ) : null}
+          {onDismiss ? (
+            <button type="button" className="widget-large-icon-button" aria-label="Close word" onClick={onDismiss}>
+              <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
+            </button>
+          ) : null}
         </header>
       ) : (
         <header className="widget-large-header">
@@ -525,6 +531,11 @@ export default function WidgetLarge({
               {docked && onTogglePanel ? (
                 <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={onTogglePanel}>
                   <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                </button>
+              ) : null}
+              {onDismiss ? (
+                <button type="button" className="widget-large-icon-button" aria-label="Close word" onClick={onDismiss}>
+                  <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
                 </button>
               ) : null}
             </div>

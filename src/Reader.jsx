@@ -1497,12 +1497,17 @@ export default function Reader() {
   const [fontStyle, setFontStyle] = useState("Rubik Original");
   const [textSize, setTextSize] = useState(DEFAULT_TEXT_LEVEL);
   const [sidePanel, setSidePanel] = useState(false);
+  const [cover, setCover] = useState(null);
+  const coverTimer = useRef(null);
+  const coverGen = useRef(0);
   const [panelTabs, setPanelTabs] = useState(false);
   const [panelTab, setPanelTab] = useState("review");
   const [panelVisible, setPanelVisible] = useState(false);
   const [panelMemory, setPanelMemory] = useState(null);
   const panelWordKey = useRef(null);
   const [lynxOpen, setLynxOpen] = useState(false);
+  const [lynxOverlay, setLynxOverlay] = useState(false);
+  const [lynxReturns, setLynxReturns] = useState(false);
   const [reviewMenu, setReviewMenu] = useState(false);
   const [reviewCardMenu, setReviewCardMenu] = useState(false);
   const [reviewCard, setReviewCard] = useState(null);
@@ -1522,7 +1527,14 @@ export default function Reader() {
   const [reviewDocked, setReviewDocked] = useState(false);
   const [reviewSuspended, setReviewSuspended] = useState(false);
   const [reviewOverlay, setReviewOverlay] = useState(false);
+  const [reviewReturns, setReviewReturns] = useState(false);
   const [reviewDockHost, setReviewDockHost] = useState(null);
+  const [lynxDockHost, setLynxDockHost] = useState(null);
+  const [lynxPortalNode] = useState(() => {
+    const node = document.createElement("div");
+    node.className = "lynx-portal";
+    return node;
+  });
   const [reviewPortalNode] = useState(() => {
     const node = document.createElement("div");
     node.className = "review-portal";
@@ -2490,48 +2502,205 @@ export default function Reader() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [playerShown, theater, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, phrasePick, active, termMenu, reviewCard, lynxOpen, progressPrompt, termsList, readerSettings, celebration, exitHint]);
 
+  function sidebarIsOpen() {
+    if (theater || mobile) return false;
+    if (panelTabs) return panelVisible;
+    return reviewDocked || (lynxOpen && !lynxOverlay) || (sidePanel && !!active);
+  }
+
+  function wordTakesSidebar() {
+    if (theater || mobile) return false;
+    if (panelTabs) return panelVisible;
+    if (lynxOpen && !lynxOverlay) return false;
+    if (reviewDocked && !reviewListView) return false;
+    return (reviewDocked && reviewListView) || sidePanel;
+  }
+
+  function wordDockedInSidebar() {
+    if (panelTabs || theater || mobile) return false;
+    return sidePanel && !!active && !reviewDocked && !(lynxOpen && !lynxOverlay);
+  }
+
+  function listIsSidebar() {
+    if (cover) return false;
+    return !panelTabs && !mobile && !theater && reviewDocked && reviewListView && !reviewOverlay;
+  }
+
+  function cancelCover() {
+    coverGen.current += 1;
+    if (coverTimer.current) {
+      window.clearTimeout(coverTimer.current);
+      coverTimer.current = null;
+    }
+    setCover(null);
+  }
+
+  function runCover(layer, phase, done) {
+    const gen = coverGen.current + 1;
+    coverGen.current = gen;
+    if (coverTimer.current) window.clearTimeout(coverTimer.current);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setCover(null);
+      done();
+      return;
+    }
+    const finish = (ms) => {
+      coverTimer.current = window.setTimeout(() => {
+        coverTimer.current = null;
+        if (coverGen.current !== gen) return;
+        setCover(null);
+        done();
+      }, ms);
+    };
+    if (phase === "out") {
+      setCover({ layer, phase: "hold" });
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          if (coverGen.current !== gen) return;
+          setCover({ layer, phase: "out" });
+          finish(120);
+        });
+      });
+      return;
+    }
+    setCover({ layer, phase });
+    finish(200);
+  }
+
+  function showListUnderCover() {
+    setReviewCardMenu(false);
+    setReviewFilterOpen(false);
+    setReviewListView(true);
+    setReviewCard((current) => current || reviewScopeForMode(mode));
+    setReviewSuspended(false);
+    setReviewOverlay(false);
+    setReviewReturns(false);
+    setReviewDocked(true);
+    setSidePanel(true);
+  }
+
+  function releaseSidebarForLynx() {
+    if (listIsSidebar()) {
+      setReviewCardMenu(false);
+      setReviewFilterOpen(false);
+      setReviewOverlay(false);
+      setReviewReturns(false);
+      setSidePanel(false);
+      setShowMini(false);
+      setActive(null);
+      setLynxOverlay(false);
+      setLynxReturns(false);
+      setLynxOpen(true);
+      runCover("lynx", "in", () => dismissDockedReview());
+      return;
+    }
+    cancelCover();
+    setReviewCardMenu(false);
+    setReviewFilterOpen(false);
+    setReviewOverlay(false);
+    setReviewReturns(false);
+    if (reviewCard && (reviewDocked || reviewSuspended)) {
+      setReviewDocked(false);
+      setReviewSuspended(true);
+    } else if (reviewCard) {
+      closeReview();
+    }
+    setSidePanel(false);
+    setShowMini(false);
+    setActive(null);
+    setLynxOverlay(false);
+    setLynxReturns(false);
+    setLynxOpen(true);
+  }
+
+  function floatLynx() {
+    setReviewCardMenu(false);
+    setReviewFilterOpen(false);
+    if (reviewCard && !reviewDocked && !reviewSuspended) closeReview();
+    setShowMini(false);
+    setActive(null);
+    setLynxOverlay(true);
+    setLynxReturns(false);
+    setLynxOpen(true);
+  }
+
   function openLynx() {
     if (theater && !mobile) return;
-    if (panelTabs && !mobile) {
+    if (mobile) {
       transition(() => {
-        setReviewOverlay(false);
-        setShowMini(false);
-        setPanelTab("lynx");
-        setPanelVisible(true);
-        setSidePanel(true);
+        if (reviewDocked || reviewListView) {
+          setReviewCardMenu(false);
+          setReviewFilterOpen(false);
+          setReviewOverlay(false);
+          setReviewReturns(false);
+          setReviewCard(null);
+          setReviewListView(false);
+          setReviewDocked(false);
+          setReviewSuspended(false);
+          setSidePanel(false);
+        }
+        setLynxOverlay(false);
+        setLynxReturns(false);
         setLynxOpen(true);
       });
       return;
     }
-    transition(() => {
-      if (reviewDocked || (mobile && reviewListView)) {
-        setReviewCardMenu(false);
-        setReviewFilterOpen(false);
-        setReviewOverlay(false);
-        setReviewCard(null);
-        setReviewListView(false);
-        setReviewDocked(false);
-        setReviewSuspended(false);
-        setSidePanel(false);
-      } else if (sidePanel) {
-        setSidePanel(false);
-      }
-      if (!mobile) {
-        setShowMini(false);
-        setActive(null);
-      }
-      setLynxOpen(true);
-    });
+    if (panelTabs) {
+      transition(() => selectPanelTab("lynx"));
+      return;
+    }
+    if (sidebarIsOpen()) {
+      if (listIsSidebar()) releaseSidebarForLynx();
+      else transition(() => releaseSidebarForLynx());
+    } else transition(() => floatLynx());
   }
 
   function closeLynx() {
-    transition(() => setLynxOpen(false));
+    const returnToSidebar = !panelTabs && !mobile && !theater && lynxOpen && !lynxOverlay;
+    if (returnToSidebar && !active) {
+      showListUnderCover();
+      runCover("lynx", "out", () => {
+        setLynxOpen(false);
+        setLynxOverlay(false);
+        setLynxReturns(false);
+      });
+      return;
+    }
+    transition(() => {
+      setLynxOpen(false);
+      setLynxOverlay(false);
+      setLynxReturns(false);
+      if (returnToSidebar && active) dockSelectedWord();
+    });
+  }
+
+  function closeLynxDialog() {
+    if (lynxReturns && wide && !theater) {
+      if (panelTabs) {
+        setPanelTab("lynx");
+        setPanelVisible(true);
+        setSidePanel(true);
+      }
+      setLynxOverlay(false);
+      setLynxReturns(false);
+      setLynxOpen(true);
+      return;
+    }
+    closeLynx();
+  }
+
+  function expandLynx() {
+    setLynxReturns(true);
+    setLynxOverlay(true);
   }
 
   function hideTabbedPanel() {
     setPanelVisible(false);
     setLynxOpen(false);
+    setLynxOverlay(false);
+    setLynxReturns(false);
     setReviewOverlay(false);
+    setReviewReturns(false);
     setShowMini(false);
     setSidePanel(false);
     setActive((current) => (current?.size === "large" ? { ...current, size: "small" } : current));
@@ -2540,9 +2709,12 @@ export default function Reader() {
   function closePanelForTheater() {
     setPanelVisible(false);
     setLynxOpen(false);
+    setLynxOverlay(false);
+    setLynxReturns(false);
     setReviewCardMenu(false);
     setReviewFilterOpen(false);
     setReviewOverlay(false);
+    setReviewReturns(false);
     setReviewCard(null);
     setReviewListView(false);
     setReviewDocked(false);
@@ -2653,20 +2825,34 @@ export default function Reader() {
   function panelIsOpen() {
     if (theater) return false;
     if (panelTabs && !mobile) return panelVisible;
-    return !mobile && (lynxOpen || reviewDocked || sidePanel);
+    return !mobile && (reviewDocked || sidePanel);
   }
 
   function givePanelToWord() {
     if (theater) return;
     if (panelTabs && !mobile) {
       setReviewOverlay(false);
+      setReviewReturns(false);
       setPanelTab("term");
       setPanelVisible(true);
       setSidePanel(true);
       setLynxOpen(false);
+      setLynxOverlay(false);
+      setLynxReturns(false);
       return;
     }
+    if (listIsSidebar()) {
+      setLynxOpen(false);
+      setLynxOverlay(false);
+      setLynxReturns(false);
+      setSidePanel(true);
+      runCover("word", "in", () => dismissDockedReview());
+      return;
+    }
+    cancelCover();
     setLynxOpen(false);
+    setLynxOverlay(false);
+    setLynxReturns(false);
     dismissDockedReview();
     setSidePanel(true);
   }
@@ -2692,7 +2878,7 @@ export default function Reader() {
       return;
     }
     const saved = savedAt(paragraphIndex, tokenIndex);
-    const panelOpenNow = panelIsOpen();
+    const panelOpenNow = wordTakesSidebar();
     const panelShowsWord = panelTabs
       ? panelVisible && panelTab === "term"
       : sidePanel && !lynxOpen && !reviewDocked;
@@ -2705,7 +2891,7 @@ export default function Reader() {
         return;
       }
       if (sameWord && !panelOpenNow) {
-        if (panelTabs && !showMini) {
+        if ((panelTabs || lynxOpen) && !showMini) {
           setShowMini(true);
           return;
         }
@@ -2718,7 +2904,7 @@ export default function Reader() {
       if (panelOpenNow) {
         givePanelToWord();
         setShowMini(true);
-      } else if (panelTabs) setShowMini(true);
+      } else if (panelTabs || lynxOpen || reviewDocked) setShowMini(true);
       return;
     }
     const sameWord = active
@@ -2732,7 +2918,7 @@ export default function Reader() {
       return;
     }
     if (sameWord && !panelOpenNow) {
-      if (panelTabs && !showMini) {
+      if ((panelTabs || lynxOpen) && !showMini) {
         setShowMini(true);
         return;
       }
@@ -2746,11 +2932,11 @@ export default function Reader() {
     if (panelOpenNow) {
       givePanelToWord();
       setShowMini(true);
-    } else if (panelTabs) setShowMini(true);
+    } else if (panelTabs || lynxOpen || reviewDocked) setShowMini(true);
   }
 
   function handlePointerDown(event, paragraphIndex, tokenIndex) {
-    if (phrasePick || panelIsOpen()) return;
+    if (phrasePick || wordTakesSidebar()) return;
     if (event.pointerType === "mouse" && event.button !== 0) return;
     const startX = event.clientX;
     const startY = event.clientY;
@@ -3042,10 +3228,24 @@ export default function Reader() {
     setTermMenu(null);
     if (phrase) openSaved(phrase, paragraphIndex, tokenIndex, "large");
     else setActive({ paragraphIndex, tokenIndex, size: "large", mode: "meaning", statusMenu: false });
-    if (panelIsOpen()) {
+    if (wordTakesSidebar()) {
       givePanelToWord();
       setShowMini(false);
     }
+  }
+
+  function openListedTerm(item) {
+    if (item?.paragraphIndex == null || item.tokenIndex == null) return;
+    const phrase = item.phraseId != null ? savedPhrases.find((entry) => entry.id === item.phraseId) : null;
+    if (phrase) openSaved(phrase, item.paragraphIndex, item.tokenIndex, "small");
+    else {
+      if (item.status === "Blue") createLingQ(item.paragraphIndex, item.tokenIndex);
+      setActive({ paragraphIndex: item.paragraphIndex, tokenIndex: item.tokenIndex, size: "small", mode: "meaning", statusMenu: false });
+    }
+    highlightSentenceTerm(item.paragraphIndex, item.tokenIndex);
+    if (!reviewDocked) closeReview();
+    givePanelToWord();
+    setShowMini(true);
   }
 
   function onLessonPointerDown(event) {
@@ -3108,6 +3308,7 @@ export default function Reader() {
     setReviewCardMenu(false);
     setReviewFilterOpen(false);
     setReviewOverlay(false);
+    setReviewReturns(false);
     setReviewCard(null);
     setReviewListView(false);
     setReviewDocked(false);
@@ -3118,20 +3319,40 @@ export default function Reader() {
   function closeReviewDialog() {
     setReviewCardMenu(false);
     setReviewFilterOpen(false);
-    if (!wide || theater) {
-      closeReview();
+    if (reviewReturns && wide && !theater) {
+      if (panelTabs) {
+        setShowMini(false);
+        setPanelTab("review");
+        setPanelVisible(true);
+        setLynxOpen(false);
+        setLynxOverlay(false);
+        setLynxReturns(false);
+      }
+      setReviewDocked(true);
+      setReviewSuspended(false);
+      setSidePanel(true);
+      setReviewOverlay(false);
+      setReviewReturns(false);
       return;
     }
-    if (panelTabs) {
-      setShowMini(false);
-      setPanelTab("review");
-      setPanelVisible(true);
-      setLynxOpen(false);
-    }
-    setReviewDocked(true);
+    closeReview();
+  }
+
+  function floatReview() {
+    setReviewCardMenu(false);
+    setReviewFilterOpen(false);
+    setReviewDocked(false);
     setReviewSuspended(false);
-    setSidePanel(true);
-    setReviewOverlay(false);
+    setReviewOverlay(true);
+    setReviewReturns(false);
+    if (lynxOverlay && !lynxReturns) {
+      setLynxOpen(false);
+      setLynxOverlay(false);
+      setLynxReturns(false);
+    }
+    setShowMini(false);
+    setActive(null);
+    setSidePanel(false);
   }
 
   function dismissDockedReview() {
@@ -3139,6 +3360,7 @@ export default function Reader() {
     setReviewCardMenu(false);
     setReviewFilterOpen(false);
     setReviewOverlay(false);
+    setReviewReturns(false);
     setReviewCard(null);
     setReviewListView(false);
     setReviewDocked(false);
@@ -3162,6 +3384,24 @@ export default function Reader() {
     return undefined;
   }, [reviewCard, reviewDocked, reviewDockHost, reviewOverlay, reviewSuspended, reviewPortalNode]);
 
+  useLayoutEffect(() => {
+    const keep = !mobile && (lynxOpen || (panelTabs && panelVisible));
+    if (!keep) {
+      lynxPortalNode.remove();
+      return undefined;
+    }
+    if (!lynxOverlay && lynxDockHost) {
+      if (lynxPortalNode.parentElement !== lynxDockHost) lynxDockHost.appendChild(lynxPortalNode);
+      return undefined;
+    }
+    if (lynxOpen) {
+      if (lynxPortalNode.parentElement !== document.body) document.body.appendChild(lynxPortalNode);
+      return undefined;
+    }
+    lynxPortalNode.remove();
+    return undefined;
+  }, [mobile, lynxOpen, lynxOverlay, lynxDockHost, lynxPortalNode, panelTabs, panelVisible]);
+
   useEffect(() => {
     const dialogOpen = reviewCard && !reviewSuspended && !(reviewDocked && !reviewOverlay);
     if (!dialogOpen) return undefined;
@@ -3171,7 +3411,7 @@ export default function Reader() {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [reviewCard, reviewSuspended, reviewDocked, reviewOverlay, reviewCardMenu, reviewFilterOpen, wide, theater, panelTabs]);
+  }, [reviewCard, reviewSuspended, reviewDocked, reviewOverlay, reviewReturns, reviewCardMenu, reviewFilterOpen, wide, theater, panelTabs]);
 
   function dockReview() {
     if (theater && !mobile) return;
@@ -3179,25 +3419,33 @@ export default function Reader() {
     if (panelTabs && !mobile) {
       setShowMini(false);
       setReviewOverlay(false);
+      setReviewReturns(false);
       setPanelTab("review");
       setPanelVisible(true);
       setReviewDocked(true);
       setReviewSuspended(false);
       setSidePanel(true);
       setLynxOpen(false);
+      setLynxOverlay(false);
+      setLynxReturns(false);
       return;
     }
     setLynxOpen(false);
+    setLynxOverlay(false);
+    setLynxReturns(false);
     setShowMini(false);
     setActive(null);
     setReviewDocked(true);
     setReviewSuspended(false);
+    setReviewOverlay(false);
+    setReviewReturns(false);
     setSidePanel(true);
   }
 
   function expandReview() {
     setReviewCardMenu(false);
     setReviewFilterOpen(false);
+    setReviewReturns(true);
     setReviewOverlay(true);
   }
 
@@ -3216,10 +3464,11 @@ export default function Reader() {
       return;
     }
     if (REVIEW_CARDS[action]) {
-      const opening = !reviewCard;
       setReviewListView(false);
       setReviewCard(action);
-      if (wide && (opening || reviewDocked || reviewSuspended)) dockReview();
+      if (!wide || mobile) return;
+      if (sidebarIsOpen()) dockReview();
+      else floatReview();
     }
   }
 
@@ -3275,6 +3524,16 @@ export default function Reader() {
         hideTabbedPanel();
         return;
       }
+      if (!panelVisible) {
+        if (reviewCard && !reviewSuspended && reviewOverlay && !reviewReturns) {
+          closeReview();
+          return;
+        }
+        setReviewListView(false);
+        if (!reviewCard) setReviewCard(reviewScopeForMode(mode));
+        floatReview();
+        return;
+      }
       if (!reviewCard) {
         chooseReviewAction(reviewScopeForMode(mode));
         return;
@@ -3289,29 +3548,27 @@ export default function Reader() {
     chooseReviewAction(reviewScopeForMode(mode));
   }
 
-  function openSideVocabulary() {
+  function openSideVocabulary({ dock = false } = {}) {
     if (theater && !mobile) return;
     setReviewCardMenu(false);
-    if (panelTabs && !mobile) {
-      setPanelTab("review");
-      setPanelVisible(true);
-      setShowMini(false);
-      setLynxOpen(false);
-    } else {
-      setLynxOpen(false);
-      setShowMini(false);
-      setActive(null);
-    }
     setReviewListView(true);
     if (!reviewCard) setReviewCard(reviewScopeForMode(mode));
     setReviewSuspended(false);
-    if (!wide) {
+    if (!wide || mobile) {
+      setLynxOpen(false);
+      setLynxOverlay(false);
+      setLynxReturns(false);
       setReviewDocked(false);
+      setReviewOverlay(false);
+      setReviewReturns(false);
+      setShowMini(false);
       return;
     }
-    setReviewDocked(true);
-    setReviewSuspended(false);
-    setSidePanel(true);
+    if (dock || sidebarIsOpen()) {
+      dockReview();
+      return;
+    }
+    floatReview();
   }
 
   function selectPanelTab(tab) {
@@ -3319,9 +3576,14 @@ export default function Reader() {
     setPanelTab(tab);
     setPanelVisible(true);
     setSidePanel(true);
+    setLynxOverlay(false);
+    setLynxReturns(false);
     setLynxOpen(tab === "lynx");
     if (tab !== "term") setShowMini(false);
-    if (tab !== "review") setReviewOverlay(false);
+    if (tab !== "review") {
+      setReviewOverlay(false);
+      setReviewReturns(false);
+    }
     if (tab !== "review") return;
     setReviewDocked(true);
     setReviewSuspended(false);
@@ -3332,7 +3594,7 @@ export default function Reader() {
 
   function choosePanelTabs(next) {
     if (next) {
-      const open = !mobile && (lynxOpen || reviewDocked || (sidePanel && !!active));
+      const open = !mobile && ((lynxOpen && (!lynxOverlay || lynxReturns)) || reviewDocked || (sidePanel && !!active));
       setPanelVisible(open);
       setPanelTab(lynxOpen ? "lynx" : reviewDocked || !active ? "review" : "term");
       if (open) setSidePanel(true);
@@ -3343,6 +3605,9 @@ export default function Reader() {
     setPanelVisible(false);
     if (panelTab === "lynx") {
       setReviewOverlay(false);
+      setReviewReturns(false);
+      setLynxOverlay(false);
+      setLynxReturns(false);
       setReviewDocked(false);
       setReviewCard(null);
       setReviewListView(false);
@@ -3361,36 +3626,73 @@ export default function Reader() {
       return;
     }
     setLynxOpen(false);
+    setLynxOverlay(false);
+    setLynxReturns(false);
     setReviewOverlay(false);
+    setReviewReturns(false);
     setReviewDocked(false);
     setSidePanel(Boolean(active));
   }
 
   useEffect(() => {
-    if (mobile || theater) return;
+    if (mobile || theater || !panelTabs || !panelVisible) return;
     let next = null;
-    if (panelTabs) {
-      if (!panelVisible) return;
-      if (panelTab === "lynx") next = "lynx";
-      else if (panelTab === "term" && active) next = "term";
-      else if (panelTab === "review" && reviewCard) next = reviewListView ? "list" : "review";
-    } else if (lynxOpen) next = "lynx";
-    else if (reviewDocked && reviewCard) next = reviewListView ? "list" : "review";
-    else if (sidePanel && active) next = "term";
+    if (panelTab === "lynx") next = "lynx";
+    else if (panelTab === "term" && active) next = "term";
+    else if (panelTab === "review" && reviewCard) next = reviewListView ? "list" : "review";
     if (!next) return;
     if (next === "term") panelWordKey.current = wordKey(active);
     setPanelMemory(next);
-  }, [mobile, theater, panelTabs, panelVisible, panelTab, active, reviewDocked, reviewCard, reviewListView, lynxOpen, sidePanel]);
+  }, [mobile, theater, panelTabs, panelVisible, panelTab, active, reviewCard, reviewListView]);
 
   function hideDefaultPanel() {
+    cancelCover();
     setReviewCardMenu(false);
     setReviewFilterOpen(false);
     setReviewOverlay(false);
-    setLynxOpen(false);
+    setReviewReturns(false);
+    setReviewCard(null);
+    setReviewListView(false);
     setReviewDocked(false);
-    setReviewSuspended(Boolean(reviewCard));
+    setReviewSuspended(false);
+    setLynxOpen(false);
+    setLynxOverlay(false);
+    setLynxReturns(false);
     setSidePanel(false);
-    setActive((current) => (current?.size === "large" ? { ...current, size: "small" } : current));
+    setActive((current) => (current ? { ...current, size: "small" } : current));
+    setShowMini(Boolean(active));
+  }
+
+  function closeDockedWord() {
+    if (panelTabs || mobile || theater) {
+      setActive(null);
+      setShowMini(false);
+      openSideVocabulary({ dock: true });
+      return;
+    }
+    showListUnderCover();
+    setShowMini(false);
+    runCover("word", "out", () => {
+      setActive(null);
+      setShowMini(false);
+    });
+  }
+
+  function dockSelectedWord() {
+    setReviewCardMenu(false);
+    setReviewFilterOpen(false);
+    setReviewOverlay(false);
+    setReviewReturns(false);
+    setReviewCard(null);
+    setReviewListView(false);
+    setReviewDocked(false);
+    setReviewSuspended(false);
+    setLynxOpen(false);
+    setLynxOverlay(false);
+    setLynxReturns(false);
+    setActive((current) => (current ? { ...current, size: "small", statusMenu: false } : current));
+    setShowMini(true);
+    setSidePanel(true);
   }
 
   function openPanelToWord() {
@@ -3404,6 +3706,8 @@ export default function Reader() {
     }
     dismissDockedReview();
     setLynxOpen(false);
+    setLynxOverlay(false);
+    setLynxReturns(false);
     setSidePanel(true);
   }
 
@@ -3428,7 +3732,7 @@ export default function Reader() {
       return;
     }
     if (panelMemory === "lynx") {
-      openLynx();
+      openSideVocabulary({ dock: true });
       return;
     }
     if (rememberedWord) {
@@ -3442,44 +3746,48 @@ export default function Reader() {
       dockReview();
       return;
     }
-    openSideVocabulary();
+    openSideVocabulary({ dock: true });
   }
 
   function toggleSidePanel() {
     if (theater) return;
-    const floatingLarge = !mobile && active?.size === "large";
+    const panelShowing = panelTabs ? panelVisible : sidebarIsOpen();
+    if (panelShowing) {
+      if (panelTabs && !mobile) hideTabbedPanel();
+      else hideDefaultPanel();
+      return;
+    }
     if (panelTabs && !mobile) {
-      if (panelVisible) {
-        hideTabbedPanel();
-        return;
-      }
-      if (floatingLarge) {
-        openPanelToWord();
-        return;
-      }
       openRememberedPanel();
       return;
     }
-    if (lynxOpen || sidePanel || reviewDocked) {
-      hideDefaultPanel();
+    if (active) {
+      dockSelectedWord();
       return;
     }
-    if (floatingLarge) {
-      openPanelToWord();
-      return;
-    }
-    openRememberedPanel();
+    openSideVocabulary({ dock: true });
   }
 
   function collapseSidePanel() {
     setPanelVisible(false);
     setReviewOverlay(false);
     setReviewDocked(false);
+    if (lynxOverlay && !lynxReturns) {
+      setLynxOpen(false);
+      setLynxOverlay(false);
+    } else {
+      setLynxOverlay(false);
+      setLynxReturns(false);
+    }
     if (!sidePanel) return;
     setSidePanel(false);
     setShowMini(false);
     setActive(null);
   }
+
+  useEffect(() => () => {
+    if (coverTimer.current) window.clearTimeout(coverTimer.current);
+  }, []);
 
   useEffect(() => {
     const query = window.matchMedia("(max-width: 1024px)");
@@ -3523,11 +3831,12 @@ export default function Reader() {
   const activeToken = active ? lesson[active.paragraphIndex][active.tokenIndex] : null;
   const showVideo = lessonHasVideo && media === "video" && !videoClosed;
   const videoFrame = playing ? (videoChrome ? videoPlayingUi : videoPlaying) : videoPausedUi;
+  const lynxInPanel = lynxOpen && (!lynxOverlay || lynxReturns);
   const sideColumn = !theater && (panelTabs
     ? !mobile && panelVisible
-    : !mobile && (lynxOpen || reviewDocked || (sidePanel && !!activeToken)));
+    : !mobile && (lynxInPanel || reviewDocked || (sidePanel && !!activeToken)));
   const reviewInPanel = reviewDocked && !reviewOverlay;
-  const panelOpen = wide && sideColumn && !reviewOverlay;
+  const panelOpen = wide && sideColumn && !reviewOverlay && !lynxOverlay;
   const [panelHeld, setPanelHeld] = useState(false);
   const [panelIn, setPanelIn] = useState(false);
   const [panelArrive, setPanelArrive] = useState(false);
@@ -3562,7 +3871,8 @@ export default function Reader() {
   }, [panelOpen]);
 
   useEffect(() => {
-    if (reviewOverlay) {
+    const overlayOpen = reviewOverlay || lynxOverlay;
+    if (overlayOpen) {
       overlayWasOpen.current = true;
       setPanelArrive(false);
       return undefined;
@@ -3573,7 +3883,17 @@ export default function Reader() {
     setPanelArrive(true);
     const id = window.setTimeout(() => setPanelArrive(false), 200);
     return () => window.clearTimeout(id);
-  }, [reviewOverlay, sideColumn]);
+  }, [reviewOverlay, lynxOverlay, sideColumn]);
+
+  useEffect(() => {
+    if (!lynxOpen || !lynxOverlay || mobile) return undefined;
+    function onKeyDown(event) {
+      if (event.key !== "Escape") return;
+      closeLynxDialog();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [lynxOpen, lynxOverlay, mobile, lynxReturns, wide, theater, panelTabs]);
   const sideBySide = split && wide && (!sideColumn || roomy);
   function toggleLoopAudio() {
     setLoopAudio((on) => {
@@ -3896,7 +4216,6 @@ export default function Reader() {
                 />
               ) : null}
             </span>
-            {panelTabs || !sideColumn ? (
             <button
               type="button"
               className="icon-button panel-button"
@@ -3906,7 +4225,6 @@ export default function Reader() {
             >
               <PanelRight size={24} strokeWidth={1.5} absoluteStrokeWidth />
             </button>
-            ) : null}
           </div>
         </div>
 
@@ -4156,7 +4474,7 @@ export default function Reader() {
                 </button>
               </div>
             )}
-            {activeToken && active.size !== "medium" && active.size !== "large" && (panelTabs ? showMini && (!panelVisible || panelTab === "term") : (!sidePanel || showMini)) ? (
+            {activeToken && active.size !== "medium" && active.size !== "large" && (panelTabs ? showMini && (!panelVisible || panelTab === "term") : ((lynxInPanel && !lynxOverlay) ? showMini : (!sidePanel || showMini))) ? (
               <WidgetSmall
                 anchorId={`${active.paragraphIndex}-${active.tokenIndex}`}
                 boundaryRef={textRef}
@@ -4165,11 +4483,11 @@ export default function Reader() {
                 meaning={activeMeaning}
                 mode={active.mode}
                 isNew={activeIsNew}
-                hideChevron={panelTabs ? panelVisible : sidePanel}
+                hideChevron={panelTabs ? panelVisible : wordDockedInSidebar()}
                 onMode={(mode) => setActive((current) => (current ? { ...current, mode } : current))}
                 onStatus={handleStatusChange}
                 onClose={() => {
-                  if (sidePanel) setShowMini(false);
+                  if (wordDockedInSidebar()) setShowMini(false);
                   else setActive(null);
                 }}
                 onOpenLarge={openLarge}
@@ -4191,7 +4509,7 @@ export default function Reader() {
                 onTranslate={openTranslate}
                 onClose={() => setActive(null)}
                 onOpenLarge={openLarge}
-                hideChevron={panelTabs ? panelVisible : sidePanel}
+                hideChevron={panelTabs ? panelVisible : wordDockedInSidebar()}
               />
             ) : null}
           </article>
@@ -4212,7 +4530,7 @@ export default function Reader() {
               <p>Select another word to create a phrase.</p>
             </div>
           ) : null}
-          {activeToken && active.size === "large" && (panelTabs ? !panelVisible && !sidePanel : !sidePanel) ? (
+          {activeToken && active.size === "large" && (panelTabs ? !panelVisible && !sidePanel : !wordDockedInSidebar()) ? (
             <WidgetLarge
               term={largeTerm}
               meanings={largeMeanings}
@@ -4229,6 +4547,7 @@ export default function Reader() {
               onChooseMeaning={chooseMeaning}
               onUpdateMeanings={updateMeanings}
               onClose={() => setActive(null)}
+              onDismiss={() => setActive(null)}
               docked={false}
             />
           ) : null}
@@ -4567,36 +4886,51 @@ export default function Reader() {
                   </div>
                 </div>
                 <div className={`side-panel-tab${panelTab === "lynx" ? "" : " is-hidden"}`} role="tabpanel" id="side-panel-panel-lynx" aria-labelledby="side-panel-tab-lynx">
-                  <LynxChat onClose={closeLynx} lesson={LESSON_IDENTITY} replaceTitle />
+                  <div className="review-dock-host" ref={setLynxDockHost}>
+                    {lynxOverlay ? <div className="review-dock-placeholder" aria-hidden="true" /> : null}
+                    {lynxInPanel ? null : <p className="side-panel-empty">Ask Lynx from the lesson.</p>}
+                  </div>
                 </div>
               </>
-            ) : reviewDocked && !mobile ? (
-              <div className="review-dock-host" ref={setReviewDockHost}>
-                {reviewOverlay ? <div className="review-dock-placeholder" aria-hidden="true" /> : null}
-              </div>
-            ) : sidePanel && activeToken ? (
-            <WidgetLarge
-              term={largeTerm}
-              meanings={largeMeanings}
-              suggestions={largeSuggestions}
-              glossary={largeGlossary}
-              isNew={activeIsNew}
-              sentence={sentence.text}
-              sentenceTranslation={sentence.translation}
-              sentenceWords={largeSentenceWords}
-              pastEncounters={largePastEncounters}
-              status={activeStatus}
-              selectStatus={selectStatus}
-              onStatus={handleStatusChange}
-              onChooseMeaning={chooseMeaning}
-              onUpdateMeanings={updateMeanings}
-              onClose={() => setActive(null)}
-              onTogglePanel={toggleSidePanel}
-              docked
-            />
-            ) : lynxOpen && !mobile ? (
-              <LynxChat onClose={closeLynx} lesson={LESSON_IDENTITY} onTogglePanel={toggleSidePanel} />
-            ) : null}
+            ) : (
+              <>
+                {reviewDocked && !mobile ? (
+                  <div className="review-dock-host" ref={setReviewDockHost}>
+                    {reviewOverlay ? <div className="review-dock-placeholder" aria-hidden="true" /> : null}
+                  </div>
+                ) : null}
+                {sidePanel && activeToken && (!reviewDocked || cover?.layer === "word") ? (
+                  <div className={`side-panel-cover${cover?.layer === "word" ? ` is-${cover.phase}` : ""}`}>
+                    <WidgetLarge
+                      term={largeTerm}
+                      meanings={largeMeanings}
+                      suggestions={largeSuggestions}
+                      glossary={largeGlossary}
+                      isNew={activeIsNew}
+                      sentence={sentence.text}
+                      sentenceTranslation={sentence.translation}
+                      sentenceWords={largeSentenceWords}
+                      pastEncounters={largePastEncounters}
+                      status={activeStatus}
+                      selectStatus={selectStatus}
+                      onStatus={handleStatusChange}
+                      onChooseMeaning={chooseMeaning}
+                      onUpdateMeanings={updateMeanings}
+                      onClose={closeDockedWord}
+                      onDismiss={closeDockedWord}
+                      docked
+                    />
+                  </div>
+                ) : null}
+                {(lynxInPanel && !mobile && !reviewDocked) || cover?.layer === "lynx" ? (
+                  <div className={`side-panel-cover${cover?.layer === "lynx" ? ` is-${cover.phase}` : ""}`}>
+                    <div className="review-dock-host" ref={setLynxDockHost}>
+                      {lynxOverlay ? <div className="review-dock-placeholder" aria-hidden="true" /> : null}
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            )}
           </aside>
             ) : null}
           </div>
@@ -4723,10 +5057,16 @@ export default function Reader() {
             <div className="review-card-header">
               <div className={`review-card-header-bar${mobile && !reviewInPanel ? " is-compact" : ""}`}>
                 <div className="review-card-header-start">
-                  {!reviewInPanel ? (
-                    <button type="button" className={`${mobile ? "widget-large-icon-button" : "icon-button"} review-card-close`} aria-label="Close review" onClick={closeReviewDialog}>
+                  {!reviewInPanel && mobile ? (
+                    <button type="button" className="widget-large-icon-button review-card-close" aria-label="Close review" onClick={closeReviewDialog}>
                       <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
+                  ) : null}
+                  {!reviewInPanel && !mobile ? (
+                    <div className="review-card-title">
+                      <img src={reviewIcon} alt="" width={20} height={20} />
+                      <p>Review</p>
+                    </div>
                   ) : null}
                   <ReviewToggle
                     listView={reviewListView}
@@ -4736,12 +5076,6 @@ export default function Reader() {
                   />
                 </div>
                 <div className="review-card-tools">
-                  <span className="review-card-options">
-                    <button type="button" className={reviewInPanel || mobile ? "widget-large-icon-button" : "icon-button"} aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => { setReviewFilterOpen(false); setReviewCardMenu((open) => !open); }}>
-                      <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                    </button>
-                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} toolsOnly /> : null}
-                  </span>
                   {reviewInPanel && wide ? (
                     <button
                       type="button"
@@ -4752,9 +5086,15 @@ export default function Reader() {
                       <Maximize2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
                   ) : null}
-                  {reviewInPanel && !panelTabs ? (
-                    <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={toggleSidePanel}>
-                      <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                  <span className="review-card-options">
+                    <button type="button" className={reviewInPanel || mobile ? "widget-large-icon-button" : "icon-button"} aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => { setReviewFilterOpen(false); setReviewCardMenu((open) => !open); }}>
+                      <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                    </button>
+                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} toolsOnly /> : null}
+                  </span>
+                  {!reviewInPanel && !mobile ? (
+                    <button type="button" className="icon-button review-card-close" aria-label="Close review" onClick={closeReviewDialog}>
+                      <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
                   ) : null}
                 </div>
@@ -4778,6 +5118,7 @@ export default function Reader() {
                   filterExtra={extraFilterCount(reviewFilters)}
                   filterCompact={false}
                   filterOpen={reviewFilterOpen}
+                  onOpenTerm={panelTabs ? null : openListedTerm}
                 />
               ) : null}
               <ReviewSession
@@ -4819,6 +5160,25 @@ export default function Reader() {
           </div>
         </div>,
         reviewPortalNode,
+      ) : null}
+      {!mobile && (lynxOpen || (panelTabs && panelVisible)) ? createPortal(
+        <div
+          className={`review-card-layer lynx-layer${lynxInPanel && !lynxOverlay ? " is-docked" : ""}`}
+          onClick={lynxOverlay ? (event) => {
+            if (event.target === event.currentTarget) closeLynxDialog();
+          } : undefined}
+        >
+          <div className="review-card" role="dialog" aria-modal={lynxOverlay ? "true" : "false"} aria-label="Lynx AI">
+            <LynxChat
+              onClose={lynxOverlay ? closeLynxDialog : closeLynx}
+              lesson={LESSON_IDENTITY}
+              replaceTitle={panelTabs && !lynxOverlay}
+              onExpand={!lynxOverlay && wide ? expandLynx : null}
+              closable={!panelTabs || lynxOverlay}
+            />
+          </div>
+        </div>,
+        lynxPortalNode,
       ) : null}
       {mobile && reviewCard && reviewFilterOpen ? (
         <ReviewFilterSheet

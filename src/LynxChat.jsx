@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUp, CornerDownRight, Mic, PanelRight, X } from "lucide-react";
+import { ArrowUp, CornerDownRight, Maximize2, Mic, PanelRight, X } from "lucide-react";
 import lynxIcon from "../assets/lynx_icon_light.png";
 
 const SUGGESTIONS = [
@@ -7,7 +7,7 @@ const SUGGESTIONS = [
   "Wiederhole die Wörter, die ich falsch hatte.",
 ];
 
-function LessonIdentity({ lesson }) {
+function LessonIdentity({ lesson, onExpand }) {
   return (
     <div className="lynx-chat-lesson">
       <img src={lesson.image} alt="" width={40} height={40} />
@@ -15,11 +15,16 @@ function LessonIdentity({ lesson }) {
         <p className="lynx-chat-lesson-title">{lesson.title}</p>
         <p className="lynx-chat-lesson-course">{lesson.course}</p>
       </div>
+      {onExpand ? (
+        <button type="button" className="widget-large-icon-button" aria-label="Expand Lynx" onClick={onExpand}>
+          <Maximize2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+        </button>
+      ) : null}
     </div>
   );
 }
 
-export default function LynxChat({ onClose, sheet = false, lesson = null, replaceTitle = false, onTogglePanel = null }) {
+export default function LynxChat({ onClose, sheet = false, lesson = null, replaceTitle = false, onTogglePanel = null, onExpand = null, closable = false }) {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState([]);
 
@@ -42,7 +47,7 @@ export default function LynxChat({ onClose, sheet = false, lesson = null, replac
           </div>
         </header>
       ) : replaceTitle ? (
-        lesson ? <LessonIdentity lesson={lesson} /> : null
+        lesson ? <LessonIdentity lesson={lesson} onExpand={onExpand} /> : null
       ) : (
         <>
           <header className="lynx-chat-header">
@@ -50,10 +55,24 @@ export default function LynxChat({ onClose, sheet = false, lesson = null, replac
               <img src={lynxIcon} alt="" width={20} height={20} />
               <p>Lynx AI</p>
             </div>
-            {onTogglePanel ? (
-              <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={onTogglePanel}>
-                <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
-              </button>
+            {onExpand || onTogglePanel || closable ? (
+              <div className="lynx-chat-heading-actions">
+                {onExpand ? (
+                  <button type="button" className="widget-large-icon-button" aria-label="Expand Lynx" onClick={onExpand}>
+                    <Maximize2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                  </button>
+                ) : null}
+                {onTogglePanel ? (
+                  <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={onTogglePanel}>
+                    <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                  </button>
+                ) : null}
+                {closable ? (
+                  <button type="button" className="widget-large-icon-button" aria-label="Close Lynx" onClick={onClose}>
+                    <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                  </button>
+                ) : null}
+              </div>
             ) : null}
           </header>
           {lesson ? <LessonIdentity lesson={lesson} /> : null}

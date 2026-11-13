@@ -2625,7 +2625,25 @@ export default function Reader() {
   }
 
   function openLynx() {
-    if (theater && !mobile) return;
+    if (theater && !mobile) {
+      transition(() => {
+        setReviewCardMenu(false);
+        setReviewFilterOpen(false);
+        setReviewOverlay(false);
+        setReviewReturns(false);
+        setReviewCard(null);
+        setReviewListView(false);
+        setReviewDocked(false);
+        setReviewSuspended(false);
+        setSidePanel(false);
+        setShowMini(false);
+        setActive(null);
+        setLynxOverlay(false);
+        setLynxReturns(false);
+        setLynxOpen(true);
+      });
+      return;
+    }
     if (mobile) {
       transition(() => {
         if (reviewDocked || reviewListView) {
@@ -2675,7 +2693,7 @@ export default function Reader() {
   }
 
   function closeLynxDialog() {
-    if (lynxReturns && wide && !theater) {
+    if (lynxReturns && wide) {
       if (panelTabs) {
         setPanelTab("lynx");
         setPanelVisible(true);
@@ -2725,8 +2743,7 @@ export default function Reader() {
   }
 
   function toggleLynx() {
-    if (theater && !mobile) return;
-    if (panelTabs && !mobile) {
+    if (panelTabs && !mobile && !theater) {
       if (panelVisible && panelTab === "lynx") {
         hideTabbedPanel();
         return;
@@ -3832,9 +3849,9 @@ export default function Reader() {
   const showVideo = lessonHasVideo && media === "video" && !videoClosed;
   const videoFrame = playing ? (videoChrome ? videoPlayingUi : videoPlaying) : videoPausedUi;
   const lynxInPanel = lynxOpen && (!lynxOverlay || lynxReturns);
-  const sideColumn = !theater && (panelTabs
-    ? !mobile && panelVisible
-    : !mobile && (lynxInPanel || reviewDocked || (sidePanel && !!activeToken)));
+  const sideColumn = panelTabs
+    ? !theater && !mobile && panelVisible
+    : !mobile && (lynxInPanel || (!theater && (reviewDocked || (sidePanel && !!activeToken))));
   const reviewInPanel = reviewDocked && !reviewOverlay;
   const panelOpen = wide && sideColumn && !reviewOverlay && !lynxOverlay;
   const [panelHeld, setPanelHeld] = useState(false);
@@ -4656,14 +4673,16 @@ export default function Reader() {
                         </span>
                       </div>
                     </div>
-                    <span className="vocab-split audio-bar-vocab">
-                      <button type="button" className="vocab-button" aria-label="Vocabulary" onClick={startDefaultReview}>
-                        <span className="audio-bar-vocab-mark">
-                          <img className="is-light" src={reviewIcon} alt="" width={24} height={24} />
-                          <img className="is-dark" src={reviewIconOnDark} alt="" width={24} height={24} />
-                        </span>
-                      </button>
-                    </span>
+                    {theater ? null : (
+                      <span className="vocab-split audio-bar-vocab">
+                        <button type="button" className="vocab-button" aria-label="Vocabulary" onClick={startDefaultReview}>
+                          <span className="audio-bar-vocab-mark">
+                            <img className="is-light" src={reviewIcon} alt="" width={24} height={24} />
+                            <img className="is-dark" src={reviewIconOnDark} alt="" width={24} height={24} />
+                          </span>
+                        </button>
+                      </span>
+                    )}
                     <button type="button" className="audio-bar-lynx" aria-label={lynxOpen ? "Close Lynx" : "Ask Lynx AI"} aria-pressed={lynxOpen} onClick={toggleLynx}>
                       <span className="audio-bar-lynx-mark">
                         <img className="is-light" src={lynxIcon} alt="" width={24} height={24} />

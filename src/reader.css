@@ -6752,6 +6752,29 @@ button:focus-visible {
 
 .widget-large-term-actions {
   display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.widget-large-importance {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+  color: var(--fg-muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.widget-large-importance img {
+  display: block;
+  flex-shrink: 0;
+}
+
+.widget-large-term-buttons {
+  display: flex;
   flex-shrink: 0;
   gap: 4px;
 }

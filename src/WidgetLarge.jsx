@@ -19,8 +19,18 @@ import {
 import flagIcon from "../assets/language_flag_icon.png";
 import localeFlag from "../assets/flag-en.svg";
 import lynxIcon from "../assets/lynx-icon-blue.png";
+import importanceCoin from "../assets/importance-coin.svg";
 import sentenceIcon from "../assets/sentencemode_icon_light.png";
 import StatusButton, { BlueWordStatus, WORD_BAR_STATUSES } from "./StatusButton.jsx";
+
+function importanceFor(term) {
+  let hash = 0;
+  const value = term || "";
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return (hash % 4) + 1;
+}
 
 const TAGS = ["Noun", "Proper Noun"];
 const DICTIONARIES = ["Google Translate", "Linguee", "DeepL", "WörterBuch"];
@@ -475,6 +485,7 @@ export default function WidgetLarge({
     };
   }, [onClose, docked, page, dictionaryFrom]);
 
+  const importance = importanceFor(term);
   const savedMeanings = isNew ? [] : meanings;
   const firstMeaning = (!isNew && meanings.find(Boolean)) || suggestions[0] || "";
   const suggestedMeanings = (glossary.length ? glossary : suggestions).slice(0, 5);
@@ -525,19 +536,25 @@ export default function WidgetLarge({
           <div className="widget-large-term-row">
             <p className="widget-large-term">{term}</p>
             <div className="widget-large-term-actions">
-              <button type="button" className="widget-large-icon-button" aria-label="Play audio">
-                <Volume2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
-              </button>
-              {docked && onTogglePanel ? (
-                <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={onTogglePanel}>
-                  <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
+              <span className="widget-large-importance" aria-label={`${importance} ${importance === 1 ? "coin" : "coins"}`}>
+                <img src={importanceCoin} alt="" width={24} height={24} />
+                <span>{importance}</span>
+              </span>
+              <div className="widget-large-term-buttons">
+                <button type="button" className="widget-large-icon-button" aria-label="Play audio">
+                  <Volume2 size={20} strokeWidth={1.5} absoluteStrokeWidth />
                 </button>
-              ) : null}
-              {onDismiss ? (
-                <button type="button" className="widget-large-icon-button" aria-label="Close word" onClick={onDismiss}>
-                  <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
-                </button>
-              ) : null}
+                {docked && onTogglePanel ? (
+                  <button type="button" className="widget-large-icon-button" aria-label="Close side panel" onClick={onTogglePanel}>
+                    <PanelRight size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                  </button>
+                ) : null}
+                {onDismiss ? (
+                  <button type="button" className="widget-large-icon-button" aria-label="Close word" onClick={onDismiss}>
+                    <X size={20} strokeWidth={1.5} absoluteStrokeWidth />
+                  </button>
+                ) : null}
+              </div>
             </div>
           </div>
         </header>

@@ -67,6 +67,7 @@ Centered in the lesson column, 400×600 (shrinks if the column is shorter). Not 
 - Shows the term, meanings, the full sentence, and its English translation. Original sentence is 16px regular, not italic, and clamps to 2 lines. Translation is 14px regular and does not clamp. The sentence card is at least 128px tall. German transliteration is hidden.
 - Notes text is 16px regular, matching the meaning and sentence text. The notes icon is the notebook. A note from Lynx uses the Lynx-marked notebook.
 - Header and footer are white. Each section (Meanings, Sentence, Notes) keeps its header outside a `#F8F9FA` card, radius 12, with 12px padding on the left and right.
+- Left of Play, the header shows how many coins the term is worth. A 24px coin, then 4px, then a number from 1 to 4. The number is 14px medium, `#49525B`, with an 18px line height. Each term is assigned one number, and that number stays with the term. The coin sits 12px left of Play, on the floating card and in the side panel.
 - Section labels are 14px regular, `#49525B`, 18px line height. Icons and chevrons are 16px. Lucide strokes are 1.33. The Sentence icon is the custom image at 16px.
 - The reader's default grey buttons, including these section chevrons, are `#F8F9FA`. Borders and the meaning dividers are `#F1F3F4`.
 - Meaning dividers are inset from the left, in line with the text, and run to the right edge.

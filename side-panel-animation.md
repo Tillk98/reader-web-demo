@@ -22,9 +22,9 @@ Reduced motion skips all of this. The column appears and disappears in place.
 
 ## 2. Lynx and the word widget inside the column
 
-This plays only when Lynx or a word opens on top of the vocabulary list, and when that view closes back onto the list. Opening the column, swapping one word for another, opening Lynx from a docked word or a review, and the text popup do not use it.
+This plays only when Lynx or a word opens on top of the review, the list or the activity, and when that view closes back onto that review. Opening the column, swapping one word for another, and the text popup do not use it. Lynx replaces an open word rather than returning to it.
 
-Same motion both ways. No fade. The list stays underneath the whole time.
+Same motion both ways. No fade. The review stays underneath the whole time.
 
 | | Open | Close |
 |---|---|---|
@@ -36,8 +36,8 @@ Same motion both ways. No fade. The list stays underneath the whole time.
 | Opacity | none | none |
 | Fill | default | `forwards`, held until it unmounts |
 
-On close, the list is painted for two frames at full size before the 120ms reverse starts. The closing view ignores clicks during that 120ms. When the 200ms open finishes, the list underneath is removed. When the 120ms close finishes, Lynx or the word is removed and the list is what remains.
+On close, the review is painted for two frames at full size before the 120ms reverse starts. The closing view ignores clicks during that 120ms. When the 200ms open finishes, the review underneath is dismissed. When the 120ms close finishes, Lynx or the word is removed and that review is what remains.
 
-The word’s X always uses the close. Lynx’s X uses it only when no word is selected. If a word is selected, Lynx’s X swaps to that word with no cover motion.
+The word’s X and Lynx’s X both use this close, and both return to the review underneath. Lynx does not return to a word it replaced.
 
 Reduced motion skips it and switches views immediately.

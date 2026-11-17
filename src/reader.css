@@ -4061,8 +4061,7 @@ html.split-motion::view-transition-new(split-text) {
 .audio-bar-speed:hover,
 .audio-bar-mode:hover:not(:disabled),
 .audio-bar-lynx:hover,
-.audio-bar-vocab .vocab-button:hover,
-.audio-bar-vocab .vocab-split-menu:hover {
+.audio-bar-vocab .vocab-button:hover {
   background: var(--bg-elevated);
 }
 
@@ -4157,17 +4156,12 @@ html.split-motion::view-transition-new(split-text) {
   opacity: 1;
 }
 
-.reader.is-theater .audio-bar-vocab .vocab-split-menu {
-  color: #fff;
-}
-
 .reader.is-theater .audio-bar-control:hover,
 .reader.is-theater .audio-bar-pause:hover,
 .reader.is-theater .audio-bar-speed:hover,
 .reader.is-theater .audio-bar-mode:hover:not(:disabled),
 .reader.is-theater .audio-bar-lynx:hover,
-.reader.is-theater .audio-bar-vocab .vocab-button:hover,
-.reader.is-theater .audio-bar-vocab .vocab-split-menu:hover {
+.reader.is-theater .audio-bar-vocab .vocab-button:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -4380,33 +4374,16 @@ html.split-motion::view-transition-new(split-text) {
   padding: 0;
 }
 
-.vocab-split-menu {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 10px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--fg-muted);
-  cursor: pointer;
-}
-
-.vocab-split-menu svg,
 .play-split-chevron svg,
 .review-search-contains svg {
   transition: transform 150ms ease;
 }
 
-.vocab-split-menu[aria-expanded="true"] svg,
 .review-search-contains[aria-expanded="true"] svg {
   transform: rotate(180deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vocab-split-menu svg,
   .play-split-chevron svg,
   .review-search-contains svg {
     transition: none;
@@ -4488,7 +4465,6 @@ html.split-motion::view-transition-new(split-text) {
 .play-split-chevron:hover,
 .mode-selector:hover,
 .vocab-button:hover,
-.vocab-split-menu:hover,
 .lynx-button:hover {
   background: var(--bg-elevated);
 }

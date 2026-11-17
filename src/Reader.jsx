@@ -238,48 +238,20 @@ function reviewScopeForMode(readingMode) {
   return "page";
 }
 
-const REVIEW_ACTIONS = [
-  { id: "page", label: "Review Page" },
-  { id: "sentence", label: "Review Sentence" },
-  { id: "lesson", label: "Review Lesson" },
-  { id: "list", label: "Vocabulary List" },
-];
-
-function ReviewActionsMenu({ onChoose, toolsOnly = false }) {
-  const actions = (
-    <div className="reader-menu-group">
-      <MenuRow role="menuitem" label="Manage Vocabulary" onClick={() => onChoose("manage")}>
-        <ArrowUpRight className="reader-menu-chevron" size={12} strokeWidth={1.5} absoluteStrokeWidth />
-      </MenuRow>
-      <MenuRow
-        role="menuitem"
-        icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />}
-        label="Settings"
-        onClick={() => onChoose("settings")}
-      />
-    </div>
-  );
-  if (toolsOnly) {
-    return (
-      <div className="reader-menu vocab-menu" role="menu">
-        {actions}
-      </div>
-    );
-  }
+function ReviewActionsMenu({ onChoose }) {
   return (
     <div className="reader-menu vocab-menu" role="menu">
       <div className="reader-menu-group">
-        {REVIEW_ACTIONS.map((item) => (
-          <MenuRow
-            key={item.id}
-            role="menuitem"
-            label={item.label}
-            onClick={() => onChoose(item.id)}
-          />
-        ))}
+        <MenuRow role="menuitem" label="Manage Vocabulary" onClick={() => onChoose("manage")}>
+          <ArrowUpRight className="reader-menu-chevron" size={12} strokeWidth={1.5} absoluteStrokeWidth />
+        </MenuRow>
+        <MenuRow
+          role="menuitem"
+          icon={<Settings size={16} strokeWidth={1.5} absoluteStrokeWidth />}
+          label="Settings"
+          onClick={() => onChoose("settings")}
+        />
       </div>
-      <div className="reader-menu-divider" />
-      {actions}
     </div>
   );
 }
@@ -1508,7 +1480,6 @@ export default function Reader() {
   const [lynxOpen, setLynxOpen] = useState(false);
   const [lynxOverlay, setLynxOverlay] = useState(false);
   const [lynxReturns, setLynxReturns] = useState(false);
-  const [reviewMenu, setReviewMenu] = useState(false);
   const [reviewCardMenu, setReviewCardMenu] = useState(false);
   const [reviewCard, setReviewCard] = useState(null);
   const [reviewFilters, setReviewFilters] = useState(defaultFilters);
@@ -1901,7 +1872,6 @@ export default function Reader() {
       setTheaterLine(line);
       setPlayerMenu(false);
       setModeMenu(false);
-      setReviewMenu(false);
       setMedia("video");
       setPlayerShown(true);
       setPlayerOpen(true);
@@ -2243,23 +2213,6 @@ export default function Reader() {
   }, [theater, mode, lesson, textLayout, showTranslation, textSize]);
 
   useEffect(() => {
-    if (!reviewMenu) return undefined;
-    function onPointerDown(event) {
-      if (event.target.closest?.(".vocab-menu") || event.target.closest?.(".vocab-button") || event.target.closest?.(".vocab-split-menu")) return;
-      setReviewMenu(false);
-    }
-    function onKeyDown(event) {
-      if (event.key === "Escape") setReviewMenu(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [reviewMenu]);
-
-  useEffect(() => {
     if (!reviewCardMenu) return undefined;
     function onPointerDown(event) {
       if (event.target.closest?.(".review-card-options")) return;
@@ -2492,7 +2445,7 @@ export default function Reader() {
     if (!playerShown) return undefined;
     function onKeyDown(event) {
       if (event.key !== "Escape") return;
-      if (modeMenu || reviewMenu || playerMenu || playMenu || chromeMenu || demoSettings || phrasePick || active || termMenu || reviewCard || lynxOpen || progressPrompt || termsList || readerSettings || celebration || exitHint) return;
+      if (modeMenu || playerMenu || playMenu || chromeMenu || demoSettings || phrasePick || active || termMenu || reviewCard || lynxOpen || progressPrompt || termsList || readerSettings || celebration || exitHint) return;
       if (theater) {
         runTheater(() => setTheater(false));
         return;
@@ -2501,7 +2454,7 @@ export default function Reader() {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [playerShown, theater, modeMenu, reviewMenu, playerMenu, playMenu, chromeMenu, demoSettings, phrasePick, active, termMenu, reviewCard, lynxOpen, progressPrompt, termsList, readerSettings, celebration, exitHint]);
+  }, [playerShown, theater, modeMenu, playerMenu, playMenu, chromeMenu, demoSettings, phrasePick, active, termMenu, reviewCard, lynxOpen, progressPrompt, termsList, readerSettings, celebration, exitHint]);
 
   function sidebarIsOpen() {
     if (theater || mobile) return false;
@@ -3517,7 +3470,6 @@ export default function Reader() {
 
   function chooseReviewAction(action) {
     if (theater && !mobile) return;
-    setReviewMenu(false);
     setReviewCardMenu(false);
     setReviewFilterOpen(false);
     if (action === "list") {
@@ -4729,7 +4681,7 @@ export default function Reader() {
                     <div className={`audio-bar-reading${theater ? " is-hidden" : ""}`} inert={theater ? true : undefined}>
                       <div className="audio-bar-reading-clip">
                         <span className="mode-anchor">
-                          <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
+                          <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => setModeMenu((open) => !open)}>
                             {modeIcon(mode, 24)}
                           </button>
                           {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
@@ -4828,7 +4780,7 @@ export default function Reader() {
                 </div>
                 <div className="audio-player-tools">
                   <span className="mode-anchor audio-player-mode">
-                    <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
+                    <button type="button" className="audio-bar-mode" aria-label="Reading mode" aria-expanded={modeMenu} onClick={() => setModeMenu((open) => !open)}>
                       {modeIcon(mode, 20)}
                     </button>
                     {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
@@ -4901,7 +4853,7 @@ export default function Reader() {
           <>
           <div className="floating-nav">
             <span className="mode-anchor">
-              <button type="button" className="mode-selector" aria-expanded={modeMenu} onClick={() => { setReviewMenu(false); setModeMenu((open) => !open); }}>
+              <button type="button" className="mode-selector" aria-expanded={modeMenu} onClick={() => setModeMenu((open) => !open)}>
                 {modeIcon(mode)}
                 <span>{MODES.find((item) => item.id === mode)?.label}</span>
                 <ChevronsUpDown size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
@@ -4909,15 +4861,9 @@ export default function Reader() {
               {modeMenu ? <ModeMenu mode={mode} onChoose={chooseMode} /> : null}
             </span>
             <span className="nav-divider" aria-hidden="true" />
-            <span className="vocab-split">
-              <button type="button" className="vocab-button" aria-label="Vocabulary" onClick={startDefaultReview}>
-                <img src={reviewIcon} alt="" width={24} height={24} />
-              </button>
-              <button type="button" className="vocab-split-menu" aria-label="Review actions" aria-haspopup="menu" aria-expanded={reviewMenu} onClick={() => { setModeMenu(false); setReviewMenu((open) => !open); }}>
-                <ChevronDown size={20} strokeWidth={1.5} absoluteStrokeWidth />
-              </button>
-              {reviewMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
-            </span>
+            <button type="button" className="vocab-button" aria-label="Review" onClick={startDefaultReview}>
+              <img src={reviewIcon} alt="" width={24} height={24} />
+            </button>
           </div>
 
           <form className="lynx-control" onSubmit={(event) => event.preventDefault()} onClick={toggleLynx}>
@@ -5174,7 +5120,7 @@ export default function Reader() {
                     <button type="button" className={reviewInPanel || mobile ? "widget-large-icon-button" : "icon-button"} aria-label="Review options" aria-haspopup="menu" aria-expanded={reviewCardMenu} onClick={() => { setReviewFilterOpen(false); setReviewCardMenu((open) => !open); }}>
                       <EllipsisVertical size={20} strokeWidth={1.5} absoluteStrokeWidth />
                     </button>
-                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} toolsOnly /> : null}
+                    {reviewCardMenu ? <ReviewActionsMenu onChoose={chooseReviewAction} /> : null}
                   </span>
                   {!reviewInPanel && !mobile ? (
                     <button type="button" className="icon-button review-card-close" aria-label="Close review" onClick={closeReviewDialog}>

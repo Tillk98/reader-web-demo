@@ -201,7 +201,7 @@ Each group has 6px of padding, so the hover fill does not sit against the line. 
 
 ## Bottom bar
 
-Default bar: play on the left, mode and vocabulary in the center, Ask Lynx on the right. Items sit 16px above the bottom of the screen. The center group stays horizontally centered as the bar narrows. Play and Ask Lynx are 48px circles: white, no border, 24px marks, shadow `0 4px 6px rgba(0,0,0,0.08)`. Icons in this default bar are 24×24. The center group is a pill (radius 999), the same white fill and shadow, padding 6px 12px, gap 10px. A 1px divider in `--border` (`#F1F3F4`) stretches the height of that pill between the mode control and the vocabulary section. The mode control is the mode icon and a 20px up-down chevron. On desktop and tablet it also shows the mode name, 14px medium with an 18px line height. The icon is `--fg-default`. The chevron is `--fg-muted`. Its hover fills the 48px control, with 12px of padding on either side, the same inset as a 24px icon in a 48px circle. The pill’s 6px padding stays clear of that fill. Vocabulary on this bar is a split button: a 48px cards icon and a 40px chevron, with no divider between them. The icon starts the default review. The chevron opens Review actions.
+Default bar: play on the left, mode and vocabulary in the center, Ask Lynx on the right. Items sit 16px above the bottom of the screen. The center group stays horizontally centered as the bar narrows. Play and Ask Lynx are 48px circles: white, no border, 24px marks, shadow `0 4px 6px rgba(0,0,0,0.08)`. Icons in this default bar are 24×24. The center group is a pill (radius 999), the same white fill and shadow, padding 6px 12px, gap 10px. A 1px divider in `--border` (`#F1F3F4`) stretches the height of that pill between the mode control and the vocabulary section. The mode control is the mode icon and a 20px up-down chevron. On desktop and tablet it also shows the mode name, 14px medium with an 18px line height. The icon is `--fg-default`. The chevron is `--fg-muted`. Its hover fills the 48px control, with 12px of padding on either side, the same inset as a 24px icon in a 48px circle. The pill’s 6px padding stays clear of that fill. Vocabulary on this bar is a single 48px cards button, the same size as Play and Lynx. It starts the default review. There is no chevron beside it.
 
 Below 767px the mode control drops its label and keeps the mode icon plus the up-down chevron. On that same width, play opens a collapsed player that takes the whole bar. Expanding it replaces the center group and Lynx with the full player.
 
@@ -238,14 +238,7 @@ Left: pause, then replay 10 seconds. Right: the reading mode icon, 20px, then vo
 
 The vocabulary control in the players is the cards icon. Clicking it starts the default review for the current reading mode, the same as the cards icon on the default bar. While the player is open on desktop and tablet, that icon sits in the player, a 48px target. While theater mode is on, that button leaves the bar. Review does not open. Below 767px the expanded player does not include it. The collapsed player does: a 20px cards icon in a 40px target, between the reading mode and Lynx.
 
-On the default bar, while the player is closed, vocabulary is a split button on both desktop and mobile. No fill and no border. No divider between the cards icon and the chevron. Horizontal padding 4px. The cards icon and the chevron sit in that one section.
-
-- Icon half is 48×48. Chevron half is 40×40. Both are transparent so the section color shows through. The vocabulary icon does not use the blue toggle state.
-- The icon starts the default review for the current reading mode. With the side panel open, pressing it opens that review’s activities and leaves the panel open. Pressing it again while those activities are already open does nothing. With the side panel closed, pressing it again closes the open review. Pressing Lynx again closes Lynx and leaves the side panel open.
-- The chevron opens Review actions and rotates 180° while that menu is open. 150ms ease. No transition when reduced motion is on. The search-type chevron in the vocabulary search field uses the same flip.
-- Opening the mode menu or the review menu closes the other. Outside click or Escape closes it.
-
-The chevron menu uses the reader-menu row, in two groups split by a divider. It opens upward, 16px above the split button on the default bar, aligned to the button’s right edge. There is no lesson header. The first group is Review Page, Review Sentence, Review Lesson, and Vocabulary List. The second group is Manage Vocabulary and Settings. Those rows have no leading icons. Manage Vocabulary keeps the 12px up-right arrow. Settings keeps a 16px settings icon. The review ellipsis uses only the second group.
+On the default bar, while the player is closed, vocabulary is one 48px button on desktop and mobile. No fill and no border of its own. It uses the pill behind it. The vocabulary icon does not use the blue toggle state. It starts the default review for the current reading mode. With the side panel open, pressing it opens that review’s activities and leaves the panel open. Pressing it again while those activities are already open does nothing. With the side panel closed, pressing it again closes the open review. Pressing Lynx again closes Lynx and leaves the side panel open. There is no menu on this button. The review ellipsis still opens Manage Vocabulary and Settings. Manage Vocabulary keeps the 12px up-right arrow. Settings keeps a 16px settings icon.
 
 **Default for the cards icon on the default bar and in the players:**
 
@@ -253,12 +246,7 @@ The chevron menu uses the reader-menu row, in two groups split by a divider. It 
 - **Sentence mode** opens Sentence Vocabulary Review.
 - **Scroll mode** opens Lesson Vocabulary Review, for the words in the lesson. It does not use the sentence that is playing, highlighted, or about to play.
 
-Changing the reading mode moves an open review to that scope: the sentence in sentence mode, the page in page mode, and the whole lesson in scroll mode. Choosing Review Page, Review Sentence, or Review Lesson sets the scope until the reading mode changes.
-
-- **Review Page**, **Review Sentence**, and **Review Lesson** open that review: Page Vocabulary Review, Sentence Vocabulary Review, or Lesson Vocabulary Review.
-- **Vocabulary List** opens the list in the side panel when the panel is on, and as the review dialog when the panel is off.
-- **Manage Vocabulary** opens Manage Vocabulary.
-- **Settings** closes the menu. It does not open a settings page.
+Changing the reading mode moves an open review to that scope: the sentence in sentence mode, the page in page mode, and the whole lesson in scroll mode. Page, Sentence, and Lesson in the review filter set the scope until the reading mode changes.
 
 ## Side panel
 

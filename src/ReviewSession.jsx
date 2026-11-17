@@ -1,5 +1,5 @@
 import { Children, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Check, Info, Mic, RefreshCw, Square, Volume2, X } from "lucide-react";
+import { Check, Info, Mic, Pencil, RefreshCw, Square, Volume2, X } from "lucide-react";
 import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
 import { ScopeFilterButton } from "./ReviewPanel.jsx";
 
@@ -95,7 +95,7 @@ function ReviewInProgress({ index, total, done }) {
   );
 }
 
-export default function ReviewSession({ kind, title, words = [], hidden = false, compact = false, onClose, onFilter, filterAnchorRef = null, scopeLabel = "Page", filterExtra = 0, filterCompact = false, filterOpen = false }) {
+export default function ReviewSession({ kind, title, words = [], hidden = false, compact = false, onClose, onEdit = null, onFilter, filterAnchorRef = null, scopeLabel = "Page", filterExtra = 0, filterCompact = false, filterOpen = false }) {
   const activities = useMemo(() => activitiesFor(kind, words), [kind, words]);
   const steps = activities.map((item) => item.type);
   const [index, setIndex] = useState(0);
@@ -149,7 +149,8 @@ export default function ReviewSession({ kind, title, words = [], hidden = false,
       if (event.key !== "Enter" || event.repeat || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
       const target = event.target;
       if (!(target instanceof Element)) return;
-      if (target.closest("input, textarea, select, [role='menu']")) return;
+      if (target.closest("input, textarea, select, [role='menu'], .widget-large")) return;
+      if (document.querySelector(".widget-large")) return;
       const control = target.closest(".review-session-quiet, .review-session-wrong, .review-session-right, .review-session-primary, .review-session-secondary, .review-session-record, .review-session-affordance, .review-session-choice");
       if (control && !control.matches(":disabled")) return;
       event.preventDefault();
@@ -325,6 +326,7 @@ export default function ReviewSession({ kind, title, words = [], hidden = false,
             meaning={word.meaning}
             status={status}
             onStatus={setStatus}
+            onEdit={onEdit}
             onNext={goNext}
           />
         ) : step === "matching" ? (
@@ -351,6 +353,7 @@ export default function ReviewSession({ kind, title, words = [], hidden = false,
             onWrong={goNext}
             onRight={goNext}
             onSkip={goNext}
+            onEdit={onEdit}
           />
         ) : step === "cloze" || step === "choice" ? (
           <Choices
@@ -512,7 +515,9 @@ function ActivityFrame({ children }) {
 
   return (
     <div className="review-session-stage">
-      {card}
+      <div className="review-session-scroll">
+        {card}
+      </div>
       {actions}
     </div>
   );
@@ -574,7 +579,16 @@ function FlashcardMeasure() {
   );
 }
 
-function Flashcard({ notice, word, reverse, face, status, onStatus, onFlip, onWrong, onRight, onSkip }) {
+function EditTerm({ word, onEdit }) {
+  if (!onEdit || word?.paragraphIndex == null || word?.tokenIndex == null) return null;
+  return (
+    <button type="button" className="review-session-edit" aria-label="Edit term" onClick={(event) => { event.stopPropagation(); onEdit(word); }}>
+      <Pencil size={20} strokeWidth={1.5} absoluteStrokeWidth />
+    </button>
+  );
+}
+
+function Flashcard({ notice, word, reverse, face, status, onStatus, onFlip, onWrong, onRight, onSkip, onEdit }) {
   const front = face === "front";
   return (
     <ActivityFrame notice={notice}>
@@ -602,6 +616,7 @@ function Flashcard({ notice, word, reverse, face, status, onStatus, onFlip, onWr
               </div>
             </div>
             <StatusBar status={status} onStatus={onStatus} />
+            {front ? null : <EditTerm word={word} onEdit={onEdit} />}
           </div>
         </div>
       </div>
@@ -934,7 +949,7 @@ function AnswerFeedback({ correct, answer }) {
   );
 }
 
-function ResultFace({ notice, word, sentence, meaning, status, onStatus, onRetry, onNext }) {
+function ResultFace({ notice, word, sentence, meaning, status, onStatus, onEdit, onRetry, onNext }) {
   return (
     <ActivityFrame notice={notice}>
       <div className="review-session-card">
@@ -954,6 +969,7 @@ function ResultFace({ notice, word, sentence, meaning, status, onStatus, onRetry
           </div>
         </div>
         {word ? <StatusBar status={status} onStatus={onStatus} /> : null}
+        <EditTerm word={word} onEdit={onEdit} />
       </div>
       <Actions>
         {onRetry ? <Quiet onClick={onRetry}>Try again</Quiet> : null}

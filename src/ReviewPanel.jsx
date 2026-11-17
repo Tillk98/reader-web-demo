@@ -208,6 +208,9 @@ export function reviewWordsFrom(terms, filters) {
     sentence: item.sentence || item.term,
     translation: item.translation || "",
     tags: [],
+    paragraphIndex: item.paragraphIndex,
+    tokenIndex: item.tokenIndex,
+    phraseId: item.phraseId,
   }));
 }
 

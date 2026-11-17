@@ -1525,6 +1525,7 @@ export default function Reader() {
     [reviewTerms, reviewFilters],
   );
   const [reviewDocked, setReviewDocked] = useState(false);
+  const [reviewEdit, setReviewEdit] = useState(false);
   const [reviewSuspended, setReviewSuspended] = useState(false);
   const [reviewOverlay, setReviewOverlay] = useState(false);
   const [reviewReturns, setReviewReturns] = useState(false);
@@ -2745,7 +2746,7 @@ export default function Reader() {
   function toggleLynx() {
     if (panelTabs && !mobile && !theater) {
       if (panelVisible && panelTab === "lynx") {
-        hideTabbedPanel();
+        selectPanelTab(active ? "term" : "review");
         return;
       }
       selectPanelTab("lynx");
@@ -2880,6 +2881,10 @@ export default function Reader() {
       pressRef.current.suppressClick = false;
       return;
     }
+    if (reviewEdit) {
+      cancelCover();
+      setReviewEdit(false);
+    }
     if (phrasePick) {
       if (phrasePick.paragraphIndex === paragraphIndex && phrasePick.tokenIndex === tokenIndex) return;
       const phrase = describePhrase(lesson, phrasePick, { paragraphIndex, tokenIndex });
@@ -2960,6 +2965,10 @@ export default function Reader() {
     const saved = savedAt(paragraphIndex, tokenIndex);
     const timer = window.setTimeout(() => {
       pressRef.current.suppressClick = true;
+      if (reviewEdit) {
+        cancelCover();
+        setReviewEdit(false);
+      }
       if (saved) {
         openSaved(saved, paragraphIndex, tokenIndex, "medium");
         highlightSentenceTerm(paragraphIndex, tokenIndex);
@@ -3251,15 +3260,52 @@ export default function Reader() {
     }
   }
 
-  function openListedTerm(item) {
+  function editReviewedTerm(item) {
     if (item?.paragraphIndex == null || item.tokenIndex == null) return;
     const phrase = item.phraseId != null ? savedPhrases.find((entry) => entry.id === item.phraseId) : null;
-    if (phrase) openSaved(phrase, item.paragraphIndex, item.tokenIndex, "small");
+    const dockedActivity = !mobile && !panelTabs && !theater && reviewDocked && !reviewOverlay && !reviewSuspended && !reviewListView;
+    const open = (size) => {
+      if (phrase) openSaved(phrase, item.paragraphIndex, item.tokenIndex, size);
+      else setActive({ paragraphIndex: item.paragraphIndex, tokenIndex: item.tokenIndex, size, mode: "meaning", statusMenu: false });
+    };
+    if (dockedActivity) {
+      cancelCover();
+      open("large");
+      setShowMini(false);
+      setSidePanel(true);
+      setReviewEdit(true);
+      runCover("word", "in", () => {});
+      return;
+    }
+    setReviewEdit(false);
+    open("large");
+    setShowMini(false);
+  }
+
+  function openListedTerm(item) {
+    if (item?.paragraphIndex == null || item.tokenIndex == null) return;
+    if (reviewEdit) {
+      cancelCover();
+      setReviewEdit(false);
+    }
+    const phrase = item.phraseId != null ? savedPhrases.find((entry) => entry.id === item.phraseId) : null;
+    const overReviewDialog = Boolean(reviewCard) && !reviewSuspended && !(reviewDocked && !reviewOverlay);
+    if (phrase) openSaved(phrase, item.paragraphIndex, item.tokenIndex, overReviewDialog ? "large" : "small");
     else {
       if (item.status === "Blue") createLingQ(item.paragraphIndex, item.tokenIndex);
-      setActive({ paragraphIndex: item.paragraphIndex, tokenIndex: item.tokenIndex, size: "small", mode: "meaning", statusMenu: false });
+      setActive({
+        paragraphIndex: item.paragraphIndex,
+        tokenIndex: item.tokenIndex,
+        size: overReviewDialog ? "large" : "small",
+        mode: "meaning",
+        statusMenu: false,
+      });
     }
     highlightSentenceTerm(item.paragraphIndex, item.tokenIndex);
+    if (overReviewDialog) {
+      setShowMini(false);
+      return;
+    }
     if (!reviewDocked) closeReview();
     givePanelToWord();
     setShowMini(true);
@@ -3330,6 +3376,7 @@ export default function Reader() {
     setReviewListView(false);
     setReviewDocked(false);
     setReviewSuspended(false);
+    setReviewEdit(false);
     setSidePanel(false);
   }
 
@@ -3382,6 +3429,7 @@ export default function Reader() {
     setReviewListView(false);
     setReviewDocked(false);
     setReviewSuspended(false);
+    setReviewEdit(false);
   }
 
   useLayoutEffect(() => {
@@ -3424,11 +3472,12 @@ export default function Reader() {
     if (!dialogOpen) return undefined;
     function onKeyDown(event) {
       if (event.key !== "Escape" || reviewCardMenu || reviewFilterOpen) return;
+      if (active?.size === "large") return;
       closeReviewDialog();
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [reviewCard, reviewSuspended, reviewDocked, reviewOverlay, reviewReturns, reviewCardMenu, reviewFilterOpen, wide, theater, panelTabs]);
+  }, [reviewCard, reviewSuspended, reviewDocked, reviewOverlay, reviewReturns, reviewCardMenu, reviewFilterOpen, wide, theater, panelTabs, active]);
 
   function dockReview() {
     if (theater && !mobile) return;
@@ -3536,13 +3585,10 @@ export default function Reader() {
 
   function startDefaultReview() {
     if (theater && !mobile) return;
+    const activitiesOpen = Boolean(reviewCard) && !reviewSuspended && !reviewListView;
     if (panelTabs && !mobile) {
-      if (panelVisible && panelTab === "review") {
-        hideTabbedPanel();
-        return;
-      }
       if (!panelVisible) {
-        if (reviewCard && !reviewSuspended && reviewOverlay && !reviewReturns) {
+        if (reviewCard && !reviewSuspended && !reviewReturns) {
           closeReview();
           return;
         }
@@ -3551,11 +3597,18 @@ export default function Reader() {
         floatReview();
         return;
       }
-      if (!reviewCard) {
-        chooseReviewAction(reviewScopeForMode(mode));
-        return;
-      }
+      if (panelTab === "review" && activitiesOpen) return;
+      setReviewListView(false);
+      if (!reviewCard) setReviewCard(reviewScopeForMode(mode));
       selectPanelTab("review");
+      return;
+    }
+    const columnOpen = wide && sidebarIsOpen() && !reviewOverlay && !lynxOverlay;
+    if (columnOpen) {
+      if (reviewDocked && activitiesOpen) return;
+      setReviewListView(false);
+      if (!reviewCard) setReviewCard(reviewScopeForMode(mode));
+      dockReview();
       return;
     }
     if (reviewCard && !reviewSuspended) {
@@ -3672,6 +3725,7 @@ export default function Reader() {
     setReviewListView(false);
     setReviewDocked(false);
     setReviewSuspended(false);
+    setReviewEdit(false);
     setLynxOpen(false);
     setLynxOverlay(false);
     setLynxReturns(false);
@@ -3681,6 +3735,15 @@ export default function Reader() {
   }
 
   function closeDockedWord() {
+    if (reviewEdit) {
+      setShowMini(false);
+      runCover("word", "out", () => {
+        setReviewEdit(false);
+        setActive(null);
+        setShowMini(false);
+      });
+      return;
+    }
     if (panelTabs || mobile || theater) {
       setActive(null);
       setShowMini(false);
@@ -4547,7 +4610,7 @@ export default function Reader() {
               <p>Select another word to create a phrase.</p>
             </div>
           ) : null}
-          {activeToken && active.size === "large" && (panelTabs ? !panelVisible && !sidePanel : !wordDockedInSidebar()) ? (
+          {activeToken && active.size === "large" && !reviewEdit && (panelTabs ? !panelVisible && !sidePanel : !wordDockedInSidebar()) ? (
             <WidgetLarge
               term={largeTerm}
               meanings={largeMeanings}
@@ -4918,7 +4981,7 @@ export default function Reader() {
                     {reviewOverlay ? <div className="review-dock-placeholder" aria-hidden="true" /> : null}
                   </div>
                 ) : null}
-                {sidePanel && activeToken && (!reviewDocked || cover?.layer === "word") ? (
+                {sidePanel && activeToken && (!reviewDocked || cover?.layer === "word" || reviewEdit) ? (
                   <div className={`side-panel-cover${cover?.layer === "word" ? ` is-${cover.phase}` : ""}`}>
                     <WidgetLarge
                       term={largeTerm}
@@ -5062,7 +5125,9 @@ export default function Reader() {
         <div
           className={`review-card-layer${theater ? " is-theater" : ""}${reviewInPanel ? " is-docked" : ""}${reviewInPanel && !reviewDockHost ? " is-moving" : ""}`}
           onClick={!reviewInPanel ? (event) => {
-            if (event.target === event.currentTarget && !reviewFilterOpen && !reviewCardMenu) closeReviewDialog();
+            if (event.target !== event.currentTarget || reviewFilterOpen || reviewCardMenu) return;
+            if (active?.size === "large") return;
+            closeReviewDialog();
           } : undefined}
         >
           <div
@@ -5148,6 +5213,7 @@ export default function Reader() {
                 hidden={reviewListView}
                 compact={false}
                 onClose={closeReview}
+                onEdit={editReviewedTerm}
                 onFilter={() => {
                   setReviewCardMenu(false);
                   setReviewFilterOpen((open) => !open);

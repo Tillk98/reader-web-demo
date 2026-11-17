@@ -5996,8 +5996,8 @@ button:focus-visible {
   min-height: 0;
 }
 
-.review-card .review-session-stage > .review-session-card {
-  flex: 1 1 auto;
+.review-card .review-session-scroll > .review-session-card {
+  flex: 1 0 auto;
   width: 100%;
   height: auto;
   min-height: 0;
@@ -6008,9 +6008,18 @@ button:focus-visible {
   box-shadow: none;
 }
 
-.review-card .review-session-stage > .review-session-card.is-flash {
+.review-card .review-session-scroll > .review-session-card.is-flash,
+.review-card .review-session-scroll > .review-session-card:has(.review-session-status) {
+  flex: 1 1 auto;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
   overflow: visible;
   border: 0;
+}
+
+.review-card .review-session-scroll > .review-session-card:has(.review-session-status):not(.is-flash) {
+  overflow: hidden;
 }
 
 .review-card .review-session-stage > .review-session-actions {
@@ -6020,7 +6029,8 @@ button:focus-visible {
 
 .review-card-layer.is-docked .review-session:not(:has(.review-session-finish)) .review-session-body,
 .review-card-layer.is-docked .review-session-stage,
-.review-card-layer.is-docked .review-session-stage > .review-session-card {
+.review-card-layer.is-docked .review-session-scroll,
+.review-card-layer.is-docked .review-session-scroll > .review-session-card.is-flash {
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -6033,10 +6043,16 @@ button:focus-visible {
   width: 100%;
 }
 
-.review-card-layer.is-docked .review-session-stage > .review-session-card {
+.review-card-layer.is-docked .review-session-scroll > .review-session-card {
   width: 100%;
   height: auto;
   margin-inline: 0;
+}
+
+.review-card-layer.is-docked .review-session-scroll > .review-session-card.is-flash,
+.review-card-layer.is-docked .review-session-scroll > .review-session-card:has(.review-session-status) {
+  height: 100%;
+  max-height: 100%;
 }
 
 .review-card-layer.is-docked .review-session-card-body {
@@ -6668,6 +6684,10 @@ button:focus-visible {
 .lynx-chat-actions button:last-child {
   background: var(--fg-secondary);
   color: #ffffff;
+}
+
+body:has(.review-card-layer:not(.is-docked)) .widget-large {
+  z-index: 45;
 }
 
 .widget-large {
@@ -7630,8 +7650,28 @@ button:focus-visible {
   position: relative;
 }
 
-.review-session-stage > .review-session-card {
+.review-session-scroll {
+  display: flex;
   flex: 1 1 auto;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.review-session-scroll:has(> .review-session-card.is-flash) {
+  overflow: visible;
+}
+
+.review-session-scroll:has(> .review-session-card:has(.review-session-status):not(.is-flash)) {
+  overflow: hidden;
+}
+
+.review-session-stage > .review-session-card,
+.review-session-scroll > .review-session-card {
+  flex: 1 0 auto;
   align-self: stretch;
   width: 100%;
   height: auto;
@@ -7697,12 +7737,18 @@ button:focus-visible {
   box-shadow: none;
 }
 
-.review-session-card.is-flash .review-session-meaning,
-.review-session-card.is-flash .review-session-sentence {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+.review-session-scroll > .review-session-card:not(.is-flash):not(:has(.review-session-status)) .review-session-card-body {
+  flex: 1 1 auto;
+  min-height: auto;
+  overflow: visible;
+}
+
+.review-session-scroll > .review-session-card:has(.review-session-status):not(.is-flash) > .review-session-card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  justify-content: safe center;
 }
 
 .review-session-card-body {
@@ -7751,7 +7797,7 @@ button:focus-visible {
 
 .review-session-card-body:has(.review-session-match),
 .review-card-layer.is-docked .review-session-card-body:has(.review-session-match) {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .review-session-card:has(.review-session-status) .review-session-card-body {
@@ -7808,6 +7854,29 @@ button:focus-visible {
   transform: rotateY(180deg);
 }
 
+.review-session-card:has(> .review-session-edit) {
+  position: relative;
+}
+
+.review-session-edit {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  border: 1px solid #e3e5e7;
+  border-radius: 999px;
+  background: var(--bg-page);
+  color: var(--fg-default);
+  cursor: pointer;
+}
+
 .review-session-flip.is-flipped > .review-session-card-front,
 .review-session-flip:not(.is-flipped) > .review-session-card-face {
   pointer-events: none;
@@ -7832,8 +7901,18 @@ button:focus-visible {
   pointer-events: none;
 }
 
-.review-session-card.is-flash .review-session-card-body {
-  flex: 1;
+.review-session-card.is-flash .review-session-card-face > .review-session-card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  justify-content: safe center;
+}
+
+.review-session-flip > .review-session-card-front {
+  overflow: auto;
+  overscroll-behavior: contain;
+  justify-content: safe center;
 }
 
 .review-session-card-front {
@@ -8465,7 +8544,8 @@ button.review-session-affordance {
 
   .review-card .review-session:not(:has(.review-session-finish)) .review-session-body,
   .review-card .review-session-stage,
-  .review-card .review-session-stage > .review-session-card {
+  .review-card .review-session-scroll,
+  .review-card .review-session-scroll > .review-session-card.is-flash {
     flex: 1 1 auto;
     min-height: 0;
   }
@@ -8478,10 +8558,16 @@ button.review-session-affordance {
     width: 100%;
   }
 
-  .review-card .review-session-stage > .review-session-card {
+  .review-card .review-session-scroll > .review-session-card {
     width: 100%;
     height: auto;
     margin-inline: 0;
+  }
+
+  .review-card .review-session-scroll > .review-session-card.is-flash,
+  .review-card .review-session-scroll > .review-session-card:has(.review-session-status) {
+    height: 100%;
+    max-height: 100%;
   }
 
   .review-session-card-body {

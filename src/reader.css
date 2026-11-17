@@ -5997,29 +5997,19 @@ button:focus-visible {
 }
 
 .review-card .review-session-scroll > .review-session-card {
-  flex: 1 0 auto;
+  flex: 1 1 auto;
   width: 100%;
-  height: auto;
+  height: 100%;
   min-height: 0;
-  max-height: none;
+  max-height: 100%;
   overflow: hidden;
   border: 0;
   background: var(--bg-elevated);
   box-shadow: none;
 }
 
-.review-card .review-session-scroll > .review-session-card.is-flash,
-.review-card .review-session-scroll > .review-session-card:has(.review-session-status) {
-  flex: 1 1 auto;
-  height: 100%;
-  max-height: 100%;
-  min-height: 0;
+.review-card .review-session-scroll > .review-session-card.is-flash {
   overflow: visible;
-  border: 0;
-}
-
-.review-card .review-session-scroll > .review-session-card:has(.review-session-status):not(.is-flash) {
-  overflow: hidden;
 }
 
 .review-card .review-session-stage > .review-session-actions {
@@ -6045,14 +6035,9 @@ button:focus-visible {
 
 .review-card-layer.is-docked .review-session-scroll > .review-session-card {
   width: 100%;
-  height: auto;
-  margin-inline: 0;
-}
-
-.review-card-layer.is-docked .review-session-scroll > .review-session-card.is-flash,
-.review-card-layer.is-docked .review-session-scroll > .review-session-card:has(.review-session-status) {
   height: 100%;
   max-height: 100%;
+  margin-inline: 0;
 }
 
 .review-card-layer.is-docked .review-session-card-body {
@@ -7657,7 +7642,7 @@ body:has(.review-card-layer:not(.is-docked)) .widget-large {
   align-items: stretch;
   width: 100%;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
 }
 
@@ -7665,18 +7650,14 @@ body:has(.review-card-layer:not(.is-docked)) .widget-large {
   overflow: visible;
 }
 
-.review-session-scroll:has(> .review-session-card:has(.review-session-status):not(.is-flash)) {
-  overflow: hidden;
-}
-
 .review-session-stage > .review-session-card,
 .review-session-scroll > .review-session-card {
-  flex: 1 0 auto;
+  flex: 1 1 auto;
   align-self: stretch;
   width: 100%;
-  height: auto;
+  height: 100%;
   min-height: 0;
-  max-height: none;
+  max-height: 100%;
   overflow: hidden;
 }
 
@@ -7737,13 +7718,7 @@ body:has(.review-card-layer:not(.is-docked)) .widget-large {
   box-shadow: none;
 }
 
-.review-session-scroll > .review-session-card:not(.is-flash):not(:has(.review-session-status)) .review-session-card-body {
-  flex: 1 1 auto;
-  min-height: auto;
-  overflow: visible;
-}
-
-.review-session-scroll > .review-session-card:has(.review-session-status):not(.is-flash) > .review-session-card-body {
+.review-session-scroll > .review-session-card:not(.is-flash) > .review-session-card-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
@@ -7764,7 +7739,7 @@ body:has(.review-card-layer:not(.is-docked)) .widget-large {
 }
 
 .review-session-card-body:not(:has(> .review-session-prompt, > .review-session-dictation-label, > .review-session-speaking)) {
-  justify-content: center;
+  justify-content: safe center;
 }
 
 .review-session-card-body > .review-session-prompt + *,
@@ -8560,14 +8535,9 @@ button.review-session-affordance {
 
   .review-card .review-session-scroll > .review-session-card {
     width: 100%;
-    height: auto;
-    margin-inline: 0;
-  }
-
-  .review-card .review-session-scroll > .review-session-card.is-flash,
-  .review-card .review-session-scroll > .review-session-card:has(.review-session-status) {
     height: 100%;
     max-height: 100%;
+    margin-inline: 0;
   }
 
   .review-session-card-body {

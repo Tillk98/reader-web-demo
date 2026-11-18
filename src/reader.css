@@ -3662,6 +3662,10 @@ html.split-motion::view-transition-new(split-text) {
   padding: 0;
 }
 
+.reader-footer:has(.mode-menu) {
+  z-index: 5;
+}
+
 .demo-settings-layer {
   position: fixed;
   inset: 0;

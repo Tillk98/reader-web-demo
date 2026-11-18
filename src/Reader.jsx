@@ -2934,18 +2934,14 @@ export default function Reader() {
     if (saved) {
       const sameWord = active?.phrase?.savedId === saved.id;
       if (sameWord && panelShowsWord) {
-        setActive((current) => (current ? { ...current, size: "small" } : current));
-        setShowMini((open) => !open);
+        if (!showMini && active?.size !== "large" && active?.size !== "medium") {
+          setShowMini(true);
+        }
         highlightSentenceTerm(paragraphIndex, tokenIndex);
         return;
       }
       if (sameWord && !panelOpenNow) {
-        if ((panelTabs || lynxOpen) && !showMini) {
-          setShowMini(true);
-          return;
-        }
-        setActive(null);
-        setShowMini(false);
+        if (!showMini) setShowMini(true);
         return;
       }
       openSaved(saved, paragraphIndex, tokenIndex, "small");
@@ -2961,18 +2957,14 @@ export default function Reader() {
       && active.paragraphIndex === paragraphIndex
       && active.tokenIndex === tokenIndex;
     if (sameWord && panelShowsWord) {
-      setActive((current) => (current ? { ...current, size: "small", mode: "meaning", statusMenu: false } : current));
-      setShowMini((open) => !open);
+      if (!showMini && active?.size !== "large" && active?.size !== "medium") {
+        setShowMini(true);
+      }
       highlightSentenceTerm(paragraphIndex, tokenIndex);
       return;
     }
     if (sameWord && !panelOpenNow) {
-      if ((panelTabs || lynxOpen) && !showMini) {
-        setShowMini(true);
-        return;
-      }
-      setActive(null);
-      setShowMini(false);
+      if (!showMini) setShowMini(true);
       return;
     }
     createLingQ(paragraphIndex, tokenIndex);

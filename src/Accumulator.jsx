@@ -112,14 +112,17 @@ function useFocusTrap(open, ref, initial) {
 function TermChips({ terms, onOpen }) {
   const shown = terms.slice(0, 4);
   const more = terms.length - shown.length;
+  if (!terms.length) return null;
   return (
     <button type="button" className="accumulator-card" onClick={onOpen}>
       <span className="accumulator-card-main">
         <span className="accumulator-card-copy">
           <span className="accumulator-card-heading">
             <span className="accumulator-count-line">
-              <span className="accumulator-count">{terms.length}</span>
-              {` blue ${terms.length === 1 ? "term" : "terms"} passed`}
+              <span>
+                <span className="accumulator-count">{terms.length}</span>
+                {` blue ${terms.length === 1 ? "term" : "terms"} passed`}
+              </span>
             </span>
             <span className="accumulator-card-chevron" aria-hidden="true">
               <ChevronRight size={16} strokeWidth={1.5} absoluteStrokeWidth />

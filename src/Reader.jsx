@@ -70,6 +70,7 @@ import {
   OutcomeDialog,
   ProgressPopover,
 } from "./Accumulator.jsx";
+import StatsPanel from "./StatsPanel.jsx";
 import {
   coinsForStatus,
   loadPassed,
@@ -1364,6 +1365,8 @@ export default function Reader() {
   const [savedPhrases, setSavedPhrases] = useState([]);
   const [snackbar, setSnackbar] = useState(null);
   const [passedKeys, setPassedKeys] = useState(loadPassed);
+  const [tickerCount, setTickerCount] = useState(null);
+  const [tickerLeaving, setTickerLeaving] = useState(null);
   const [accumulatorPrefs, setAccumulatorPrefs] = useState(loadPrefs);
   const [lessonCoins, setLessonCoins] = useState(0);
   const [blueCoins, setBlueCoins] = useState(0);
@@ -1377,6 +1380,9 @@ export default function Reader() {
   const [exitHint, setExitHint] = useState(false);
   const [swipeSeen, setSwipeSeen] = useState(loadSwipeSeen);
   const passedRef = useRef(passedKeys);
+  const tickerCountRef = useRef(null);
+  const tickerTargetRef = useRef(0);
+  const tickerTimersRef = useRef([]);
   const prefsRef = useRef(accumulatorPrefs);
   const phrasesRef = useRef([]);
   const pageBlueRef = useRef(new Map());
@@ -1481,6 +1487,7 @@ export default function Reader() {
   const [lynxOverlay, setLynxOverlay] = useState(false);
   const [lynxReturns, setLynxReturns] = useState(false);
   const [reviewCardMenu, setReviewCardMenu] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [reviewCard, setReviewCard] = useState(null);
   const [reviewFilters, setReviewFilters] = useState(defaultFilters);
   const [reviewFilterOpen, setReviewFilterOpen] = useState(false);
@@ -2002,6 +2009,43 @@ export default function Reader() {
     return present.size;
   }
 
+  function clearBlueTickerTimers() {
+    tickerTimersRef.current.forEach((id) => window.clearTimeout(id));
+    tickerTimersRef.current = [];
+  }
+
+  function setBlueTicker(value) {
+    const previous = tickerCountRef.current;
+    tickerCountRef.current = value;
+    if (value == null || previous == null || previous === value) setTickerLeaving(null);
+    else setTickerLeaving(previous);
+    setTickerCount(value);
+  }
+
+  function showBlueTicker(from, total) {
+    clearBlueTickerTimers();
+    tickerTargetRef.current = total;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const hold = 1600;
+    const step = 140;
+    const first = reduced ? total : Math.min(from, total - 1) + 1;
+    setBlueTicker(first);
+    if (!reduced) {
+      for (let next = first + 1; next <= total; next += 1) {
+        const delay = (next - first) * step;
+        tickerTimersRef.current.push(window.setTimeout(() => {
+          if (tickerTargetRef.current !== total) return;
+          setBlueTicker(next);
+        }, delay));
+      }
+    }
+    const steps = reduced ? 0 : total - first;
+    tickerTimersRef.current.push(window.setTimeout(() => {
+      if (tickerTargetRef.current !== total) return;
+      setBlueTicker(null);
+    }, steps * step + hold));
+  }
+
   function passBlueKeys(keys) {
     const unique = [...new Set(keys)];
     if (!unique.length) return;
@@ -2023,13 +2067,26 @@ export default function Reader() {
     }
     const fresh = present.filter((key) => !passedRef.current.includes(key));
     if (!fresh.length) return;
+    const previous = passedRef.current.length;
     const next = [...passedRef.current, ...fresh];
     passedRef.current = next;
     savePassed(next);
     setPassedKeys(next);
+    const from = tickerCountRef.current == null ? previous : tickerCountRef.current;
+    showBlueTicker(from, next.length);
   }
 
   passRef.current = passBlueKeys;
+
+  useEffect(() => () => clearBlueTickerTimers(), []);
+
+  useEffect(() => {
+    if (tickerCountRef.current == null) return;
+    if (passedKeys.length >= tickerCountRef.current) return;
+    clearBlueTickerTimers();
+    tickerTargetRef.current = 0;
+    setBlueTicker(null);
+  }, [passedKeys.length]);
 
   function continueProgress(prompt, snapshot) {
     setProgressPrompt(null);
@@ -2445,7 +2502,7 @@ export default function Reader() {
     if (!playerShown) return undefined;
     function onKeyDown(event) {
       if (event.key !== "Escape") return;
-      if (modeMenu || playerMenu || playMenu || chromeMenu || demoSettings || phrasePick || active || termMenu || reviewCard || lynxOpen || progressPrompt || termsList || readerSettings || celebration || exitHint) return;
+      if (statsOpen || modeMenu || playerMenu || playMenu || chromeMenu || demoSettings || phrasePick || active || termMenu || reviewCard || lynxOpen || progressPrompt || termsList || readerSettings || celebration || exitHint) return;
       if (theater) {
         runTheater(() => setTheater(false));
         return;
@@ -2454,7 +2511,24 @@ export default function Reader() {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [playerShown, theater, modeMenu, playerMenu, playMenu, chromeMenu, demoSettings, phrasePick, active, termMenu, reviewCard, lynxOpen, progressPrompt, termsList, readerSettings, celebration, exitHint]);
+  }, [playerShown, theater, statsOpen, modeMenu, playerMenu, playMenu, chromeMenu, demoSettings, phrasePick, active, termMenu, reviewCard, lynxOpen, progressPrompt, termsList, readerSettings, celebration, exitHint]);
+
+  useEffect(() => {
+    if (!statsOpen) return undefined;
+    function onPointerDown(event) {
+      if (event.target.closest?.(".stats-anchor, .stats-edit-popover, .stats-repair-layer, .stats-demo-menu, .accumulator-scrim")) return;
+      setStatsOpen(false);
+    }
+    function onKeyDown(event) {
+      if (event.key === "Escape" && !termsList) setStatsOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [statsOpen, termsList]);
 
   function sidebarIsOpen() {
     if (theater || mobile) return false;
@@ -4162,17 +4236,46 @@ export default function Reader() {
           </div>
 
           <div className="status-pills">
-            <button type="button" className="status-pill">
-              <span className="pill-stat">
-                <img src={streakIcon} alt="" width={13} height={18} />
-                <span>3 Day</span>
-              </span>
-              <span className="pill-stat">
-                <img src={coinIcon} alt="" width={16} height={16} />
-                <span>10/50</span>
-              </span>
-              <ChevronDown size={14} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
-            </button>
+            <span className="stats-anchor">
+              <button type="button" className={`status-pill${statsOpen ? " is-open" : ""}`} aria-expanded={statsOpen} onClick={() => setStatsOpen((open) => !open)}>
+                <span className="pill-stat">
+                  <img src={streakIcon} alt="" width={13} height={18} />
+                  <span>3 Day</span>
+                </span>
+                <span className="pill-stat">
+                  <span className="pill-coin-slot">
+                    <img
+                      src={coinIcon}
+                      alt=""
+                      width={16}
+                      height={16}
+                      className={tickerCount == null ? undefined : "is-hidden"}
+                      aria-hidden={tickerCount != null}
+                    />
+                    <span className={`pill-ticker-dot${tickerCount == null ? " is-hidden" : ""}`} aria-hidden={tickerCount == null}>
+                      <span className="pill-ticker-window">
+                        {tickerLeaving != null ? (
+                          <span className="pill-ticker-count is-leaving" key={`out-${tickerLeaving}`}>{tickerLeaving}</span>
+                        ) : null}
+                        <span className="pill-ticker-count" key={tickerCount}>{tickerCount}</span>
+                      </span>
+                    </span>
+                  </span>
+                  <span>10/50</span>
+                </span>
+                <ChevronDown size={14} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
+              </button>
+              {statsOpen ? (
+                <StatsPanel
+                  onClose={() => setStatsOpen(false)}
+                  terms={passedTerms}
+                  onOpenTerms={() => {
+                    listEnding.current = false;
+                    morphAccumulator(() => setTermsList("progress"));
+                  }}
+                />
+              ) : null}
+            </span>
 
             <button type="button" className="status-pill language-pill">
               <span className="pill-stat">

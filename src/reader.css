@@ -1352,10 +1352,12 @@ button.reader-menu-lesson:hover {
 }
 
 .lesson-area.is-side .complete-lesson {
-  left: calc(50% + 12px);
-  width: calc(50% - 12px);
-  max-width: 1000px;
-  transform: none;
+  grid-column: 3;
+  grid-row: 1;
+  left: 50%;
+  width: min(1000px, 100%);
+  max-width: none;
+  transform: translateX(-50%);
 }
 
 .complete-lesson-anchor {
@@ -1482,11 +1484,23 @@ button.reader-menu-lesson:hover {
 
 .lesson-area.has-video.is-side .page-column {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 52px minmax(0, 1fr);
   align-items: stretch;
   justify-content: stretch;
-  gap: 24px;
+  gap: 12px;
   max-width: none;
+}
+
+.page-control.is-with-text {
+  display: none;
+}
+
+.lesson-area.has-video.is-side > .page-control:first-child {
+  display: none;
+}
+
+.lesson-area.has-video.is-side .page-control.is-with-text {
+  display: flex;
 }
 
 .lesson-area.has-video.is-side .lesson-video {
@@ -1537,17 +1551,52 @@ button.reader-menu-lesson:hover {
 .lesson-area:not(.is-scroll):not(.is-sentence) .page-column {
   height: 100%;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
-.lesson-area:not(.is-scroll):not(.is-sentence) .page-text {
-  height: 100%;
+.lesson-area:not(.is-scroll) .page-text {
+  height: min(547px, 100%);
+  max-height: 547px;
   min-height: 0;
   overflow: hidden;
 }
 
-.reader.is-player-open:not(.is-theater) .lesson-area:not(.is-scroll):not(.is-sentence) .page-text {
-  padding-bottom: 24px;
+.reader.is-player-open:not(.is-theater) .lesson-area:not(.is-scroll) .page-text {
+  height: min(547px, calc(100% - 20px));
+  margin-bottom: 20px;
+  padding-bottom: 0;
+}
+
+.lesson-area.has-video:not(.is-side):not(.is-scroll) .page-text {
+  flex: 0 1 247px;
+  height: auto;
+  max-height: 247px;
+  margin-top: 20px;
+  padding-top: 0;
+}
+
+.reader.is-player-open:not(.is-theater) .lesson-area.has-video:not(.is-side):not(.is-scroll) .page-text {
+  flex: 0 1 247px;
+  height: auto;
+  max-height: 247px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.lesson-area.has-video.is-side:not(.is-scroll) .page-column {
+  gap: 12px;
+}
+
+.lesson-area.has-video.is-side:not(.is-scroll) .page-text {
+  align-self: start;
+  height: min(547px, 100%);
+  max-height: 547px;
+}
+
+.reader.is-player-open:not(.is-theater) .lesson-area.has-video.is-side:not(.is-scroll) .page-text {
+  height: min(547px, calc(100% - 20px));
+  margin-bottom: 20px;
+  align-self: start;
 }
 
 .page-text p {
@@ -1577,13 +1626,161 @@ button.reader-menu-lesson:hover {
   margin-bottom: 0;
 }
 
+.lesson-area:not(.is-scroll):not(.is-sentence) .page-flow {
+  width: calc(100% + 16px);
+  margin-right: -8px;
+  margin-left: -8px;
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+.page-text .scroll-play-target {
+  margin-right: -8px;
+  margin-left: -8px;
+  padding: 8px;
+  border-radius: 16px;
+}
+
+.lesson-area:not(.is-scroll):not(.is-sentence) .page-text {
+  position: relative;
+  z-index: 2;
+}
+
+.page-play-fill {
+  position: absolute;
+  z-index: 1;
+  border-radius: 16px;
+  background: #f1f3f4;
+  pointer-events: none;
+}
+
+.lesson-area:not(.is-scroll):not(.is-sentence) .scroll-play-target.is-current {
+  background: none;
+}
+
+.page-text .scroll-play-target.is-selectable {
+  cursor: pointer;
+}
+
+.page-text p.scroll-play-target,
+.page-text .scroll-sentence.scroll-play-target {
+  margin-bottom: calc(var(--lesson-line, 36px) - 16px);
+}
+
+.page-text p.scroll-play-target:last-child,
+.page-text .scroll-sentence.scroll-play-target:last-child {
+  margin-bottom: 0;
+}
+
+.scroll-play-target.is-current {
+  background: #f1f3f4;
+}
+
+.scroll-sync {
+  position: absolute;
+  z-index: 4;
+  bottom: 12px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid #f1f3f4;
+  border-radius: 6px;
+  background: #f1f3f4;
+  box-shadow: var(--shadow-control);
+  color: var(--fg-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  cursor: pointer;
+  transform: translateX(-50%);
+  opacity: 0;
+  translate: 0 8px;
+  pointer-events: none;
+  transition: opacity 200ms ease, translate 200ms ease;
+}
+
+.scroll-sync.is-in {
+  opacity: 1;
+  translate: 0 0;
+  pointer-events: auto;
+}
+
+.lesson-area.has-video.is-side.is-scroll .scroll-sync {
+  left: calc(75% + 19px);
+}
+
+@media (min-width: 768px) {
+  .scroll-sync {
+    bottom: 16px;
+  }
+}
+
+.lesson-area:not(.is-scroll) .scroll-sync {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.lesson-area:not(.is-scroll) .scroll-sync.is-above-finish {
+  bottom: 70px;
+}
+
+@media (min-width: 768px) {
+  .lesson-area:not(.is-scroll) .scroll-sync.is-above-finish {
+    bottom: 74px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .lesson-area:not(.is-scroll) .scroll-sync {
+    left: max(0px, calc((100% - 1000px) / 2));
+    right: auto;
+    transform: none;
+  }
+
+  .lesson-area:not(.is-scroll) .scroll-sync.is-forward {
+    left: auto;
+    right: max(0px, calc((100% - 1000px) / 2));
+  }
+
+  .lesson-area.has-video.is-side:not(.is-scroll) .scroll-sync,
+  .lesson-area.has-video.is-side:not(.is-scroll) .scroll-sync.is-forward {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .lesson-area.has-video.is-side:not(.is-scroll) .scroll-sync {
+    left: max(0px, calc((100% - 1000px) / 2));
+    right: auto;
+    transform: none;
+  }
+
+  .lesson-area.has-video.is-side:not(.is-scroll) .scroll-sync.is-forward {
+    left: auto;
+    right: max(0px, calc((100% - 1000px) / 2));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-sync {
+    translate: 0 0;
+    transition: none;
+  }
+}
+
 .lesson-video {
   position: relative;
   flex-shrink: 0;
-  width: min(560px, calc(100% - 16px));
-  max-height: 315px;
+  width: min(490px, calc(100% - 16px));
+  max-height: 276px;
   margin: 0 auto;
-  aspect-ratio: 560 / 315;
+  aspect-ratio: 490 / 276;
   overflow: hidden;
   border-radius: 12px;
   background: #0a0a0a;
@@ -2084,8 +2281,29 @@ html.split-motion::view-transition-new(split-text) {
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.lesson-area.is-scroll .page-text,
+.lesson-area:not(.is-scroll):not(.is-sentence) .page-text,
+.lesson-area.has-video.is-side:not(.is-scroll):not(.is-sentence) .page-text {
+  width: min(1016px, calc(100% + 16px));
+  max-width: none;
+  margin-right: max(-8px, calc((100% - 1016px) / 2));
+  margin-left: max(-8px, calc((100% - 1016px) / 2));
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
 .lesson-area.is-scroll .page-text {
+  height: 100%;
+  max-height: none;
   padding-bottom: 0;
+  overflow: auto;
+}
+
+.lesson-area.has-video.is-side.is-scroll .page-text {
+  width: min(1016px, calc(100% + 16px));
+  max-width: none;
+  margin-right: max(-8px, calc((100% - 1016px) / 2));
+  margin-left: max(-8px, calc((100% - 1016px) / 2));
 }
 
 .lesson-area.is-scroll.has-video .page-text {
@@ -2118,8 +2336,22 @@ html.split-motion::view-transition-new(split-text) {
 .lesson-area.is-sentence .page-text {
   display: flex;
   flex-direction: column;
+  width: min(1016px, calc(100% + 16px));
+  max-width: none;
+  margin-right: max(-8px, calc((100% - 1016px) / 2));
+  margin-left: max(-8px, calc((100% - 1016px) / 2));
+  padding-right: 8px;
+  padding-left: 8px;
   overflow: auto;
   padding-bottom: 0;
+}
+
+.page-text p.sentence-original.is-selectable {
+  cursor: pointer;
+}
+
+.page-text p.sentence-original.is-current {
+  background: #f1f3f4;
 }
 
 .lesson-area.is-sentence.has-video .page-column {
@@ -2127,7 +2359,7 @@ html.split-motion::view-transition-new(split-text) {
 }
 
 .lesson-area.has-video.is-side .page-column {
-  gap: 24px;
+  gap: 12px;
 }
 
 .lesson-area.is-sentence.has-video .page-text {
@@ -2135,6 +2367,12 @@ html.split-motion::view-transition-new(split-text) {
 }
 
 .lesson-area.is-sentence.has-video.is-side .page-text {
+  width: calc(100% + 16px);
+  max-width: none;
+  margin-right: -8px;
+  margin-left: -8px;
+  padding-right: 8px;
+  padding-left: 8px;
   padding-bottom: 0;
 }
 
@@ -2215,6 +2453,13 @@ html.split-motion::view-transition-new(split-text) {
 .page-text p.sentence-original,
 .page-text p.sentence-translation {
   margin: 0;
+}
+
+.page-text p.sentence-original {
+  margin-right: -8px;
+  margin-left: -8px;
+  padding: 8px;
+  border-radius: 16px;
 }
 
 .sentence-original {
@@ -4819,15 +5064,38 @@ button:focus-visible {
   }
 
   .lesson-area.has-video.is-side .lesson-video {
-    width: min(560px, calc(100% - 16px));
+    width: min(490px, calc(100% - 16px));
     max-width: none;
-    max-height: 315px;
+    max-height: 276px;
     margin: 0 auto;
   }
 
   .lesson-area.has-video.is-side .page-text {
     width: min(1000px, 100%);
     margin: 0 auto;
+  }
+
+  .lesson-area.has-video.is-side:not(.is-scroll) .page-column {
+    gap: 0;
+  }
+
+  .lesson-area.has-video.is-side:not(.is-scroll) .page-text,
+  .reader.is-player-open:not(.is-theater) .lesson-area.has-video.is-side:not(.is-scroll) .page-text {
+    flex: 0 1 247px;
+    height: auto;
+    max-height: 247px;
+    min-height: 0;
+    margin-top: 20px;
+    padding-top: 0;
+    align-self: stretch;
+  }
+
+  .reader.is-player-open:not(.is-theater) .lesson-area.has-video.is-side:not(.is-scroll) .page-text {
+    margin-bottom: 20px;
+  }
+
+  .lesson-area.has-video.is-side .page-control.is-with-text {
+    display: none;
   }
 
   .lesson-area.is-sentence.has-video.is-side .page-text {

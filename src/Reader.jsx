@@ -1,8 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync, createPortal } from "react-dom";
 import {
+  ArrowDown,
   ArrowDownNarrowWide,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
   ArrowUpRight,
+  AudioLines,
   BellMinus,
   BellPlus,
   BookCheck,
@@ -129,11 +134,16 @@ const PARAGRAPHS = [
 ];
 
 const SCROLL_PARAGRAPHS = [];
-// Prototype lesson only. These sentences are joined in By paragraphs so the sample reads as paragraphs.
+// Prototype lesson only. A few sentences stay joined so By paragraphs reads as paragraphs, not as one sentence per block.
 const PARAGRAPH_GROUPS = [
-  [0, 1, 2, 3, 4, 5, 6],
-  [7, 8, 9, 10],
-  [11, 12, 13, 14, 15, 16],
+  [0, 1],
+  [2, 3],
+  [4, 5, 6],
+  [7, 8],
+  [9, 10],
+  [11, 12],
+  [13, 14],
+  [15, 16],
 ];
 
 const PAGE_COUNT = PARAGRAPHS.length;
@@ -1151,6 +1161,37 @@ function TermStatusMenu({ anchorKey, status, onStatus, onClose }) {
 
 const AUDIO_DURATION = 20 * 60 + 45;
 
+function scrollUnitTime(startIndex) {
+  const lengths = PARAGRAPHS.map((text) => text.length);
+  const total = lengths.reduce((sum, length) => sum + length, 0) || 1;
+  const before = lengths.slice(0, startIndex).reduce((sum, length) => sum + length, 0);
+  return (before / total) * AUDIO_DURATION;
+}
+
+function scrollUnitForTime(layout, time) {
+  const units = layout === "paragraphs"
+    ? PARAGRAPH_GROUPS
+    : PARAGRAPHS.map((_, index) => [index]);
+  let match = units[0][0];
+  for (const indexes of units) {
+    if (scrollUnitTime(indexes[0]) <= time) match = indexes[0];
+    else break;
+  }
+  return match;
+}
+
+function contentTopWithin(node, root) {
+  let top = 0;
+  let current = node;
+  while (current && current !== root) {
+    top += current.offsetTop;
+    const parent = current.offsetParent;
+    if (!parent || parent === current) break;
+    current = parent;
+  }
+  return top;
+}
+
 function formatAudioTime(seconds) {
   const rounded = Math.max(0, Math.round(seconds));
   const minutes = Math.floor(rounded / 60);
@@ -1357,6 +1398,9 @@ export default function Reader() {
   const termsRef = useRef(null);
   const footerRef = useRef(null);
   const pressRef = useRef({ suppressClick: false });
+  const scrollSeekLock = useRef(false);
+  const revealTermRef = useRef(null);
+  const wordPopupOpenRef = useRef(false);
   const phraseIdRef = useRef(1);
   const [lesson, setLesson] = useState(LESSON);
   const [active, setActive] = useState(null);
@@ -1466,6 +1510,12 @@ export default function Reader() {
     };
   }, [playerOpen, lessonHasVideo, theater, wide, mode]);
   const [audioTime, setAudioTime] = useState(3 * 60 + 30);
+  const [revealPlaying, setRevealPlaying] = useState(0);
+  const [pageFill, setPageFill] = useState(null);
+  const [playingOutOfView, setPlayingOutOfView] = useState(false);
+  const [syncPointsUp, setSyncPointsUp] = useState(false);
+  const [syncAnchor, setSyncAnchor] = useState(null);
+  const syncAnchorLock = useRef(false);
   const [scrubbing, setScrubbing] = useState(false);
   const [loopAudio, setLoopAudio] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
@@ -1572,6 +1622,12 @@ export default function Reader() {
     textLayoutRef.current = textLayout;
     if (pageStarts !== null) setPageStarts(null);
   }
+  const pageFrameRef = useRef("");
+  const pageFrameKey = `${playerOpen}|${media}|${videoClosed}|${split}`;
+  if (pageFrameRef.current !== pageFrameKey) {
+    pageFrameRef.current = pageFrameKey;
+    if (pageStarts !== null) setPageStarts(null);
+  }
 
   useLayoutEffect(() => {
     if (mode !== "page" || pageStarts !== null || !textRef.current) return;
@@ -1581,22 +1637,34 @@ export default function Reader() {
     const limit = textRef.current.clientHeight - (parseFloat(box.paddingTop) || 0) - (parseFloat(box.paddingBottom) || 0);
     if (limit <= 0) return;
     const lineBoxes = (node) => {
-      const lineHeight = parseFloat(getComputedStyle(node).lineHeight);
+      const style = getComputedStyle(node);
+      const lineHeight = parseFloat(style.lineHeight);
       const top = node.offsetTop;
-      const height = node.offsetHeight;
-      if (!lineHeight) return [{ top, bottom: top + height }];
-      const count = Math.max(1, Math.round(height / lineHeight));
-      return Array.from({ length: count }, (_, index) => ({
-        top: top + index * lineHeight,
-        bottom: top + (index + 1) * lineHeight,
-      }));
+      const padTop = parseFloat(style.paddingTop) || 0;
+      const padBottom = parseFloat(style.paddingBottom) || 0;
+      const contentHeight = Math.max(0, node.offsetHeight - padTop - padBottom);
+      if (!lineHeight) return [{ top, bottom: top + node.offsetHeight }];
+      const count = Math.max(1, Math.round(contentHeight / lineHeight));
+      return Array.from({ length: count }, (_, index) => {
+        const lineTop = top + padTop + index * lineHeight;
+        return {
+          top: index === 0 ? top : lineTop,
+          bottom: lineTop + lineHeight + (index === count - 1 ? padBottom : 0),
+        };
+      });
     };
     const sentences = nodes.map((node) => {
       const original = showTranslation ? node.querySelector(":scope > p:not(.sentence-translation)") : node;
       const lines = lineBoxes(original || node);
+      const shell = original !== node && node.classList.contains("scroll-play-target") ? getComputedStyle(node) : null;
+      const shellPadTop = shell ? parseFloat(shell.paddingTop) || 0 : 0;
+      const shellPadBottom = shell ? parseFloat(shell.paddingBottom) || 0 : 0;
+      if (shell && lines.length) lines[0].top -= shellPadTop;
       const translation = showTranslation ? node.querySelector(":scope > .sentence-translation") : null;
       const translationTop = translation ? translation.offsetTop : lines[lines.length - 1].bottom;
-      const translationBottom = translation ? translation.offsetTop + translation.offsetHeight : translationTop;
+      const translationBottom = translation
+        ? translation.offsetTop + translation.offsetHeight + shellPadBottom
+        : translationTop;
       const translationLine = translation ? (parseFloat(getComputedStyle(translation).lineHeight) || 20) : 0;
       return { lines, translationTop, translationBottom, translationLine };
     });
@@ -1645,7 +1713,11 @@ export default function Reader() {
       if (last.top < from - 0.5) return bottom;
       return Math.max(bottom, sentence.translationBottom);
     }, from);
-    const lastLimit = Math.max(36, limit - COMPLETE_BLOCK);
+    const lessonBox = textRef.current.closest(".lesson-area")?.getBoundingClientRect();
+    const textBox = textRef.current.getBoundingClientRect();
+    const gapBelow = lessonBox ? Math.max(0, lessonBox.bottom - textBox.bottom) : 0;
+    const finishOverlap = Math.max(0, COMPLETE_BLOCK - gapBelow);
+    const lastLimit = Math.max(36, limit - finishOverlap);
     let safety = 0;
     while (safety < 30 && contentBottom(starts[starts.length - 1]) - starts[starts.length - 1] > lastLimit + 0.5) {
       safety += 1;
@@ -2307,6 +2379,61 @@ export default function Reader() {
     });
     return () => observer.disconnect();
   }, [theater, mode, lesson, textLayout, showTranslation, textSize]);
+
+  useLayoutEffect(() => {
+    if (theater || (mode !== "scroll" && mode !== "page") || !textRef.current) {
+      setPlayingOutOfView(false);
+      return undefined;
+    }
+    const root = textRef.current;
+    let showTimer = 0;
+    function update() {
+      const target = root.querySelector(".scroll-play-target.is-current");
+      if (!target) {
+        window.clearTimeout(showTimer);
+        setPlayingOutOfView(false);
+        return;
+      }
+      const rootBox = root.getBoundingClientRect();
+      const box = target.getBoundingClientRect();
+      const center = (box.top + box.bottom) / 2;
+      const rootCenter = (rootBox.top + rootBox.bottom) / 2;
+      let out = false;
+      if (mode === "page" && pageStarts) {
+        const pageTop = pageStarts[pageIndex] ?? 0;
+        const pageEnd = pageStarts[pageIndex + 1] ?? Number.POSITIVE_INFINITY;
+        const contentTop = box.top - rootBox.top + pageTop;
+        const mark = syncAnchor ?? contentTop;
+        const startHere = mark >= pageTop - 0.5 && mark < pageEnd - 0.5;
+        setSyncPointsUp(mark < pageTop);
+        out = !startHere;
+      } else {
+        setSyncPointsUp(center < rootCenter);
+        const visible = Math.min(box.bottom, rootBox.bottom) - Math.max(box.top, rootBox.top);
+        const needed = Math.min(box.height, 48);
+        out = visible < needed - 0.5;
+      }
+      window.clearTimeout(showTimer);
+      if (!out) {
+        setPlayingOutOfView(false);
+        return;
+      }
+      if (mode === "page") {
+        setPlayingOutOfView(true);
+        return;
+      }
+      showTimer = window.setTimeout(() => setPlayingOutOfView(true), 120);
+    }
+    update();
+    root.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(root);
+    return () => {
+      window.clearTimeout(showTimer);
+      root.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [theater, mode, audioTime, textLayout, showTranslation, textSize, playerOpen, split, pageIndex, pageStarts, syncAnchor]);
 
   useEffect(() => {
     if (!reviewCardMenu) return undefined;
@@ -3947,12 +4074,188 @@ export default function Reader() {
     setActive(null);
   }
 
+  useEffect(() => {
+    function onPointerDown(event) {
+      const popup = wordPopupOpenRef.current;
+      const insidePopup = event.target.closest?.(".widget-small, .widget-medium, .widget-large, .phrase-error, .word");
+      scrollSeekLock.current = Boolean(popup && !insidePopup);
+    }
+    function onClick() {
+      scrollSeekLock.current = false;
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("click", onClick);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("click", onClick);
+    };
+  }, []);
+
+  function syncPlayingText() {
+    if (mode === "sentence") {
+      setSentenceIndex(scrollUnitForTime("sentences", audioTime));
+      return;
+    }
+    const root = textRef.current;
+    const target = root?.querySelector(".scroll-play-target.is-current");
+    if (!root || !target) return;
+    const rootBox = root.getBoundingClientRect();
+    const targetBox = target.getBoundingClientRect();
+    if (mode === "page" && pageStarts) {
+      const offset = pageStarts[pageIndex] ?? 0;
+      const start = targetBox.top - rootBox.top + offset;
+      const mark = syncAnchor ?? start;
+      let next = 0;
+      pageStarts.forEach((startAt, index) => {
+        if (startAt <= mark + 0.5) next = index;
+      });
+      setPageIndex(next);
+      return;
+    }
+    const top = root.scrollTop + (targetBox.top - rootBox.top) - (root.clientHeight - targetBox.height) / 2;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    root.scrollTo({ top: Math.max(0, top), behavior: reduced ? "auto" : "smooth" });
+  }
+
+  function playFromScrollUnit(startIndex) {
+    if (!playerShown) return;
+    if (mode === "page" && pageStarts && textRef.current) {
+      const node = textRef.current.querySelector(`[data-page-paragraph="${startIndex}"]`);
+      const pageTop = pageStarts[pageIndex] ?? 0;
+      const blockStart = node ? contentTopWithin(node, textRef.current) : pageTop;
+      syncAnchorLock.current = true;
+      setSyncAnchor(blockStart < pageTop - 0.5 ? pageTop : null);
+    } else {
+      syncAnchorLock.current = true;
+      setSyncAnchor(null);
+    }
+    const nextTime = scrollUnitTime(startIndex);
+    syncAnchorLock.current = nextTime !== audioTime;
+    setAudioTime(nextTime);
+  }
+
+  useEffect(() => {
+    if (syncAnchorLock.current) {
+      syncAnchorLock.current = false;
+      return;
+    }
+    setSyncAnchor(null);
+  }, [audioTime, mode]);
+
   function startFromHere() {
     if (!active) return;
-    const paragraphIndex = active.phrase?.start?.paragraphIndex ?? active.paragraphIndex;
-    if (mode === "sentence") setSentenceIndex(paragraphIndex);
-    startPlayback(!lessonHasVideo || media === "audio" ? "audio" : "video");
+    const paragraphIndex = active.paragraphIndex;
+    const tokenIndex = active.tokenIndex;
+    revealTermRef.current = { paragraphIndex, tokenIndex };
+    setActive(null);
+    setRevealPlaying((count) => count + 1);
+    const asVideo = lessonHasVideo;
+    transition(() => {
+      setAudioTime(scrollUnitTime(paragraphIndex));
+      if (mode === "sentence") setSentenceIndex(paragraphIndex);
+      if (theater) setTheaterLine({ paragraphIndex, start: 0, end: (lesson[paragraphIndex] || []).length });
+      setPlayMenu(false);
+      setMedia(asVideo ? "video" : "audio");
+      if (asVideo) setVideoClosed(false);
+      setPlayerShown(true);
+      setPlayerOpen(!mobile);
+      setPlaying(true);
+    });
   }
+
+  useLayoutEffect(() => {
+    const target = revealTermRef.current;
+    if (!target) return undefined;
+    if (mode === "sentence") {
+      revealTermRef.current = null;
+      return undefined;
+    }
+    if (mode === "page" && !pageStarts) return undefined;
+    const root = textRef.current;
+    const word = root?.querySelector(`[data-word-id="${target.paragraphIndex}-${target.tokenIndex}"]`);
+    if (!root || !word) return undefined;
+    if (mode === "page") {
+      const y = contentTopWithin(word, root);
+      let page = 0;
+      pageStarts.forEach((start, index) => {
+        if (start <= y + 4) page = index;
+      });
+      if (page !== pageIndex) {
+        setPageIndex(page);
+        return undefined;
+      }
+    } else {
+      const rootBox = root.getBoundingClientRect();
+      const box = word.getBoundingClientRect();
+      const top = root.scrollTop + (box.top - rootBox.top) - (root.clientHeight - box.height) / 2;
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      root.scrollTo({ top: Math.max(0, top), behavior: reduced ? "auto" : "smooth" });
+    }
+    let cancelled = false;
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!cancelled) revealTermRef.current = null;
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [revealPlaying, pageStarts, pageIndex, mode, theater, textLayout, showTranslation, playerOpen, textSize, media, videoClosed]);
+
+  useLayoutEffect(() => {
+    if (mode !== "page" || theater || !playerShown) {
+      setPageFill(null);
+      return undefined;
+    }
+    const root = textRef.current;
+    const column = root?.closest(".page-column");
+    if (!root || !column) {
+      setPageFill(null);
+      return undefined;
+    }
+    function place() {
+      const target = root.querySelector(".scroll-play-target.is-current");
+      if (!target) {
+        setPageFill(null);
+        return;
+      }
+      const columnBox = column.getBoundingClientRect();
+      const flow = root.querySelector(".page-flow");
+      const clip = (flow || root).getBoundingClientRect();
+      const box = target.getBoundingClientRect();
+      if (box.bottom <= clip.top + 0.5 || box.top >= clip.bottom - 0.5) {
+        setPageFill(null);
+        return;
+      }
+      const pad = parseFloat(getComputedStyle(target).paddingTop) || 8;
+      const top = (box.top < clip.top - 0.5 ? clip.top - pad : box.top) - columnBox.top;
+      const bottom = (box.bottom > clip.bottom + 0.5 ? clip.bottom + pad : box.bottom) - columnBox.top;
+      const next = {
+        top,
+        left: box.left - columnBox.left,
+        width: box.width,
+        height: Math.max(0, bottom - top),
+      };
+      setPageFill((current) => (
+        current
+        && Math.abs(current.top - next.top) < 0.5
+        && Math.abs(current.left - next.left) < 0.5
+        && Math.abs(current.width - next.width) < 0.5
+        && Math.abs(current.height - next.height) < 0.5
+          ? current
+          : next
+      ));
+    }
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(root);
+    window.addEventListener("resize", place);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", place);
+    };
+  }, [mode, theater, playerShown, audioTime, pageIndex, pageStarts, textLayout, showTranslation, textSize, playerOpen, split, media, videoClosed]);
 
   function openTranslate(text) {
     const url = `https://translate.google.com/?sl=de&tl=en&text=${encodeURIComponent(text)}&op=translate`;
@@ -3982,6 +4285,21 @@ export default function Reader() {
   const showVideo = lessonHasVideo && media === "video" && !videoClosed;
   const videoFrame = playing ? (videoChrome ? videoPlayingUi : videoPlaying) : videoPausedUi;
   const lynxInPanel = lynxOpen && (!lynxOverlay || lynxReturns);
+  const smallPopupOpen = Boolean(
+    activeToken
+    && active.size !== "medium"
+    && active.size !== "large"
+    && (panelTabs
+      ? showMini && (!panelVisible || panelTab === "term")
+      : ((lynxInPanel && !lynxOverlay) ? showMini : (!sidePanel || showMini)))
+  );
+  const largePopupOpen = Boolean(
+    activeToken
+    && active.size === "large"
+    && !reviewEdit
+    && (panelTabs ? !panelVisible && !sidePanel : !wordDockedInSidebar())
+  );
+  wordPopupOpenRef.current = Boolean(activeToken && (active.size === "medium" || smallPopupOpen || largePopupOpen));
   const sideColumn = panelTabs
     ? !theater && !mobile && panelVisible
     : !mobile && (lynxInPanel || (!theater && (reviewDocked || (sidePanel && !!activeToken))));
@@ -4464,6 +4782,26 @@ export default function Reader() {
               )}
             </div>
           ) : null}
+          <div className="page-control is-with-text">
+            <button
+              type="button"
+              className="page-button"
+              aria-label={mode === "sentence" ? "Previous sentence" : "Previous page"}
+              onClick={() => {
+                if (mode === "sentence") setSentenceIndex((index) => Math.max(0, index - 1));
+                if (mode === "page") setPageIndex((index) => Math.max(0, index - 1));
+              }}
+            >
+              <ChevronLeft size={16} strokeWidth={1.36} absoluteStrokeWidth />
+            </button>
+          </div>
+          {pageFill ? (
+            <div
+              className="page-play-fill"
+              aria-hidden="true"
+              style={{ top: pageFill.top, left: pageFill.left, width: pageFill.width, height: pageFill.height }}
+            />
+          ) : null}
           <article className="page-text" lang="de" ref={textRef}>
             {theater && theaterLine ? (
               <div className="theater-caption">
@@ -4481,7 +4819,15 @@ export default function Reader() {
               <div className="sentence-view">
                 <div className="sentence-stage">
                 <div className="sentence-block">
-                  <p className="sentence-original">{renderParagraph(sentenceIndex)}</p>
+                  <p
+                    className={`sentence-original${playerShown && scrollUnitForTime("sentences", audioTime) === sentenceIndex ? " is-current" : ""}${playerShown ? " is-selectable" : ""}`}
+                    onClick={(event) => {
+                      if (!playerShown || phrasePick || event.target.closest?.(".word") || scrollSeekLock.current) return;
+                      playFromScrollUnit(sentenceIndex);
+                    }}
+                  >
+                    {renderParagraph(sentenceIndex)}
+                  </p>
                 </div>
                 <div className="sentence-below">
                   {sentenceShowsTranslation ? <p className="sentence-translation">{sentenceFor(lesson, sentenceIndex, 0).translation}</p> : null}
@@ -4600,7 +4946,11 @@ export default function Reader() {
               return (
               <div
                 className="page-flow"
-                style={mode === "page" && pageEnd != null ? { height: pageEnd - pageOffset, overflow: "hidden" } : undefined}
+                style={mode === "page" ? {
+                  height: pageEnd != null ? pageEnd - pageOffset : undefined,
+                  maxHeight: "100%",
+                  overflow: "hidden",
+                } : undefined}
               >
               <div
                 className="page-flow-shift"
@@ -4608,16 +4958,25 @@ export default function Reader() {
               >
               {units.map((indexes) => {
               const key = indexes[0];
+              const currentKey = scrollUnitForTime(textLayout, audioTime);
+              const playTarget = mode === "scroll" || mode === "page" ? {
+                className: `scroll-play-target${playerShown && key === currentKey ? " is-current" : ""}${playerShown ? " is-selectable" : ""}`,
+                onClick: (event) => {
+                  if (!playerShown || phrasePick || event.target.closest?.(".word") || scrollSeekLock.current) return;
+                  playFromScrollUnit(key);
+                },
+              } : {};
               if (textLayout === "sentences") {
                 const paragraphIndex = indexes[0];
                 const nodes = renderParagraph(paragraphIndex);
                 if (showTranslation) {
                   return (
                     <div
-                      className="scroll-sentence"
+                      className={`scroll-sentence${playTarget.className ? ` ${playTarget.className}` : ""}`}
                       key={key}
                       data-sentence={paragraphIndex}
                       data-page-paragraph={mode === "page" ? paragraphIndex : undefined}
+                      onClick={playTarget.onClick}
                     >
                       <p>{nodes}</p>
                       <p className="sentence-translation">{sentenceFor(lesson, paragraphIndex, 0).translation}</p>
@@ -4625,13 +4984,13 @@ export default function Reader() {
                   );
                 }
                 return (
-                  <p key={key} data-sentence={paragraphIndex} data-page-paragraph={mode === "page" ? paragraphIndex : undefined}>
+                  <p key={key} data-sentence={paragraphIndex} data-page-paragraph={mode === "page" ? paragraphIndex : undefined} {...playTarget}>
                     {nodes}
                   </p>
                 );
               }
               return (
-                <p key={key} data-sentence={key} data-page-paragraph={mode === "page" ? key : undefined}>
+                <p key={key} data-sentence={key} data-page-paragraph={mode === "page" ? key : undefined} {...playTarget}>
                   {indexes.map((paragraphIndex, index) => (
                     <span key={paragraphIndex}>
                       {index > 0 ? " " : null}
@@ -4740,6 +5099,25 @@ export default function Reader() {
               <span className="status-snackbar-undo">
                 <Undo2 size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
               </span>
+            </button>
+          ) : null}
+          {(mode === "scroll" || mode === "page" || mode === "sentence") && !theater ? (
+            <button
+              type="button"
+              className={`scroll-sync${playing && (mode === "sentence" ? scrollUnitForTime("sentences", audioTime) !== sentenceIndex : playingOutOfView) ? " is-in" : ""}${(mode === "page" || mode === "sentence") ? ((mode === "sentence" ? scrollUnitForTime("sentences", audioTime) < sentenceIndex : syncPointsUp) ? " is-back" : " is-forward") : ""}${(mode === "page" || mode === "sentence") && showComplete ? " is-above-finish" : ""}`}
+              onClick={syncPlayingText}
+            >
+              {(mode === "page" || mode === "sentence") && (mode === "sentence" ? scrollUnitForTime("sentences", audioTime) < sentenceIndex : syncPointsUp)
+                ? <ArrowLeft size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
+                : <AudioLines size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />}
+              Sync
+              {(mode === "page" || mode === "sentence") && (mode === "sentence" ? scrollUnitForTime("sentences", audioTime) < sentenceIndex : syncPointsUp)
+                ? <AudioLines size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
+                : (mode === "page" || mode === "sentence")
+                  ? <ArrowRight size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
+                  : syncPointsUp
+                    ? <ArrowUp size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
+                    : <ArrowDown size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />}
             </button>
           ) : null}
           </div>

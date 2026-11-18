@@ -1419,6 +1419,7 @@ export default function Reader() {
   const [listEdited, setListEdited] = useState(false);
   const [termsList, setTermsList] = useState(null);
   const [readerSettings, setReaderSettings] = useState(false);
+  const [fullStatusBar, setFullStatusBar] = useState(true);
   const [celebration, setCelebration] = useState(null);
   const [exitHint, setExitHint] = useState(false);
   const [swipeSeen, setSwipeSeen] = useState(loadSwipeSeen);
@@ -3192,32 +3193,34 @@ export default function Reader() {
     window.addEventListener("pointercancel", endPress);
   }
 
+  function savePendingPhrase(status, meaning) {
+    if (!active?.phrase || active.phrase.savedId || active.phrase.invalid) return;
+    const id = phraseIdRef.current;
+    phraseIdRef.current += 1;
+    const appearance = STATUS_APPEARANCE[status] || STATUS_APPEARANCE.New;
+    const chosen = meaning || active.phrase.suggestions?.[0] || "";
+    const saved = {
+      id,
+      start: active.phrase.start,
+      end: active.phrase.end,
+      text: active.phrase.text,
+      meaning: chosen,
+      meanings: chosen ? [chosen] : [],
+      status: status === "New" ? "New" : status,
+      ...appearance,
+    };
+    setSavedPhrases((current) => [...current, saved]);
+    setActive(null);
+    showSnackbar(status, () => {
+      setSavedPhrases((current) => current.filter((phrase) => phrase.id !== id));
+    });
+  }
+
   function chooseMeaning(meaning) {
     if (!active) return;
     const keepOpen = sidePanel || active.size === "large";
     if (active.phrase && !active.phrase.savedId && !active.phrase.invalid) {
-      const id = phraseIdRef.current;
-      phraseIdRef.current += 1;
-      const saved = {
-        id,
-        start: active.phrase.start,
-        end: active.phrase.end,
-        text: active.phrase.text,
-        meaning,
-        meanings: [meaning],
-        status: "New",
-        kind: "lingq",
-        level: 1,
-      };
-      setSavedPhrases((current) => [...current, saved]);
-      setActive(keepOpen ? {
-        ...active,
-        phrase: { ...saved, savedId: id, invalid: false, suggestions: [] },
-      } : null);
-      showSnackbar("New", () => {
-        setSavedPhrases((current) => current.filter((phrase) => phrase.id !== id));
-        setActive((current) => (current?.phrase?.savedId === id ? null : current));
-      });
+      savePendingPhrase("New", meaning);
       return;
     }
     const token = lesson[active.paragraphIndex][active.tokenIndex];
@@ -3277,7 +3280,7 @@ export default function Reader() {
   function handleStatusChange(status) {
     if (!active) return;
     if (active.phrase && !active.phrase.savedId) {
-      if (sidePanel) setShowMini(false);
+      if (!active.phrase.invalid) savePendingPhrase(status);
       else setActive(null);
       return;
     }
@@ -5049,6 +5052,7 @@ export default function Reader() {
                 onClose={() => setActive(null)}
                 onOpenLarge={openLarge}
                 hideChevron={panelTabs ? panelVisible : wordDockedInSidebar()}
+                fullStatusBar={fullStatusBar}
               />
             ) : null}
           </article>
@@ -5561,6 +5565,8 @@ export default function Reader() {
       <AutoMoveSettings
         open={readerSettings}
         prefs={accumulatorPrefs}
+        fullStatusBar={fullStatusBar}
+        onFullStatusBar={setFullStatusBar}
         onAutoMove={(on) => {
           setAccumulatorPrefs((current) => {
             const next = { ...current, autoMove: on };

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowUpRight, BookA, ChevronRight, Languages, Play, Plus, Tags, TextCursorInput, Volume2 } from "lucide-react";
 import flagIcon from "../assets/language_flag_icon.png";
 import StatusButton, { BlueWordStatus, WORD_BAR_STATUSES } from "./StatusButton.jsx";
@@ -59,22 +60,110 @@ function useDragScroll() {
   return { ref, onPointerDown };
 }
 
-function placeCard(anchor, boundary, width, height) {
+function placeCard(anchor, width, height) {
   const word = anchor.getBoundingClientRect();
-  const bounds = boundary.getBoundingClientRect();
-  const aboveTop = word.top - GAP - height;
-  const placeBelow = aboveTop < bounds.top;
-  const top = placeBelow
-    ? word.bottom - bounds.top + boundary.scrollTop + GAP
-    : aboveTop - bounds.top + boundary.scrollTop;
-  const unclampedLeft = word.left - bounds.left + boundary.scrollLeft + word.width / 2 - width / 2;
-  const minLeft = boundary.scrollLeft;
-  const maxLeft = boundary.scrollLeft + boundary.clientWidth - width;
+  const margin = 8;
+  let top = word.top - GAP - height;
+  if (top < margin) top = word.bottom + GAP;
+  if (top + height > window.innerHeight - margin) top = window.innerHeight - margin - height;
+  if (top < margin) top = margin;
+
+  const unclampedLeft = word.left + word.width / 2 - width / 2;
+  const maxLeft = window.innerWidth - margin - width;
 
   return {
     top,
-    left: clamp(unclampedLeft, minLeft, maxLeft),
+    left: clamp(unclampedLeft, margin, Math.max(margin, maxLeft)),
   };
+}
+
+function MediumStatusMenu({ anchorRef, status, onStatus, onClose }) {
+  const menuRef = useRef(null);
+  const [pos, setPos] = useState(null);
+
+  useLayoutEffect(() => {
+    function place() {
+      const button = anchorRef.current;
+      const menu = menuRef.current;
+      if (!button || !menu) return;
+      const trigger = button.getBoundingClientRect();
+      const width = menu.offsetWidth;
+      const height = menu.offsetHeight;
+      let left = trigger.right + 8;
+      if (left + width > window.innerWidth - 8) left = Math.max(8, trigger.left - 8 - width);
+      let top = trigger.top;
+      if (top + height > window.innerHeight - 8) top = Math.max(8, window.innerHeight - 8 - height);
+      setPos({ top, left });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [anchorRef, status]);
+
+  useEffect(() => {
+    function onPointerDown(event) {
+      if (menuRef.current?.contains(event.target)) return;
+      if (anchorRef.current?.contains(event.target)) return;
+      onClose();
+    }
+    function onKeyDown(event) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [anchorRef, onClose]);
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      className="widget-status-menu is-fixed"
+      data-placed={pos ? "true" : "false"}
+      role="menu"
+      aria-label="Word status"
+      style={pos ? { top: pos.top, left: pos.left } : { top: 0, left: 0 }}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      {WORD_BAR_STATUSES.map((item) => (
+        <StatusButton
+          key={item}
+          status={item}
+          label
+          state={item === status ? "focus" : "default"}
+          onClick={() => onStatus(item)}
+        />
+      ))}
+    </div>,
+    document.body,
+  );
+}
+
+function HeaderTools({ hideChevron, onOpenLarge, showStatus, status, onToggleStatus, statusRef }) {
+  if (hideChevron && !showStatus) return null;
+  return (
+    <div className="widget-medium-tools">
+      {showStatus ? (
+        <span className="widget-medium-status" ref={statusRef}>
+          <StatusButton status={status} state="focus" onClick={onToggleStatus} />
+        </span>
+      ) : null}
+      {hideChevron ? null : (
+        <button type="button" className="widget-medium-chevron" aria-label="More details" onClick={onOpenLarge}>
+          <ChevronRight size={16} strokeWidth={1.33} absoluteStrokeWidth />
+        </button>
+      )}
+    </div>
+  );
 }
 
 function TagRow({ onSelectPhrase, onFromHere }) {
@@ -121,18 +210,23 @@ export default function WidgetMedium({
   onClose,
   onOpenLarge,
   hideChevron = false,
+  fullStatusBar = true,
 }) {
   const cardRef = useRef(null);
+  const statusRef = useRef(null);
   const dictionaryDrag = useDragScroll();
   const [cardPos, setCardPos] = useState(null);
+  const [statusMenu, setStatusMenu] = useState(false);
+  const compactStatus = !fullStatusBar && !phraseError;
+  const buttonStatus = isNew ? "Blue" : status;
 
   useLayoutEffect(() => {
     const boundary = boundaryRef.current;
     const card = cardRef.current;
     const anchor = boundary?.querySelector(`[data-word-id="${anchorId}"]`);
     if (!boundary || !card || !anchor) return;
-    setCardPos(placeCard(anchor, boundary, card.offsetWidth, card.offsetHeight));
-  }, [anchorId, boundaryRef, meaning, isNew, suggestions, phraseError, status, hideChevron]);
+    setCardPos(placeCard(anchor, card.offsetWidth, card.offsetHeight));
+  }, [anchorId, boundaryRef, meaning, isNew, suggestions, phraseError, status, hideChevron, fullStatusBar]);
 
   useEffect(() => {
     const boundary = boundaryRef.current;
@@ -149,7 +243,7 @@ export default function WidgetMedium({
         onClose();
         return;
       }
-      const nextCard = placeCard(anchor, boundary, card.offsetWidth, card.offsetHeight);
+      const nextCard = placeCard(anchor, card.offsetWidth, card.offsetHeight);
       setCardPos(nextCard);
     }
 
@@ -165,7 +259,7 @@ export default function WidgetMedium({
     function onPointerDown(event) {
       if (cardRef.current?.contains(event.target)) return;
       if (event.target.closest?.(".word")) return;
-      if (event.target.closest?.(".status-snackbar")) return;
+      if (event.target.closest?.(".status-snackbar, .widget-status-menu")) return;
       onClose();
     }
 
@@ -181,7 +275,7 @@ export default function WidgetMedium({
     };
   }, [onClose]);
 
-  return (
+  return createPortal(
     <>
       <div
         ref={cardRef}
@@ -211,13 +305,14 @@ export default function WidgetMedium({
           <>
             <div className="widget-medium-header is-suggested">
               <p className="widget-medium-suggested-label">Suggested Meanings</p>
-              {hideChevron ? null : (
-                <div className="widget-medium-tools">
-                  <button type="button" className="widget-medium-chevron" aria-label="More details" onClick={onOpenLarge}>
-                    <ChevronRight size={16} strokeWidth={1.33} absoluteStrokeWidth />
-                  </button>
-                </div>
-              )}
+              <HeaderTools
+                hideChevron={hideChevron}
+                onOpenLarge={onOpenLarge}
+                showStatus={compactStatus}
+                status={buttonStatus}
+                onToggleStatus={() => onStatus("New")}
+                statusRef={statusRef}
+              />
             </div>
             <div className="widget-medium-content">
               <div className="widget-suggested">
@@ -242,7 +337,6 @@ export default function WidgetMedium({
                   </div>
                 ))}
               </div>
-              <TagRow onSelectPhrase={onSelectPhrase} onFromHere={onFromHere} />
               <div className="widget-dictionaries">
                 <button type="button" className="widget-dictionary-open" aria-label="Dictionaries">
                   <BookA size={16} strokeWidth={1.5} absoluteStrokeWidth />
@@ -257,6 +351,7 @@ export default function WidgetMedium({
                 </div>
               </div>
             </div>
+            <TagRow onSelectPhrase={onSelectPhrase} onFromHere={onFromHere} />
           </>
         ) : (
           <>
@@ -267,19 +362,20 @@ export default function WidgetMedium({
                 </button>
                 <p className="widget-medium-meaning">{meaning}</p>
               </div>
-              {hideChevron ? null : (
-                <div className="widget-medium-tools">
-                  <button type="button" className="widget-medium-chevron" aria-label="More details" onClick={onOpenLarge}>
-                    <ChevronRight size={16} strokeWidth={1.33} absoluteStrokeWidth />
-                  </button>
-                </div>
-              )}
+              <HeaderTools
+                hideChevron={hideChevron}
+                onOpenLarge={onOpenLarge}
+                showStatus={compactStatus}
+                status={buttonStatus}
+                onToggleStatus={() => setStatusMenu((open) => !open)}
+                statusRef={statusRef}
+              />
             </div>
             <TagRow onSelectPhrase={onSelectPhrase} onFromHere={onFromHere} />
           </>
         )}
 
-        {!phraseError ? (
+        {!phraseError && !compactStatus ? (
           <div className="widget-medium-status-bar">
             {isNew ? (
               <BlueWordStatus
@@ -298,6 +394,18 @@ export default function WidgetMedium({
           </div>
         ) : null}
       </div>
-    </>
+      {compactStatus && statusMenu ? (
+        <MediumStatusMenu
+          anchorRef={statusRef}
+          status={isNew ? null : status}
+          onStatus={(next) => {
+            setStatusMenu(false);
+            onStatus(next);
+          }}
+          onClose={() => setStatusMenu(false)}
+        />
+      ) : null}
+    </>,
+    document.body,
   );
 }

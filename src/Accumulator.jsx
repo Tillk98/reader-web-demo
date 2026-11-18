@@ -552,7 +552,7 @@ function AutoMoveFields({ prefs, onAutoMove, onMoveTo }) {
 
 const APP_SETTINGS_SECTIONS = ["General", "Reader", "Review", "Lynx AI", "Playlist", "Languages"];
 
-export function AutoMoveSettings({ open, prefs, onAutoMove, onMoveTo, onClose }) {
+export function AutoMoveSettings({ open, prefs, fullStatusBar, onFullStatusBar, onAutoMove, onMoveTo, onClose }) {
   const panelRef = useRef(null);
   useFocusTrap(open, panelRef);
 
@@ -599,6 +599,19 @@ export function AutoMoveSettings({ open, prefs, onAutoMove, onMoveTo, onClose })
             <span className="app-settings-more">More settings</span>
           </aside>
           <div className="app-settings-main">
+            <section className="mini-widget-setting" aria-labelledby="mini-widget-setting">
+              <h3 id="mini-widget-setting">Mini widget</h3>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={fullStatusBar}
+                onClick={() => onFullStatusBar(!fullStatusBar)}
+              >
+                <span>Show the full status bar</span>
+                <span className="mini-widget-switch" aria-hidden="true"><span /></span>
+              </button>
+            </section>
+            <div className="app-settings-divider" />
             <AutoMoveFields prefs={prefs} onAutoMove={onAutoMove} onMoveTo={onMoveTo} />
           </div>
         </div>

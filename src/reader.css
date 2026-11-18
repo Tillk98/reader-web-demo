@@ -10198,6 +10198,40 @@ button.review-session-affordance {
   color: var(--fg-default);
 }
 
+@media (max-width: 767px) {
+  .stats-sheet {
+    position: fixed;
+    z-index: 80;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  .stats-sheet > .stats-panel {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    max-width: none;
+    height: min(1209px, calc(100dvh - 40px));
+    border: 0;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    padding-top: 0;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .stats-sheet > .stats-panel > .player-drag-handle {
+    display: flex;
+    width: calc(100% + 32px);
+    height: 20px;
+    margin: 0 -16px;
+    border-radius: 16px 16px 0 0;
+    background: var(--bg-page);
+  }
+}
+
 .stats-panel-header,
 .stats-known,
 .stats-progress-heading,
@@ -10465,7 +10499,7 @@ button.review-session-affordance {
 
 .stats-demo-menu {
   position: fixed;
-  z-index: 40;
+  z-index: 90;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -10617,7 +10651,7 @@ button.review-session-affordance {
 
 .stats-repair-layer {
   position: fixed;
-  z-index: 50;
+  z-index: 90;
   inset: 0;
   display: flex;
   align-items: center;
@@ -10878,7 +10912,7 @@ button.review-session-affordance {
 
 .stats-edit-popover {
   position: fixed;
-  z-index: 40;
+  z-index: 90;
   display: flex;
   flex-direction: column;
   gap: 12px;

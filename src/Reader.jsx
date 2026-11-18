@@ -2516,7 +2516,7 @@ export default function Reader() {
   useEffect(() => {
     if (!statsOpen) return undefined;
     function onPointerDown(event) {
-      if (event.target.closest?.(".stats-anchor, .stats-edit-popover, .stats-repair-layer, .stats-demo-menu, .accumulator-scrim")) return;
+      if (event.target.closest?.(".stats-anchor, .stats-sheet, .stats-edit-popover, .stats-repair-layer, .stats-demo-menu, .accumulator-scrim")) return;
       setStatsOpen(false);
     }
     function onKeyDown(event) {

@@ -64,6 +64,64 @@ const PERIODS = [
   { id: "all", menu: "All Time", title: "All Time Activity" },
 ];
 
+function usePhoneSheet() {
+  const query = "(max-width: 767px)";
+  const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const onChange = () => setPhone(media.matches);
+    onChange();
+    media.addEventListener("change", onChange);
+    window.addEventListener("resize", onChange);
+    return () => {
+      media.removeEventListener("change", onChange);
+      window.removeEventListener("resize", onChange);
+    };
+  }, []);
+  return phone;
+}
+
+function StatsSheetHandle({ onClose }) {
+  const drag = useRef(null);
+
+  function onPointerDown(event) {
+    if (event.button !== 0) return;
+    drag.current = { y: event.clientY, handled: false };
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Synthetic pointer events cannot capture.
+    }
+  }
+
+  function onPointerMove(event) {
+    const current = drag.current;
+    if (!current || current.handled) return;
+    if (event.clientY - current.y < 40) return;
+    current.handled = true;
+    onClose();
+  }
+
+  function onClick() {
+    if (drag.current?.handled) {
+      drag.current = null;
+      return;
+    }
+    onClose();
+  }
+
+  return (
+    <button
+      type="button"
+      className="player-drag-handle"
+      aria-label="Close"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onClick={onClick}
+    />
+  );
+}
+
 function Flame({ kind }) {
   if (kind === "bonus") {
     return (
@@ -511,6 +569,7 @@ export default function StatsPanel({ onClose, terms = [], onOpenTerms }) {
   const days = weekDays(streak, goalMet);
   const streakTitle = streak === "week" ? "7 Day Streak" : streak === "fresh" ? "4 Day Streak" : null;
   const activityStats = STATS.filter((stat) => demo.showExtra || (stat.id !== "writing" && stat.id !== "speaking"));
+  const phone = usePhoneSheet();
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -552,8 +611,15 @@ export default function StatsPanel({ onClose, terms = [], onOpenTerms }) {
     if (!visible.some((stat) => stat.id === editId)) setEditId(null);
   }, [editId, period, activityOpen, demo.showExtra]);
 
-  return (
-    <div className="stats-panel" role="dialog" aria-label="Stats">
+  const panel = (
+    <div
+      className="stats-panel"
+      role="dialog"
+      aria-modal={phone ? true : undefined}
+      aria-label="Stats"
+      onClick={phone ? (event) => event.stopPropagation() : undefined}
+    >
+      {phone ? <StatsSheetHandle onClose={onClose} /> : null}
       <div className="stats-panel-header">
         <div className="stats-known">
           <span className="stats-flag">
@@ -635,9 +701,11 @@ export default function StatsPanel({ onClose, terms = [], onOpenTerms }) {
             <span>470</span>
             <img src={coin} alt="" width={24} height={24} />
           </span>
-          <button type="button" className="stats-icon-button is-close" aria-label="Close stats" onClick={onClose}>
-            <img src={closeIcon} alt="" width={20} height={20} />
-          </button>
+          {phone ? null : (
+            <button type="button" className="stats-icon-button is-close" aria-label="Close stats" onClick={onClose}>
+              <img src={closeIcon} alt="" width={20} height={20} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -762,5 +830,11 @@ export default function StatsPanel({ onClose, terms = [], onOpenTerms }) {
         />
       ) : null}
     </div>
+  );
+
+  if (!phone) return panel;
+  return createPortal(
+    <div className="stats-sheet" onClick={onClose}>{panel}</div>,
+    document.body,
   );
 }

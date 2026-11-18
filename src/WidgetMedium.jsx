@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowUpRight, BookA, Brackets, ChevronRight, Languages, Plus, Tags, Volume2 } from "lucide-react";
+import { ArrowUpRight, BookA, ChevronRight, Languages, Play, Plus, Tags, TextCursorInput, Volume2 } from "lucide-react";
 import flagIcon from "../assets/language_flag_icon.png";
 import StatusButton, { BlueWordStatus, WORD_BAR_STATUSES } from "./StatusButton.jsx";
 
@@ -77,12 +77,17 @@ function placeCard(anchor, boundary, width, height) {
   };
 }
 
-function TagRow({ onSelectPhrase }) {
+function TagRow({ onSelectPhrase, onFromHere }) {
+  const drag = useDragScroll();
   return (
-    <div className="widget-medium-tags">
+    <div className="widget-medium-tags" {...drag}>
       <button type="button" className="widget-action" onClick={onSelectPhrase}>
-        <Brackets size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
-        <span>Select Phrase</span>
+        <TextCursorInput size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
+        <span>Phrase</span>
+      </button>
+      <button type="button" className="widget-action" onClick={onFromHere}>
+        <Play size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
+        <span>From here</span>
       </button>
       <span className="widget-medium-tags-divider" aria-hidden="true" />
       <div className="widget-medium-tag-group">
@@ -110,6 +115,7 @@ export default function WidgetMedium({
   onStatus,
   onChooseMeaning,
   onSelectPhrase,
+  onFromHere,
   phraseError = null,
   onTranslate,
   onClose,
@@ -236,7 +242,7 @@ export default function WidgetMedium({
                   </div>
                 ))}
               </div>
-              <TagRow onSelectPhrase={onSelectPhrase} />
+              <TagRow onSelectPhrase={onSelectPhrase} onFromHere={onFromHere} />
               <div className="widget-dictionaries">
                 <button type="button" className="widget-dictionary-open" aria-label="Dictionaries">
                   <BookA size={16} strokeWidth={1.5} absoluteStrokeWidth />
@@ -269,7 +275,7 @@ export default function WidgetMedium({
                 </div>
               )}
             </div>
-            <TagRow onSelectPhrase={onSelectPhrase} />
+            <TagRow onSelectPhrase={onSelectPhrase} onFromHere={onFromHere} />
           </>
         )}
 

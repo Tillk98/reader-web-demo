@@ -50,16 +50,16 @@ Anchored 8px above the word, inside the text column. Flips below if it would lea
 
 Long-press card, also kept inside the text column.
 
-**LingQ** (saved word or saved phrase): meaning with a play button, chevron, then one row with Select Phrase, a 30px divider, and the tags. The full status bar sits along the bottom. Ignore and Known are not repeated as buttons while that bar is showing. The chevron is hidden while the side panel is open. Play plays the term.
+**LingQ** (saved word or saved phrase): meaning with a play button, chevron, then one row with Phrase, From here, a 30px divider, and the tags. The full status bar sits along the bottom. Ignore and Known are not repeated as buttons while that bar is showing. The chevron is hidden while the side panel is open. Play plays the term.
 
 **New** (unsaved valid phrase): white header “Suggested Meanings” at 14px regular, chevron, up to 2 glosses with a plus and the same inset dividers, then the tags row, then the dictionary row. The full status bar sits along the bottom. A blue word becomes a LingQ before this card opens, so the card opens in the LingQ state. This state is for an unsaved phrase.
 
 - Tag and dictionary chips match: radius 4, `#F8F9FA`, 12px regular, `#49525B`. The add-tag button is a 16px icon with 9px padding, 4px from the chips. The dictionary button is the same size on a white fill. Dictionaries stay below the tags. Meaning rows use the same inset divider as the large widget. The add-tag button adds a tag. A dictionary chip opens that dictionary. The dictionary button opens the dictionaries page.
-- Tag and dictionary rows scroll by swipe or click-and-drag. A drag does not fire the button.
-- Select Phrase sits on the tags row in both states, before a 30px divider.
+- Tag and dictionary rows scroll by swipe or click-and-drag. A drag does not fire the button. The tags row scrolls as one piece: Phrase, From here, the divider, add tag, and the tag chips move together.
+- Phrase and From here sit on the tags row in both states, before a 30px divider. Phrase uses Lucide TextCursorInput. From here uses Lucide Play. Both match the same action button.
 - The status bar is on both the LingQ and new-word cards. Choosing a status on a saved word updates it and leaves the widget open. Choosing a status on an unsaved phrase saves it as a LingQ with that status and the first suggested meaning, and leaves the widget open.
 - Forward chevron opens the large widget. While the side panel is open, that chevron is hidden.
-- **Select Phrase** starts phrase selection.
+- **Phrase** starts phrase selection. **From here** starts playback from this sentence and leaves the widget open. In sentence mode that sentence is the one on screen.
 
 ## Large widget
 
@@ -86,7 +86,7 @@ Centered in the lesson column, 400×600 (shrinks if the column is shorter). Not 
 
 ## Select phrase
 
-1. **Select Phrase** closes the medium widget, doubles the start word’s stroke, and shows “Select another word to create a phrase.” at the bottom center of the lesson text.
+1. **Phrase** closes the medium widget, doubles the start word’s stroke, and shows “Select another word to create a phrase.” at the bottom center of the lesson text.
 2. The next word click selects the inclusive span. Clicking the start word again leaves the selection unchanged.
 3. A phrase is valid when it is 2–9 words, in one paragraph, with no `.` `!` `?` strictly between the ends. Trailing punctuation after the last word is part of the phrase text.
 4. **Valid:** span highlights as a new word, and the medium widget opens in the new-word state with two suggested meanings. Saving one creates a LingQ 1 phrase, highlights the span as that LingQ, and closes the widget (unless the large widget is open, in which case it stays open in the saved form).

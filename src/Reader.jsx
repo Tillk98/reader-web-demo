@@ -235,7 +235,6 @@ const REVIEW_CARDS = {
 
 function reviewScopeForMode(readingMode) {
   if (readingMode === "sentence") return "sentence";
-  if (readingMode === "scroll") return "lesson";
   return "page";
 }
 
@@ -1489,6 +1488,10 @@ export default function Reader() {
   const [reviewCardMenu, setReviewCardMenu] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [reviewCard, setReviewCard] = useState(null);
+  const [pinnedReviewScope, setPinnedReviewScope] = useState(null);
+  const frozenScope = useRef(false);
+  const reviewScopeStale = useRef(false);
+  const [scopeEpoch, setScopeEpoch] = useState(0);
   const [reviewFilters, setReviewFilters] = useState(defaultFilters);
   const [reviewFilterOpen, setReviewFilterOpen] = useState(false);
   const [filterSheetTall, setFilterSheetTall] = useState(false);
@@ -1694,12 +1697,48 @@ export default function Reader() {
     };
   }, [mode, lesson, playerOpen, playerShown]);
 
+  function reviewIsOpen() {
+    if (!reviewCard || reviewSuspended) return false;
+    if (reviewDocked && !reviewOverlay && panelTabs && !panelVisible) return false;
+    return true;
+  }
+
+  function scopeForOpen() {
+    frozenScope.current = false;
+    reviewScopeStale.current = false;
+    setScopeEpoch((epoch) => epoch + 1);
+    return pinnedReviewScope || reviewScopeForMode(mode);
+  }
+
+  function takeReviewScope() {
+    if (!reviewScopeStale.current && reviewCard) return;
+    reviewScopeStale.current = false;
+    setReviewCard(scopeForOpen());
+  }
+
+  function releaseReviewHold() {
+    reviewScopeStale.current = true;
+    frozenScope.current = false;
+  }
+
+  function applyReviewFilters(next) {
+    if (next.context !== reviewCard) {
+      frozenScope.current = false;
+      reviewScopeStale.current = false;
+      setPinnedReviewScope(next.context);
+      setScopeEpoch((epoch) => epoch + 1);
+    }
+    setReviewFilters(reviewListView ? cloneFilters(next) : mergeActivityFilters(reviewFilters, next));
+    setReviewCard(next.context);
+    setReviewFilterOpen(false);
+  }
+
   function applyMode(next) {
     if (next === "sentence") setSentenceIndex(1);
+    if (reviewIsOpen()) frozenScope.current = true;
     transition(() => {
       setMode(next);
       setReviewFilterOpen(false);
-      setReviewCard((current) => (current ? reviewScopeForMode(next) : current));
     });
   }
 
@@ -2599,7 +2638,7 @@ export default function Reader() {
     setReviewCardMenu(false);
     setReviewFilterOpen(false);
     setReviewListView(true);
-    setReviewCard((current) => current || reviewScopeForMode(mode));
+    if (!reviewCard) setReviewCard(scopeForOpen());
     setReviewSuspended(false);
     setReviewOverlay(false);
     setReviewReturns(false);
@@ -2741,6 +2780,7 @@ export default function Reader() {
   }
 
   function hideTabbedPanel() {
+    releaseReviewHold();
     setPanelVisible(false);
     setLynxOpen(false);
     setLynxOverlay(false);
@@ -3387,6 +3427,7 @@ export default function Reader() {
   }
 
   function closeReview() {
+    releaseReviewHold();
     setReviewCardMenu(false);
     setReviewFilterOpen(false);
     setReviewOverlay(false);
@@ -3440,6 +3481,7 @@ export default function Reader() {
 
   function dismissDockedReview() {
     if (!reviewDocked && !reviewSuspended) return;
+    frozenScope.current = false;
     setReviewCardMenu(false);
     setReviewFilterOpen(false);
     setReviewOverlay(false);
@@ -3593,31 +3635,32 @@ export default function Reader() {
       setReviewScopeKey((current) => (current === next ? current : next));
     }
 
+    if (frozenScope.current) return undefined;
     apply();
     if (!reviewCard || reviewCard === "lesson" || mode !== "scroll") return undefined;
     const node = textRef.current;
     if (!node) return undefined;
     node.addEventListener("scroll", apply, { passive: true });
     return () => node.removeEventListener("scroll", apply);
-  }, [reviewCard, mode, sentenceIndex, pageIndex, pageStarts, lesson, textLayout, showTranslation, textSize]);
+  }, [reviewCard, mode, sentenceIndex, pageIndex, pageStarts, lesson, textLayout, showTranslation, textSize, scopeEpoch]);
 
   function startDefaultReview() {
     if (theater && !mobile) return;
     const activitiesOpen = Boolean(reviewCard) && !reviewSuspended && !reviewListView;
     if (panelTabs && !mobile) {
       if (!panelVisible) {
-        if (reviewCard && !reviewSuspended && !reviewReturns) {
+        if (reviewOverlay && reviewCard && !reviewSuspended) {
           closeReview();
           return;
         }
         setReviewListView(false);
-        if (!reviewCard) setReviewCard(reviewScopeForMode(mode));
+        takeReviewScope();
         floatReview();
         return;
       }
       if (panelTab === "review" && activitiesOpen) return;
       setReviewListView(false);
-      if (!reviewCard) setReviewCard(reviewScopeForMode(mode));
+      takeReviewScope();
       selectPanelTab("review");
       return;
     }
@@ -3625,7 +3668,7 @@ export default function Reader() {
     if (columnOpen) {
       if (reviewDocked && activitiesOpen) return;
       setReviewListView(false);
-      if (!reviewCard) setReviewCard(reviewScopeForMode(mode));
+      takeReviewScope();
       dockReview();
       return;
     }
@@ -3633,14 +3676,15 @@ export default function Reader() {
       closeReview();
       return;
     }
-    chooseReviewAction(reviewScopeForMode(mode));
+    reviewScopeStale.current = false;
+    chooseReviewAction(scopeForOpen());
   }
 
   function openSideVocabulary({ dock = false } = {}) {
     if (theater && !mobile) return;
     setReviewCardMenu(false);
     setReviewListView(true);
-    if (!reviewCard) setReviewCard(reviewScopeForMode(mode));
+    takeReviewScope();
     setReviewSuspended(false);
     if (!wide || mobile) {
       setLynxOpen(false);
@@ -3675,9 +3719,9 @@ export default function Reader() {
     if (tab !== "review") return;
     setReviewDocked(true);
     setReviewSuspended(false);
+    takeReviewScope();
     if (reviewCard) return;
     setReviewListView(true);
-    setReviewCard(reviewScopeForMode(mode));
   }
 
   function choosePanelTabs(next) {
@@ -3734,6 +3778,7 @@ export default function Reader() {
   }, [mobile, theater, panelTabs, panelVisible, panelTab, active, reviewCard, reviewListView]);
 
   function hideDefaultPanel() {
+    releaseReviewHold();
     cancelCover();
     setReviewCardMenu(false);
     setReviewFilterOpen(false);
@@ -3900,6 +3945,13 @@ export default function Reader() {
     if (!active) return;
     setPhrasePick({ paragraphIndex: active.paragraphIndex, tokenIndex: active.tokenIndex });
     setActive(null);
+  }
+
+  function startFromHere() {
+    if (!active) return;
+    const paragraphIndex = active.phrase?.start?.paragraphIndex ?? active.paragraphIndex;
+    if (mode === "sentence") setSentenceIndex(paragraphIndex);
+    startPlayback(!lessonHasVideo || media === "audio" ? "audio" : "video");
   }
 
   function openTranslate(text) {
@@ -4633,6 +4685,7 @@ export default function Reader() {
                 onStatus={handleStatusChange}
                 onChooseMeaning={chooseMeaning}
                 onSelectPhrase={startPhraseSelect}
+                onFromHere={startFromHere}
                 onTranslate={openTranslate}
                 onClose={() => setActive(null)}
                 onOpenLarge={openLarge}
@@ -5273,11 +5326,7 @@ export default function Reader() {
                     ...cloneFilters(reviewFilters),
                     context: reviewCard === "sentence" || reviewCard === "lesson" ? reviewCard : "page",
                   }}
-                  onApply={(next) => {
-                    setReviewFilters(reviewListView ? cloneFilters(next) : mergeActivityFilters(reviewFilters, next));
-                    setReviewCard(next.context);
-                    setReviewFilterOpen(false);
-                  }}
+                  onApply={applyReviewFilters}
                   lockedStatuses={reviewListView ? [] : ["Blue", "Ignored"]}
                 />
               </ReviewFilterPopover>
@@ -5318,11 +5367,7 @@ export default function Reader() {
               ...cloneFilters(reviewFilters),
               context: reviewCard === "sentence" || reviewCard === "lesson" ? reviewCard : "page",
             }}
-            onApply={(next) => {
-              setReviewFilters(reviewListView ? cloneFilters(next) : mergeActivityFilters(reviewFilters, next));
-              setReviewCard(next.context);
-              setReviewFilterOpen(false);
-            }}
+            onApply={applyReviewFilters}
             lockedStatuses={reviewListView ? [] : ["Blue", "Ignored"]}
           />
         </ReviewFilterSheet>

@@ -2926,6 +2926,20 @@ html.split-motion::view-transition-new(split-text) {
   gap: 8px;
   height: 52px;
   padding: 0 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  cursor: grab;
+}
+
+.widget-medium-tags::-webkit-scrollbar {
+  display: none;
+}
+
+.widget-medium-tags.is-dragging,
+.widget-medium-tags.is-dragging .widget-action {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .widget-medium-tags-divider {
@@ -2972,10 +2986,16 @@ html.split-motion::view-transition-new(split-text) {
   min-width: 0;
 }
 
+.widget-medium-tags .widget-medium-tag-group,
 .widget-medium-tags .widget-medium-scroll {
-  flex: 1;
+  flex: none;
+  min-width: max-content;
+  overflow: visible;
+  cursor: inherit;
+}
+
+.widget-medium-tags .widget-medium-scroll {
   gap: 8px;
-  cursor: grab;
 }
 
 .widget-medium-scroll::-webkit-scrollbar {

@@ -75,6 +75,7 @@ import {
   OutcomeDialog,
   ProgressPopover,
 } from "./Accumulator.jsx";
+import LessonComplete from "./LessonComplete.jsx";
 import StatsPanel from "./StatsPanel.jsx";
 import {
   coinsForStatus,
@@ -1435,6 +1436,9 @@ export default function Reader() {
   const prevSentenceRef = useRef(1);
   const passRef = useRef(() => {});
   const listEnding = useRef(false);
+  const coinsAtFinishRef = useRef(0);
+  const movedAtFinishRef = useRef(false);
+  const celebrationTimerRef = useRef(0);
   const [playing, setPlaying] = useState(false);
   const [videoHovered, setVideoHovered] = useState(false);
   const [videoChrome, setVideoChrome] = useState(true);
@@ -2127,6 +2131,7 @@ export default function Reader() {
       setBlueCoins((value) => value + gained);
       setBlueCoinTerms((value) => value + present.size);
     }
+    if (progressPrompt === "finish") movedAtFinishRef.current = true;
     return present.size;
   }
 
@@ -2169,7 +2174,7 @@ export default function Reader() {
 
   function passBlueKeys(keys) {
     const unique = [...new Set(keys)];
-    if (!unique.length) return;
+    if (!unique.length) return 0;
     const present = [];
     const seen = new Set();
     lessonRef.current.forEach((paragraph) => {
@@ -2181,13 +2186,16 @@ export default function Reader() {
         present.push(key);
       });
     });
-    if (!present.length) return;
+    if (!present.length) return 0;
     if (prefsRef.current.autoMove) {
-      if (prefsRef.current.moveTo !== "Leave Blue") applyPassed(present, prefsRef.current.moveTo);
-      return;
+      if (prefsRef.current.moveTo !== "Leave Blue") {
+        const count = applyPassed(present, prefsRef.current.moveTo);
+        return count * coinsForStatus(prefsRef.current.moveTo);
+      }
+      return 0;
     }
     const fresh = present.filter((key) => !passedRef.current.includes(key));
-    if (!fresh.length) return;
+    if (!fresh.length) return 0;
     const previous = passedRef.current.length;
     const next = [...passedRef.current, ...fresh];
     passedRef.current = next;
@@ -2195,11 +2203,15 @@ export default function Reader() {
     setPassedKeys(next);
     const from = tickerCountRef.current == null ? previous : tickerCountRef.current;
     showBlueTicker(from, next.length);
+    return 0;
   }
 
   passRef.current = passBlueKeys;
 
-  useEffect(() => () => clearBlueTickerTimers(), []);
+  useEffect(() => () => {
+    clearBlueTickerTimers();
+    window.clearTimeout(celebrationTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (tickerCountRef.current == null) return;
@@ -2209,14 +2221,26 @@ export default function Reader() {
     setBlueTicker(null);
   }, [passedKeys.length]);
 
-  function continueProgress(prompt, snapshot) {
+  function finishCoins(extraGained = 0) {
+    const base = coinsAtFinishRef.current;
+    const bonus = Math.max(0, lessonCoins + extraGained - base);
+    return { base, bonus, terms: bonus };
+  }
+
+  function queueCelebration(snapshot, delay) {
+    window.clearTimeout(celebrationTimerRef.current);
+    celebrationTimerRef.current = window.setTimeout(() => setCelebration(snapshot), delay);
+  }
+
+  function continueProgress(prompt, extraGained = 0) {
     setProgressPrompt(null);
     setTermsList(null);
     if (prompt === "stats") return;
-    window.setTimeout(() => {
-      if (prompt === "finish") setCelebration(snapshot);
-      else showExitHint();
-    }, 500);
+    if (prompt === "finish") {
+      queueCelebration(finishCoins(extraGained), movedAtFinishRef.current ? 650 : 250);
+      return;
+    }
+    window.setTimeout(() => showExitHint(), 500);
   }
 
   function blueKeysLeaving() {
@@ -2254,45 +2278,38 @@ export default function Reader() {
   }
 
   function requestFinish() {
-    passBlueKeys(blueKeysLeaving());
+    const gainedNow = passBlueKeys(blueKeysLeaving());
+    const total = lessonCoins + gainedNow;
     if (!prefsRef.current.autoMove && passedRef.current.length) {
+      coinsAtFinishRef.current = total;
+      movedAtFinishRef.current = false;
       setListEdited(false);
       setMoveChoice(prefsRef.current.splitDefault);
       setProgressPrompt("finish");
       return;
     }
-    setCelebration({ total: lessonCoins, blue: blueCoins, terms: blueCoinTerms });
+    queueCelebration({ base: total, bonus: 0, terms: 0 }, 250);
   }
 
   function applyFromPopover(status) {
     const prompt = progressPrompt;
-    let snapshot = { total: lessonCoins, blue: blueCoins, terms: blueCoinTerms };
+    let extra = 0;
     if (status !== "Leave Blue") {
       const moved = applyPassed(passedTerms.map((term) => term.key), status);
-      const gained = moved * coinsForStatus(status);
-      snapshot = {
-        total: lessonCoins + gained,
-        blue: blueCoins + gained,
-        terms: blueCoinTerms + (gained ? moved : 0),
-      };
+      extra = moved * coinsForStatus(status);
       rememberAccumulatorStatus(status);
     }
-    continueProgress(prompt, snapshot);
+    continueProgress(prompt, extra);
   }
 
   function finishListed(status) {
     const prompt = progressPrompt;
     const moved = status ? applyPassed(passedTerms.map((term) => term.key), status) : 0;
     if (status) rememberAccumulatorStatus(status);
-    const gained = status ? moved * coinsForStatus(status) : 0;
-    const snapshot = {
-      total: lessonCoins + gained,
-      blue: blueCoins + gained,
-      terms: blueCoinTerms + (gained ? moved : 0),
-    };
+    const extra = status ? moved * coinsForStatus(status) : 0;
     setTermsList(null);
     setActive(null);
-    continueProgress(prompt, snapshot);
+    continueProgress(prompt, extra);
   }
 
   function openAccumulatorSettings() {
@@ -2304,7 +2321,7 @@ export default function Reader() {
     if (!termsList || passedTerms.length > 0 || listEnding.current) return;
     listEnding.current = true;
     const prompt = progressPrompt;
-    const snapshot = { total: lessonCoins, blue: blueCoins, terms: blueCoinTerms };
+    const finishSnapshot = finishCoins();
     setTermsList(null);
     setActive(null);
     if (prompt === "stats") {
@@ -2312,10 +2329,14 @@ export default function Reader() {
       setProgressPrompt(null);
       return;
     }
+    if (prompt === "finish") {
+      setProgressPrompt(null);
+      queueCelebration(finishSnapshot, movedAtFinishRef.current ? 650 : 250);
+      return;
+    }
     window.setTimeout(() => {
       listEnding.current = false;
-      if (prompt === "finish") setCelebration(snapshot);
-      else setExitHint(true);
+      setExitHint(true);
       setProgressPrompt(null);
     }, 500);
   }, [termsList, passedTerms.length, progressPrompt, lessonCoins, blueCoins, blueCoinTerms]);
@@ -5547,7 +5568,7 @@ export default function Reader() {
         status={moveChoice || accumulatorPrefs.splitDefault}
         onApply={applyFromPopover}
         onSelect={rememberAccumulatorStatus}
-        onContinue={() => continueProgress(progressPrompt, { total: lessonCoins, blue: blueCoins, terms: blueCoinTerms })}
+        onContinue={() => continueProgress(progressPrompt)}
         onClose={() => setProgressPrompt(null)}
         onOpenList={() => {
           listEnding.current = false;
@@ -5569,7 +5590,7 @@ export default function Reader() {
           setListEdited(true);
           applyPassed([term.key], status);
         }}
-        onLeave={() => continueProgress(progressPrompt, { total: lessonCoins, blue: blueCoins, terms: blueCoinTerms })}
+        onLeave={() => continueProgress(progressPrompt)}
         edited={listEdited}
         onBulk={finishListed}
         onOpenTerm={(term) => openTerm(term.paragraphIndex, term.tokenIndex, null)}
@@ -5612,11 +5633,13 @@ export default function Reader() {
         title="Left the lesson"
         onClose={() => setExitHint(false)}
       />
-      <OutcomeDialog
+      <LessonComplete
+        key={celebration ? "lesson-complete" : "lesson-complete-idle"}
         open={Boolean(celebration)}
-        title="Completed the lesson"
-        coins={celebration}
-        onClose={() => setCelebration(null)}
+        base={celebration?.base || 0}
+        bonus={celebration?.bonus || 0}
+        terms={celebration?.terms || 0}
+        onRestart={() => window.location.reload()}
       />
 
       {reviewCard ? createPortal(

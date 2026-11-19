@@ -696,7 +696,7 @@ export function OutcomeDialog({ open, title, coins = null, onClose }) {
         {coins ? (
           <div className="outcome-coins">
             <em>{`+ ${coins.total || 0} Coins`}</em>
-            {blue > 0 ? <span>{`+ ${blue} from ${terms} known ${terms === 1 ? "term" : "terms"}`}</span> : null}
+            {blue > 0 ? <span>{`+ ${blue} from ${terms} ${terms === 1 ? "term" : "terms"} moved to Known`}</span> : null}
           </div>
         ) : null}
       </div>

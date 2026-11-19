@@ -20,7 +20,7 @@ export const MOVE_STATUSES = [
 export const LEAVE_BLUE = { id: "Leave Blue", label: "Leave Blue", menu: "Leave Blue", button: "Leave Blue" };
 
 export function defaultPrefs() {
-  return { autoMove: false, moveTo: "Known", splitDefault: "Known" };
+  return { autoMove: false, moveTo: "Known", splitDefault: "Known", askOnExit: true };
 }
 
 function readJson(key) {

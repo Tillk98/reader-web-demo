@@ -710,8 +710,6 @@ export default function StatsPanel({ onClose, terms = [], onOpenTerms }) {
       </div>
 
       <div className="stats-panel-body">
-        <BlueTermsCard terms={terms} onOpen={onOpenTerms} />
-
         <section className="stats-progress">
           <div className="stats-progress-block">
             {goal.multiple >= 2 ? (
@@ -753,6 +751,8 @@ export default function StatsPanel({ onClose, terms = [], onOpenTerms }) {
             </div>
           </div>
         </section>
+
+        <BlueTermsCard terms={terms} onOpen={onOpenTerms} />
 
         <section className="stats-section">
           <div className="stats-activity-header">

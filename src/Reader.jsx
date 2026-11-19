@@ -2072,8 +2072,17 @@ export default function Reader() {
 
   function rememberAccumulatorStatus(status) {
     if (!["Ignored", "New", "Recognized", "Familiar", "Learned", "Known"].includes(status)) return;
+    setMoveChoice(status);
     setAccumulatorPrefs((current) => {
       const next = { ...current, splitDefault: status, moveTo: status };
+      savePrefs(next);
+      return next;
+    });
+  }
+
+  function setAskOnExit(ask) {
+    setAccumulatorPrefs((current) => {
+      const next = { ...current, askOnExit: ask };
       savePrefs(next);
       return next;
     });
@@ -2203,6 +2212,7 @@ export default function Reader() {
   function continueProgress(prompt, snapshot) {
     setProgressPrompt(null);
     setTermsList(null);
+    if (prompt === "stats") return;
     window.setTimeout(() => {
       if (prompt === "finish") setCelebration(snapshot);
       else showExitHint();
@@ -2234,7 +2244,7 @@ export default function Reader() {
   function requestExit() {
     setChromeMenu(null);
     passBlueKeys(blueKeysLeaving());
-    if (!prefsRef.current.autoMove && passedRef.current.length) {
+    if (!prefsRef.current.autoMove && prefsRef.current.askOnExit !== false && passedRef.current.length) {
       setListEdited(false);
       setMoveChoice(prefsRef.current.splitDefault);
       setProgressPrompt("exit");
@@ -2297,6 +2307,11 @@ export default function Reader() {
     const snapshot = { total: lessonCoins, blue: blueCoins, terms: blueCoinTerms };
     setTermsList(null);
     setActive(null);
+    if (prompt === "stats") {
+      listEnding.current = false;
+      setProgressPrompt(null);
+      return;
+    }
     window.setTimeout(() => {
       listEnding.current = false;
       if (prompt === "finish") setCelebration(snapshot);
@@ -2687,7 +2702,7 @@ export default function Reader() {
       setStatsOpen(false);
     }
     function onKeyDown(event) {
-      if (event.key === "Escape" && !termsList) setStatsOpen(false);
+      if (event.key === "Escape" && !termsList && !progressPrompt) setStatsOpen(false);
     }
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -2695,7 +2710,7 @@ export default function Reader() {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [statsOpen, termsList]);
+  }, [statsOpen, termsList, progressPrompt]);
 
   function sidebarIsOpen() {
     if (theater || mobile) return false;
@@ -4636,7 +4651,9 @@ export default function Reader() {
                   terms={passedTerms}
                   onOpenTerms={() => {
                     listEnding.current = false;
-                    morphAccumulator(() => setTermsList("progress"));
+                    setListEdited(false);
+                    setMoveChoice(prefsRef.current.splitDefault);
+                    setProgressPrompt("stats");
                   }}
                 />
               ) : null}
@@ -5529,7 +5546,7 @@ export default function Reader() {
         prefs={accumulatorPrefs}
         status={moveChoice || accumulatorPrefs.splitDefault}
         onApply={applyFromPopover}
-        onSelect={setMoveChoice}
+        onSelect={rememberAccumulatorStatus}
         onContinue={() => continueProgress(progressPrompt, { total: lessonCoins, blue: blueCoins, terms: blueCoinTerms })}
         onClose={() => setProgressPrompt(null)}
         onOpenList={() => {
@@ -5538,15 +5555,16 @@ export default function Reader() {
         }}
         covered={Boolean(termsList)}
         onOpenSettings={openAccumulatorSettings}
+        onAskOnExit={setAskOnExit}
         settingsOpen={readerSettings}
-        action={progressPrompt === "finish" ? "finish" : "exit"}
+        action={progressPrompt === "finish" || progressPrompt === "exit" ? progressPrompt : null}
       />
       <BlueTermsModal
         open={Boolean(termsList) && !active}
         terms={passedTerms}
         status={moveChoice || accumulatorPrefs.splitDefault}
         swipeSeen={swipeSeen}
-        onSelect={setMoveChoice}
+        onSelect={rememberAccumulatorStatus}
         onStatus={(term, status) => {
           setListEdited(true);
           applyPassed([term.key], status);
@@ -5560,7 +5578,7 @@ export default function Reader() {
           setSwipeSeen(true);
         }}
         onClose={() => morphAccumulator(() => setTermsList(null))}
-        action={progressPrompt === "finish" ? "finish" : "exit"}
+        action={progressPrompt === "finish" || progressPrompt === "exit" ? progressPrompt : null}
       />
       <AutoMoveSettings
         open={readerSettings}
@@ -5574,6 +5592,7 @@ export default function Reader() {
             return next;
           });
         }}
+        onAskOnExit={setAskOnExit}
         onMoveTo={(status) => {
           setAccumulatorPrefs((current) => {
             const next = {
@@ -5584,6 +5603,7 @@ export default function Reader() {
             savePrefs(next);
             return next;
           });
+          if (status !== "Leave Blue") setMoveChoice(status);
         }}
         onClose={() => setReaderSettings(false)}
       />

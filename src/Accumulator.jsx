@@ -252,6 +252,7 @@ export function ProgressPopover({
   onClose,
   onOpenList,
   onOpenSettings,
+  onAskOnExit,
   settingsOpen = false,
   covered = false,
   action = "exit",
@@ -288,9 +289,23 @@ export function ProgressPopover({
         <TermChips terms={terms} onOpen={onOpenList} />
         <SplitButton status={status} options={MOVE_STATUSES} onCommit={onApply} onSelect={onSelect} menuUp={narrow} action={action} autoFocus />
         <button type="button" className="accumulator-secondary" onClick={onContinue}>
-          {action === "finish" ? "Leave Blue and Finish" : "Leave Blue and Exit"}
+          {action === "finish" ? "Leave Blue and Finish" : action === "exit" ? "Leave Blue and Exit" : "Leave Blue"}
           <ArrowRight size={16} strokeWidth={1.5} absoluteStrokeWidth />
         </button>
+        {action === "exit" ? (
+          <button
+            type="button"
+            className="accumulator-ask-exit"
+            role="checkbox"
+            aria-checked={prefs.askOnExit === false}
+            onClick={() => onAskOnExit?.(prefs.askOnExit === false)}
+          >
+            <span>Don’t show again on exit</span>
+            <span className="accumulator-ask-box" aria-hidden="true">
+              {prefs.askOnExit === false ? <Check size={14} strokeWidth={2.5} absoluteStrokeWidth /> : null}
+            </span>
+          </button>
+        ) : null}
         <div className="accumulator-dialog-divider" />
         <AutoMoveRow on={prefs.autoMove} onOpen={onOpenSettings} />
       </div>
@@ -484,7 +499,7 @@ export function BlueTermsModal({
                 tabIndex={edited ? undefined : -1}
                 aria-hidden={edited ? undefined : true}
               >
-                {action === "finish" ? "Leave Remaining Blue and Finish" : "Leave Remaining Blue and Exit"}
+                {action === "finish" ? "Leave Remaining Blue and Finish" : action === "exit" ? "Leave Remaining Blue and Exit" : "Leave Remaining Blue"}
                 <ArrowRight size={16} strokeWidth={1.5} absoluteStrokeWidth />
               </button>
             </div>
@@ -519,7 +534,7 @@ function AutoMoveFields({ prefs, onAutoMove, onMoveTo }) {
           <Radio
             checked={!prefs.autoMove}
             label="Off"
-            note="Ask me when I finish or leave a lesson."
+            note="Ask me when I finish or exit a lesson."
             onSelect={() => onAutoMove(false)}
           />
           <Radio
@@ -552,7 +567,7 @@ function AutoMoveFields({ prefs, onAutoMove, onMoveTo }) {
 
 const APP_SETTINGS_SECTIONS = ["General", "Reader", "Review", "Lynx AI", "Playlist", "Languages"];
 
-export function AutoMoveSettings({ open, prefs, fullStatusBar, onFullStatusBar, onAutoMove, onMoveTo, onClose }) {
+export function AutoMoveSettings({ open, prefs, fullStatusBar, onFullStatusBar, onAutoMove, onMoveTo, onAskOnExit, onClose }) {
   const panelRef = useRef(null);
   useFocusTrap(open, panelRef);
 
@@ -599,6 +614,27 @@ export function AutoMoveSettings({ open, prefs, fullStatusBar, onFullStatusBar, 
             <span className="app-settings-more">More settings</span>
           </aside>
           <div className="app-settings-main">
+            <section className="accumulator-settings-group" aria-labelledby="accumulator-setting">
+              <h3 id="accumulator-setting">Accumulator</h3>
+              <AutoMoveFields prefs={prefs} onAutoMove={onAutoMove} onMoveTo={onMoveTo} />
+              {prefs.autoMove ? null : (
+                <section className="accumulator-setting-card ask-exit-setting">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={prefs.askOnExit !== false}
+                    onClick={() => onAskOnExit?.(prefs.askOnExit === false)}
+                  >
+                    <span>
+                      <strong>Ask when I exit</strong>
+                      <em>Ask me to “Update Lesson Progress” when I exit a lesson.</em>
+                    </span>
+                    <span className="mini-widget-switch" aria-hidden="true"><span /></span>
+                  </button>
+                </section>
+              )}
+            </section>
+            <div className="app-settings-divider" />
             <section className="mini-widget-setting" aria-labelledby="mini-widget-setting">
               <h3 id="mini-widget-setting">Mini widget</h3>
               <button
@@ -611,8 +647,6 @@ export function AutoMoveSettings({ open, prefs, fullStatusBar, onFullStatusBar, 
                 <span className="mini-widget-switch" aria-hidden="true"><span /></span>
               </button>
             </section>
-            <div className="app-settings-divider" />
-            <AutoMoveFields prefs={prefs} onAutoMove={onAutoMove} onMoveTo={onMoveTo} />
           </div>
         </div>
       </div>

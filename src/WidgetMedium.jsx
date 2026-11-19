@@ -419,13 +419,13 @@ export default function WidgetMedium({
               />
             </div>
             {unsavedWord ? <SuggestedMeanings suggestions={suggestions} onChoose={onChooseMeaning} /> : null}
-            <TagRow onSelectPhrase={onSelectPhrase} onFromHere={onFromHere} quickStatus={compactStatus && !unsavedWord} onStatus={onStatus} />
+            <TagRow onSelectPhrase={onSelectPhrase} onFromHere={onFromHere} quickStatus={compactStatus} onStatus={onStatus} />
           </>
         )}
 
-        {!phraseError && !compactStatus && !unsavedWord ? (
+        {!phraseError && !compactStatus ? (
           <div className="widget-medium-status-bar">
-            {isNew ? (
+            {isNew && !unsavedWord ? (
               <BlueWordStatus
                 onAdd={() => onStatus("New")}
                 onKnown={() => onStatus("Known")}
@@ -435,7 +435,7 @@ export default function WidgetMedium({
               <StatusButton
                 key={item}
                 status={item}
-                state={selectStatus && item === status ? "focus" : "default"}
+                state={!unsavedWord && selectStatus && item === status ? "focus" : "default"}
                 onClick={() => onStatus(item)}
               />
             ))}

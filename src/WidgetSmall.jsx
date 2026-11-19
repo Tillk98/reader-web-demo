@@ -6,8 +6,30 @@ import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
 const GAP = 8;
 const STATUS_BAR_WIDTH = 296;
 
+function anchorBox(anchor) {
+  const range = anchor.closest(".phrase-range");
+  if (!range) return anchor.getBoundingClientRect();
+  const rects = [...range.getClientRects()].filter((rect) => rect.width > 0 && rect.height > 0);
+  if (rects.length <= 1) return rects[0] || range.getBoundingClientRect();
+  const firstTop = Math.min(...rects.map((rect) => rect.top));
+  const line = rects.filter((rect) => Math.abs(rect.top - firstTop) < 2);
+  const left = Math.min(...line.map((rect) => rect.left));
+  const right = Math.max(...line.map((rect) => rect.right));
+  const top = Math.min(...line.map((rect) => rect.top));
+  const bottom = Math.max(...line.map((rect) => rect.bottom));
+  return { top, left, width: right - left, height: bottom - top, bottom };
+}
+
+function anchorInView(anchor, bounds) {
+  const range = anchor.closest(".phrase-range");
+  const rects = range
+    ? [...range.getClientRects()].filter((rect) => rect.width > 0 && rect.height > 0)
+    : [anchor.getBoundingClientRect()];
+  return rects.some((rect) => rect.bottom > bounds.top && rect.top < bounds.bottom);
+}
+
 function placeWidget(anchor, boundary, width, height) {
-  const word = anchor.getBoundingClientRect();
+  const word = anchorBox(anchor);
   const bounds = boundary.getBoundingClientRect();
   const aboveTop = word.top - GAP - height;
   const placeBelow = aboveTop < bounds.top;
@@ -57,9 +79,8 @@ export default function WidgetSmall({
       const card = cardRef.current;
       const anchor = boundary.querySelector(`[data-word-id="${anchorId}"]`);
       if (!card || !anchor) return;
-      const word = anchor.getBoundingClientRect();
       const bounds = boundary.getBoundingClientRect();
-      const inView = word.bottom > bounds.top && word.top < bounds.bottom;
+      const inView = anchorInView(anchor, bounds);
       if (!inView) {
         onClose();
         return;

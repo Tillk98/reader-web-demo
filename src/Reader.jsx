@@ -3121,14 +3121,39 @@ export default function Reader() {
       if (phrasePick.paragraphIndex === paragraphIndex && phrasePick.tokenIndex === tokenIndex) return;
       const phrase = describePhrase(lesson, phrasePick, { paragraphIndex, tokenIndex });
       setPhrasePick(null);
-      setActive({
-        paragraphIndex,
-        tokenIndex,
-        size: "medium",
-        mode: "meaning",
-        statusMenu: false,
-        phrase: { ...phrase, savedId: null },
-      });
+      if (phrase.invalid) {
+        setActive({
+          paragraphIndex,
+          tokenIndex,
+          size: "medium",
+          mode: "meaning",
+          statusMenu: false,
+          phrase: { ...phrase, savedId: null },
+        });
+        return;
+      }
+      if (autoLingq) {
+        const saved = commitPhrase(phrase, "New");
+        openSaved(saved, paragraphIndex, tokenIndex, "small");
+      } else {
+        setActive({
+          paragraphIndex,
+          tokenIndex,
+          size: "small",
+          mode: "meaning",
+          statusMenu: false,
+          phrase: { ...phrase, savedId: null },
+        });
+      }
+      const panelOpenNow = wordTakesSidebar();
+      if (panelOpenNow) {
+        givePanelToWord();
+        setShowMini(true);
+      } else if (panelTabs || lynxOpen || reviewDocked) setShowMini(true);
+      return;
+    }
+    if (active?.phrase && !active.phrase.savedId && phraseCovers(active.phrase, paragraphIndex, tokenIndex)) {
+      if (!showMini && active.size !== "large" && active.size !== "medium") setShowMini(true);
       return;
     }
     const saved = savedAt(paragraphIndex, tokenIndex);
@@ -3193,6 +3218,23 @@ export default function Reader() {
         cancelCover();
         setReviewEdit(false);
       }
+      const pending = active?.phrase && !active.phrase.savedId && phraseCovers(active.phrase, paragraphIndex, tokenIndex)
+        ? active.phrase
+        : null;
+      if (pending) {
+        if (!pending.invalid) {
+          setActive({
+            paragraphIndex,
+            tokenIndex,
+            size: "medium",
+            mode: "meaning",
+            statusMenu: false,
+            phrase: pending,
+          });
+          highlightSentenceTerm(paragraphIndex, tokenIndex);
+        }
+        return;
+      }
       if (saved) {
         openSaved(saved, paragraphIndex, tokenIndex, "medium");
         highlightSentenceTerm(paragraphIndex, tokenIndex);
@@ -3230,27 +3272,48 @@ export default function Reader() {
     window.addEventListener("pointercancel", endPress);
   }
 
-  function savePendingPhrase(status, meaning) {
-    if (!active?.phrase || active.phrase.savedId || active.phrase.invalid) return;
+  function commitPhrase(phrase, status, meaning) {
+    if (!phrase || phrase.savedId || phrase.invalid) return null;
     const id = phraseIdRef.current;
     phraseIdRef.current += 1;
     const appearance = STATUS_APPEARANCE[status] || STATUS_APPEARANCE.New;
-    const chosen = meaning || active.phrase.suggestions?.[0] || "";
+    const chosen = meaning || phrase.suggestions?.[0] || "";
     const saved = {
       id,
-      start: active.phrase.start,
-      end: active.phrase.end,
-      text: active.phrase.text,
+      start: phrase.start,
+      end: phrase.end,
+      text: phrase.text,
       meaning: chosen,
       meanings: chosen ? [chosen] : [],
       status: status === "New" ? "New" : status,
       ...appearance,
     };
     setSavedPhrases((current) => [...current, saved]);
-    setActive(null);
     showSnackbar(status, () => {
-      setSavedPhrases((current) => current.filter((phrase) => phrase.id !== id));
+      setSavedPhrases((current) => current.filter((item) => item.id !== id));
+      setActive((current) => {
+        if (current?.phrase?.savedId !== id) return current;
+        return {
+          ...current,
+          phrase: {
+            start: phrase.start,
+            end: phrase.end,
+            words: phrase.words,
+            text: phrase.text,
+            invalid: false,
+            suggestions: phrase.suggestions || [],
+            savedId: null,
+          },
+        };
+      });
     });
+    return saved;
+  }
+
+  function savePendingPhrase(status, meaning) {
+    if (!active?.phrase || active.phrase.savedId || active.phrase.invalid) return;
+    commitPhrase(active.phrase, status, meaning);
+    setActive(null);
   }
 
   function chooseMeaning(meaning) {
@@ -4462,6 +4525,7 @@ export default function Reader() {
   const termText = (savedOpen || pendingPhrase)?.text || activeToken?.value || "";
   const wordChoices = activeToken ? meaningChoices(activeToken.value) : [];
   let activeMeaning = savedOpen?.meaning
+    || (pendingPhrase && !pendingPhrase.invalid ? pendingPhrase.suggestions?.[0] : "")
     || activeToken?.meaning
     || (activeToken ? formatMeanings(activeToken.value) : "");
   if (termText && activeMeaning.trim().toLowerCase() === termText.trim().toLowerCase()) {

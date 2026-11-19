@@ -358,11 +358,7 @@ export default function WidgetMedium({
               <HeaderTools
                 hideChevron={hideChevron}
                 onOpenLarge={onOpenLarge}
-                showStatus={compactStatus}
                 showAudio
-                status={buttonStatus}
-                onToggleStatus={() => onStatus("New")}
-                statusRef={statusRef}
               />
             </div>
             <div className="widget-medium-content">
@@ -407,7 +403,11 @@ export default function WidgetMedium({
         ) : (
           <>
             <div className="widget-medium-header">
-              <p className="widget-medium-meaning">{meaning}</p>
+              {unsavedWord ? (
+                <p className="widget-medium-suggested-label">Suggested Meanings</p>
+              ) : (
+                <p className="widget-medium-meaning">{meaning}</p>
+              )}
               <HeaderTools
                 hideChevron={hideChevron}
                 onOpenLarge={onOpenLarge}

@@ -105,10 +105,77 @@ const MEANINGS = {
   würde: "would",
 };
 
-export function meaningsFor(word) {
+const EXTRA_GLOSSES = [
+  "also",
+  "in fact",
+  "that is",
+  "for instance",
+  "as well",
+  "indeed",
+  "in other words",
+  "on the other hand",
+  "in particular",
+  "above all",
+  "for one thing",
+  "in short",
+];
+
+function normalized(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function hashWord(word) {
+  let hash = 0;
+  const value = String(word || "");
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 33 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function listedMeanings(word) {
   const entry = MEANINGS[word];
-  if (!entry) return [word];
-  return Array.isArray(entry) ? entry : [entry];
+  if (!entry) return [];
+  return (Array.isArray(entry) ? entry : [entry]).map((item) => String(item).trim()).filter(Boolean);
+}
+
+function pushGloss(list, text, term) {
+  const value = String(text || "").trim();
+  const key = normalized(value);
+  if (!value || key === normalized(term)) return;
+  if (list.some((item) => normalized(item) === key)) return;
+  list.push(value);
+}
+
+export function meaningChoices(word) {
+  const choices = [];
+  listedMeanings(word).forEach((item) => pushGloss(choices, item, word));
+  const start = hashWord(word);
+  let offset = 0;
+  while (choices.length < 4 && offset < EXTRA_GLOSSES.length) {
+    pushGloss(choices, EXTRA_GLOSSES[(start + offset) % EXTRA_GLOSSES.length], word);
+    offset += 1;
+  }
+  return choices;
+}
+
+export function distinctMeanings(items, term, count) {
+  const list = [];
+  items.forEach((item) => pushGloss(list, item, term));
+  const start = hashWord(term);
+  let offset = 0;
+  while (list.length < count && offset < EXTRA_GLOSSES.length) {
+    pushGloss(list, EXTRA_GLOSSES[(start + offset) % EXTRA_GLOSSES.length], term);
+    offset += 1;
+  }
+  return list.slice(0, count);
+}
+
+export function meaningsFor(word) {
+  const listed = [];
+  listedMeanings(word).forEach((item) => pushGloss(listed, item, word));
+  if (listed.length) return listed;
+  return meaningChoices(word).slice(0, 1);
 }
 
 export function formatMeanings(word) {

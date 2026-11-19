@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import StatusButton, { BlueWordStatus, WORD_BAR_STATUSES } from "./StatusButton.jsx";
+import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
 
 const GAP = 8;
 const STATUS_BAR_WIDTH = 296;
@@ -124,16 +124,12 @@ export default function WidgetSmall({
           aria-label="Back to meaning"
           onClick={() => transition(() => onMode("meaning"))}
         >
-          <ChevronLeft size={18} strokeWidth={1.17} absoluteStrokeWidth />
+          <ChevronLeft size={16} strokeWidth={1.33} absoluteStrokeWidth />
         </button>
       ) : null}
 
       {isNew ? (
-        <BlueWordStatus
-          onAdd={() => { onStatus("New"); onClose(); }}
-          onKnown={() => { onStatus("Known"); onClose(); }}
-          onIgnore={() => { onStatus("Ignored"); onClose(); }}
-        />
+        <StatusButton status="Blue" state="focus" onClick={() => { onStatus("New"); onClose(); }} />
       ) : mode === "meaning" ? (
         <StatusButton
           status={status}
@@ -161,7 +157,7 @@ export default function WidgetSmall({
           <p className="widget-meaning">{meaning}</p>
           {hideChevron ? null : (
             <button type="button" className="widget-chevron" aria-label="More details" onClick={onOpenLarge}>
-              <ChevronRight size={18} strokeWidth={1.17} absoluteStrokeWidth />
+              <ChevronRight size={16} strokeWidth={1.33} absoluteStrokeWidth />
             </button>
           )}
         </>

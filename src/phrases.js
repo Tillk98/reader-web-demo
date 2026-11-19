@@ -1,4 +1,4 @@
-import { meaningsFor } from "./meanings.js";
+import { distinctMeanings, meaningChoices } from "./meanings.js";
 
 const PHRASES = {
   "der erste": ["the first", "the first one"],
@@ -92,12 +92,12 @@ function orderPoints(a, b) {
 
 export function phraseSuggestions(words) {
   const key = words.map((word) => word.toLowerCase()).join(" ");
+  const phrase = words.join(" ");
   const known = PHRASES[key];
-  if (known) return known;
-  const primary = words.map((word) => meaningsFor(word)[0]).join(" ");
-  const secondary = words.map((word) => meaningsFor(word).at(-1)).join(" ");
-  if (secondary.toLowerCase() !== primary.toLowerCase()) return [primary, secondary];
-  return [primary, primary];
+  if (known) return distinctMeanings(known, phrase, 2);
+  const primary = words.map((word) => meaningChoices(word)[0]).join(" ");
+  const secondary = words.map((word) => meaningChoices(word)[1] || meaningChoices(word)[0]).join(" ");
+  return distinctMeanings([primary, secondary], phrase, 2);
 }
 
 export function describePhrase(lesson, from, to) {

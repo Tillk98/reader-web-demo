@@ -21,7 +21,7 @@ import localeFlag from "../assets/flag-en.svg";
 import lynxIcon from "../assets/lynx-icon-blue.png";
 import importanceCoin from "../assets/importance-coin.svg";
 import sentenceIcon from "../assets/sentencemode_icon_light.png";
-import StatusButton, { BlueWordStatus, WORD_BAR_STATUSES } from "./StatusButton.jsx";
+import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
 
 function importanceFor(term) {
   let hash = 0;
@@ -241,9 +241,6 @@ function MeaningRow({ meaning, onSave, onRemove, autoFocus = false }) {
           </span>
         </button>
       ) : null}
-      {phase === "idle" || (editing && !active) || phase === "removed" ? (
-        <img className="widget-large-locale" src={localeFlag} alt="" width={22} height={16} />
-      ) : null}
     </div>
   );
 }
@@ -345,7 +342,6 @@ function SuggestedRow({ meaning, onAdd }) {
           <span>{added ? "Added" : ""}</span>
         </span>
       </span>
-      <img className="widget-large-locale" src={localeFlag} alt="" width={22} height={16} />
     </div>
   );
 }
@@ -565,7 +561,6 @@ export default function WidgetLarge({
           <div className="widget-large-meanings">
             <div className="widget-large-meaning">
               <p>{firstMeaning}</p>
-              <img className="widget-large-locale" src={localeFlag} alt="" width={22} height={16} />
             </div>
           </div>
         </div>
@@ -690,7 +685,6 @@ export default function WidgetLarge({
                   </SuggestedList>
                 )}
                 <TagRow />
-                {isNew ? <DictionaryRow onOpen={() => openDictionaries("default")} /> : null}
               </section>
 
               <section className="widget-large-section">
@@ -725,17 +719,11 @@ export default function WidgetLarge({
       {compact || page !== "dictionaries" ? (
         <footer className="widget-large-footer">
           <div className="widget-large-status-bar">
-            {isNew ? (
-              <BlueWordStatus
-                onAdd={() => onStatus("New")}
-                onKnown={() => onStatus("Known")}
-                onIgnore={() => onStatus("Ignored")}
-              />
-            ) : WORD_BAR_STATUSES.map((item) => (
+            {WORD_BAR_STATUSES.map((item) => (
               <StatusButton
                 key={item}
                 status={item}
-                state={selectStatus && item === status ? "focus" : "default"}
+                state={!isNew && selectStatus && item === status ? "focus" : "default"}
                 onClick={() => onStatus(item)}
               />
             ))}

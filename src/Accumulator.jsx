@@ -567,7 +567,7 @@ function AutoMoveFields({ prefs, onAutoMove, onMoveTo }) {
 
 const APP_SETTINGS_SECTIONS = ["General", "Reader", "Review", "Lynx AI", "Playlist", "Languages"];
 
-export function AutoMoveSettings({ open, prefs, fullStatusBar, onFullStatusBar, onAutoMove, onMoveTo, onAskOnExit, onClose }) {
+export function AutoMoveSettings({ open, prefs, fullStatusBar, onFullStatusBar, autoLingq, onAutoLingq, onAutoMove, onMoveTo, onAskOnExit, onClose }) {
   const panelRef = useRef(null);
   useFocusTrap(open, panelRef);
 
@@ -644,6 +644,22 @@ export function AutoMoveSettings({ open, prefs, fullStatusBar, onFullStatusBar, 
                 onClick={() => onFullStatusBar(!fullStatusBar)}
               >
                 <span>Show the full status bar</span>
+                <span className="mini-widget-switch" aria-hidden="true"><span /></span>
+              </button>
+            </section>
+            <div className="app-settings-divider" />
+            <section className="general-setting" aria-labelledby="general-setting">
+              <h3 id="general-setting">General</h3>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={autoLingq}
+                onClick={() => onAutoLingq(!autoLingq)}
+              >
+                <span>
+                  <strong>Auto LingQ creation</strong>
+                  <em>Landing on a new word saves it as a LingQ right away, with its top meaning. Turn this off to keep new words blue until you choose a meaning.</em>
+                </span>
                 <span className="mini-widget-switch" aria-hidden="true"><span /></span>
               </button>
             </section>

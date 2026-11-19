@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpRight, BookA, ChevronRight, Languages, Play, Plus, Tags, TextCursorInput, Volume2 } from "lucide-react";
+import { ArrowUpRight, BookA, Check, ChevronRight, EyeOff, Languages, Play, Plus, Tags, TextCursorInput, Volume2 } from "lucide-react";
 import flagIcon from "../assets/language_flag_icon.png";
 import StatusButton, { BlueWordStatus, WORD_BAR_STATUSES } from "./StatusButton.jsx";
 
@@ -91,8 +91,10 @@ function MediumStatusMenu({ anchorRef, status, onStatus, onClose }) {
       const height = menu.offsetHeight;
       let left = trigger.right + 8;
       if (left + width > window.innerWidth - 8) left = Math.max(8, trigger.left - 8 - width);
-      let top = trigger.top;
-      if (top + height > window.innerHeight - 8) top = Math.max(8, window.innerHeight - 8 - height);
+      const margin = 8;
+      let top = trigger.top + trigger.height / 2 - height / 2;
+      if (top < margin) top = margin;
+      if (top + height > window.innerHeight - margin) top = Math.max(margin, window.innerHeight - margin - height);
       setPos({ top, left });
     }
     place();
@@ -148,14 +150,19 @@ function MediumStatusMenu({ anchorRef, status, onStatus, onClose }) {
   );
 }
 
-function HeaderTools({ hideChevron, onOpenLarge, showStatus, status, onToggleStatus, statusRef }) {
-  if (hideChevron && !showStatus) return null;
+function HeaderTools({ hideChevron, onOpenLarge, showStatus, showAudio = false, status, onToggleStatus, statusRef }) {
+  if (hideChevron && !showStatus && !showAudio) return null;
   return (
     <div className="widget-medium-tools">
       {showStatus ? (
         <span className="widget-medium-status" ref={statusRef}>
           <StatusButton status={status} state="focus" onClick={onToggleStatus} />
         </span>
+      ) : null}
+      {showAudio ? (
+        <button type="button" className="widget-medium-audio" aria-label="Play term">
+          <Volume2 size={16} strokeWidth={1.5} absoluteStrokeWidth />
+        </button>
       ) : null}
       {hideChevron ? null : (
         <button type="button" className="widget-medium-chevron" aria-label="More details" onClick={onOpenLarge}>
@@ -166,10 +173,51 @@ function HeaderTools({ hideChevron, onOpenLarge, showStatus, status, onToggleSta
   );
 }
 
-function TagRow({ onSelectPhrase, onFromHere }) {
+function SuggestedMeanings({ suggestions, onChoose }) {
+  const rows = suggestions.filter(Boolean).slice(0, 2);
+  if (!rows.length) return null;
+  return (
+    <div className="widget-medium-suggestions">
+      <div className="widget-large-meanings">
+        {rows.map((suggestion, index) => (
+          <div
+            key={`${suggestion}-${index}`}
+            className="widget-large-meaning is-suggestion"
+            role="button"
+            tabIndex={0}
+            onClick={() => onChoose(suggestion)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onChoose(suggestion);
+              }
+            }}
+          >
+            <p>{suggestion}</p>
+            <span className="widget-suggested-add" aria-hidden="true">
+              <Plus size={16} strokeWidth={1.33} absoluteStrokeWidth />
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TagRow({ onSelectPhrase, onFromHere, quickStatus = false, onStatus }) {
   const drag = useDragScroll();
   return (
     <div className="widget-medium-tags" {...drag}>
+      {quickStatus ? (
+        <>
+          <button type="button" className="widget-action is-icon" aria-label="Ignore" onClick={() => onStatus("Ignored")}>
+            <EyeOff size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
+          </button>
+          <button type="button" className="widget-action is-icon" aria-label="Known" onClick={() => onStatus("Known")}>
+            <Check size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
+          </button>
+        </>
+      ) : null}
       <button type="button" className="widget-action" onClick={onSelectPhrase}>
         <TextCursorInput size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
         <span>Phrase</span>
@@ -201,6 +249,7 @@ export default function WidgetMedium({
   meaning,
   suggestions = [],
   isNew = false,
+  isPhrase = false,
   onStatus,
   onChooseMeaning,
   onSelectPhrase,
@@ -218,6 +267,7 @@ export default function WidgetMedium({
   const [cardPos, setCardPos] = useState(null);
   const [statusMenu, setStatusMenu] = useState(false);
   const compactStatus = !fullStatusBar && !phraseError;
+  const unsavedWord = isNew && !isPhrase && !phraseError;
   const buttonStatus = isNew ? "Blue" : status;
 
   useLayoutEffect(() => {
@@ -301,7 +351,7 @@ export default function WidgetMedium({
               </button>
             </div>
           </>
-        ) : isNew ? (
+        ) : isNew && !unsavedWord ? (
           <>
             <div className="widget-medium-header is-suggested">
               <p className="widget-medium-suggested-label">Suggested Meanings</p>
@@ -309,6 +359,7 @@ export default function WidgetMedium({
                 hideChevron={hideChevron}
                 onOpenLarge={onOpenLarge}
                 showStatus={compactStatus}
+                showAudio
                 status={buttonStatus}
                 onToggleStatus={() => onStatus("New")}
                 statusRef={statusRef}
@@ -316,7 +367,7 @@ export default function WidgetMedium({
             </div>
             <div className="widget-medium-content">
               <div className="widget-suggested">
-                {suggestions.map((suggestion, index) => (
+                {suggestions.slice(0, 2).map((suggestion, index) => (
                   <div
                     key={`${suggestion}-${index}`}
                     className="widget-suggested-row"
@@ -351,31 +402,28 @@ export default function WidgetMedium({
                 </div>
               </div>
             </div>
-            <TagRow onSelectPhrase={onSelectPhrase} onFromHere={onFromHere} />
+            <TagRow onSelectPhrase={onSelectPhrase} onFromHere={onFromHere} quickStatus={compactStatus} onStatus={onStatus} />
           </>
         ) : (
           <>
             <div className="widget-medium-header">
-              <div className="widget-medium-meaning-group">
-                <button type="button" className="widget-medium-audio" aria-label="Play audio">
-                  <Volume2 size={16} strokeWidth={1.5} absoluteStrokeWidth />
-                </button>
-                <p className="widget-medium-meaning">{meaning}</p>
-              </div>
+              <p className="widget-medium-meaning">{meaning}</p>
               <HeaderTools
                 hideChevron={hideChevron}
                 onOpenLarge={onOpenLarge}
-                showStatus={compactStatus}
+                showStatus={compactStatus && !unsavedWord}
+                showAudio
                 status={buttonStatus}
                 onToggleStatus={() => setStatusMenu((open) => !open)}
                 statusRef={statusRef}
               />
             </div>
-            <TagRow onSelectPhrase={onSelectPhrase} onFromHere={onFromHere} />
+            {unsavedWord ? <SuggestedMeanings suggestions={suggestions} onChoose={onChooseMeaning} /> : null}
+            <TagRow onSelectPhrase={onSelectPhrase} onFromHere={onFromHere} quickStatus={compactStatus && !unsavedWord} onStatus={onStatus} />
           </>
         )}
 
-        {!phraseError && !compactStatus ? (
+        {!phraseError && !compactStatus && !unsavedWord ? (
           <div className="widget-medium-status-bar">
             {isNew ? (
               <BlueWordStatus

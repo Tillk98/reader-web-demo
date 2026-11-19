@@ -65,7 +65,7 @@ import WidgetMedium from "./WidgetMedium.jsx";
 import WidgetLarge from "./WidgetLarge.jsx";
 import LynxChat from "./LynxChat.jsx";
 import ReviewPanel, { ReviewFilter, cloneFilters, defaultFilters, extraFilterCount, mergeActivityFilters, reviewTermsFrom, reviewWordsFrom, withoutActivityLocked } from "./ReviewPanel.jsx";
-import { formatMeanings, meaningsFor } from "./meanings.js";
+import { formatMeanings, meaningChoices, meaningsFor } from "./meanings.js";
 import { describePhrase, phraseCovers } from "./phrases.js";
 import { pastSentences, sentenceFor, sentenceWords } from "./sentences.js";
 import StatusButton, { WORD_BAR_STATUSES } from "./StatusButton.jsx";
@@ -1421,6 +1421,7 @@ export default function Reader() {
   const [termsList, setTermsList] = useState(null);
   const [readerSettings, setReaderSettings] = useState(false);
   const [fullStatusBar, setFullStatusBar] = useState(true);
+  const [autoLingq, setAutoLingq] = useState(true);
   const [celebration, setCelebration] = useState(null);
   const [exitHint, setExitHint] = useState(false);
   const [swipeSeen, setSwipeSeen] = useState(loadSwipeSeen);
@@ -3171,7 +3172,7 @@ export default function Reader() {
       if (!showMini) setShowMini(true);
       return;
     }
-    createLingQ(paragraphIndex, tokenIndex);
+    if (autoLingq) createLingQ(paragraphIndex, tokenIndex);
     setActive({ paragraphIndex, tokenIndex, size: "small", mode: "meaning", statusMenu: false });
     highlightSentenceTerm(paragraphIndex, tokenIndex);
     if (panelOpenNow) {
@@ -3197,7 +3198,7 @@ export default function Reader() {
         highlightSentenceTerm(paragraphIndex, tokenIndex);
         return;
       }
-      createLingQ(paragraphIndex, tokenIndex);
+      if (autoLingq) createLingQ(paragraphIndex, tokenIndex);
       setActive({
         paragraphIndex,
         tokenIndex,
@@ -3265,8 +3266,11 @@ export default function Reader() {
       level: token.level ?? null,
       status: token.status,
       meaning: token.meaning,
+      meanings: token.meanings,
     };
     const { paragraphIndex, tokenIndex } = active;
+    const creating = token.kind === "new";
+    if (creating) releaseTerm(token.value.toLowerCase());
     setLesson((current) => current.map((paragraph, pIndex) => {
       if (pIndex !== paragraphIndex) return paragraph;
       return paragraph.map((item, tIndex) => {
@@ -3361,15 +3365,26 @@ export default function Reader() {
       kind: token.kind,
       level: token.level ?? null,
       meaning: token.meaning,
+      meanings: token.meanings,
     };
     const { paragraphIndex, tokenIndex } = active;
+    const promoting = token.kind === "new";
     if (termsList) setListEdited(true);
     releaseTerm(token.value.toLowerCase());
     setLesson((current) => current.map((paragraph, pIndex) => {
       if (pIndex !== paragraphIndex) return paragraph;
       return paragraph.map((item, tIndex) => {
         if (tIndex !== tokenIndex || item.type !== "word") return item;
-        return { ...item, status, ...appearance };
+        if (!promoting) return { ...item, status, ...appearance };
+        const top = meaningsFor(item.value)[0] || "";
+        const meaning = item.meaning || top;
+        return {
+          ...item,
+          status,
+          ...appearance,
+          meaning,
+          meanings: item.meanings?.length ? item.meanings : (meaning ? [meaning] : []),
+        };
       });
     }));
     showSnackbar(status, () => restoreToken(paragraphIndex, tokenIndex, previous));
@@ -3517,7 +3532,7 @@ export default function Reader() {
     const overReviewDialog = Boolean(reviewCard) && !reviewSuspended && !(reviewDocked && !reviewOverlay);
     if (phrase) openSaved(phrase, item.paragraphIndex, item.tokenIndex, overReviewDialog ? "large" : "small");
     else {
-      if (item.status === "Blue") createLingQ(item.paragraphIndex, item.tokenIndex);
+      if (item.status === "Blue" && autoLingq) createLingQ(item.paragraphIndex, item.tokenIndex);
       setActive({
         paragraphIndex: item.paragraphIndex,
         tokenIndex: item.tokenIndex,
@@ -4443,16 +4458,21 @@ export default function Reader() {
   const savedOpen = active?.phrase?.savedId
     ? savedPhrases.find((phrase) => phrase.id === active.phrase.savedId)
     : null;
-  const activeMeaning = savedOpen?.meaning
+  const pendingPhrase = active?.phrase && !active.phrase.savedId ? active.phrase : null;
+  const termText = (savedOpen || pendingPhrase)?.text || activeToken?.value || "";
+  const wordChoices = activeToken ? meaningChoices(activeToken.value) : [];
+  let activeMeaning = savedOpen?.meaning
     || activeToken?.meaning
     || (activeToken ? formatMeanings(activeToken.value) : "");
+  if (termText && activeMeaning.trim().toLowerCase() === termText.trim().toLowerCase()) {
+    activeMeaning = (pendingPhrase?.suggestions?.[0] || wordChoices[0] || activeMeaning);
+  }
   const activeStatus = savedOpen?.status || activeToken?.status || "New";
-  const pendingPhrase = active?.phrase && !active.phrase.savedId ? active.phrase : null;
   const activeIsNew = pendingPhrase ? !pendingPhrase.invalid : activeToken?.kind === "new";
   const activeSuggestions = pendingPhrase
-    ? pendingPhrase.suggestions
-    : (activeToken ? meaningsFor(activeToken.value).slice(0, 2) : []);
-  const largeTerm = (savedOpen || pendingPhrase)?.text || activeToken?.value || "";
+    ? pendingPhrase.suggestions.slice(0, 2)
+    : wordChoices.slice(0, 2);
+  const largeTerm = termText;
   const largeMeanings = savedOpen
     ? (Array.isArray(savedOpen.meanings) ? savedOpen.meanings : (savedOpen.meaning ? [savedOpen.meaning] : []))
     : activeToken
@@ -4463,7 +4483,7 @@ export default function Reader() {
   const selectStatus = activeIsNew || largeMeanings.length > 0;
   const largeSuggestions = pendingPhrase
     ? pendingPhrase.suggestions
-    : (activeToken ? meaningsFor(activeToken.value).slice(0, 3) : []);
+    : wordChoices.slice(0, 4);
   const sentencePoint = active?.phrase?.start || (
     active ? { paragraphIndex: active.paragraphIndex, tokenIndex: active.tokenIndex } : null
   );
@@ -4482,7 +4502,7 @@ export default function Reader() {
     : [];
   const largeGlossary = pendingPhrase
     ? pendingPhrase.suggestions
-    : (activeToken ? meaningsFor(activeToken.value) : []);
+    : wordChoices;
 
   function markAt(paragraphIndex, tokenIndex) {
     const saved = savedPhrases.find((phrase) => phraseCovers(phrase, paragraphIndex, tokenIndex));
@@ -5081,6 +5101,7 @@ export default function Reader() {
                 meaning={activeMeaning}
                 suggestions={activeSuggestions}
                 isNew={activeIsNew}
+                isPhrase={Boolean(pendingPhrase)}
                 phraseError={pendingPhrase?.invalid ? pendingPhrase.text : null}
                 onStatus={handleStatusChange}
                 onChooseMeaning={chooseMeaning}
@@ -5606,6 +5627,8 @@ export default function Reader() {
         prefs={accumulatorPrefs}
         fullStatusBar={fullStatusBar}
         onFullStatusBar={setFullStatusBar}
+        autoLingq={autoLingq}
+        onAutoLingq={setAutoLingq}
         onAutoMove={(on) => {
           setAccumulatorPrefs((current) => {
             const next = { ...current, autoMove: on };

@@ -3054,13 +3054,11 @@ html.split-motion::view-transition-new(split-text) {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
+  padding: 9px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 999px;
   background: transparent;
-  color: #000000;
+  color: var(--fg-default);
   cursor: pointer;
 }
 
@@ -3101,27 +3099,6 @@ html.split-motion::view-transition-new(split-text) {
   background: var(--bg-page);
 }
 
-.widget-medium-meaning-group {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.widget-medium-audio {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  padding: 9px;
-  border: 1.4px solid var(--border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--fg-default);
-  cursor: pointer;
-}
-
 .widget-medium-meaning {
   flex: 1;
   min-width: 0;
@@ -3131,6 +3108,28 @@ html.split-motion::view-transition-new(split-text) {
   line-height: 20px;
   letter-spacing: 0;
   color: var(--fg-default);
+  overflow-wrap: break-word;
+}
+
+.widget-medium-audio {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 9px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-default);
+  cursor: pointer;
+}
+
+.widget-medium-audio:hover {
+  background: var(--bg-elevated);
+}
+
+.widget-medium-suggestions {
+  margin: 12px 12px 0;
 }
 
 .widget-medium-tools {
@@ -3160,7 +3159,12 @@ html.split-motion::view-transition-new(split-text) {
 .widget-medium-chevron {
   padding: 9px;
   border-radius: 999px;
-  color: #0a0a0a;
+  background: transparent;
+  color: var(--fg-default);
+}
+
+.widget-medium-chevron:hover {
+  background: var(--bg-elevated);
 }
 
 .widget-medium-add-tag {
@@ -3331,7 +3335,7 @@ html.split-motion::view-transition-new(split-text) {
   justify-content: center;
   padding: 9px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 999px;
   background: transparent;
   color: var(--fg-secondary);
   cursor: pointer;
@@ -3403,6 +3407,13 @@ html.split-motion::view-transition-new(split-text) {
   object-fit: cover;
   border: 0.4px solid var(--border);
   border-radius: 1.6px;
+}
+
+.widget-action.is-icon {
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
 }
 
 .widget-action {
@@ -7206,10 +7217,14 @@ body:has(.review-card-layer:not(.is-docked)) .widget-large {
   color: var(--fg-muted);
 }
 
-.widget-large .widget-dictionary-open,
-.widget-large .widget-suggested-add {
+.widget-large .widget-dictionary-open {
   padding: 9px;
   border-radius: 8px;
+}
+
+.widget-large .widget-suggested-add {
+  padding: 9px;
+  border-radius: 999px;
 }
 
 .widget-suggested-add {
@@ -7240,7 +7255,7 @@ body:has(.review-card-layer:not(.is-docked)) .widget-large {
 .widget-large .widget-suggested-add.is-revealed {
   gap: 6px;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 999px;
   cursor: default;
 }
 
@@ -7324,7 +7339,7 @@ body:has(.review-card-layer:not(.is-docked)) .widget-large {
 .widget-large-heading-chevron {
   flex-shrink: 0;
   padding: 9px;
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--bg-elevated);
 }
 
@@ -7608,7 +7623,7 @@ body:has(.review-card-layer:not(.is-docked)) .widget-large {
   align-items: center;
   justify-content: center;
   padding: 9px;
-  border-radius: 8px;
+  border-radius: 999px;
   color: var(--fg-secondary);
 }
 
@@ -10162,6 +10177,7 @@ button.review-session-affordance {
 }
 
 .mini-widget-setting h3,
+.general-setting h3,
 .accumulator-settings-group > h3 {
   margin: 0;
   font-size: 16px;
@@ -10212,12 +10228,14 @@ button.review-session-affordance {
 }
 
 .mini-widget-setting button[aria-checked="true"] .mini-widget-switch,
-.ask-exit-setting button[aria-checked="true"] .mini-widget-switch {
+.ask-exit-setting button[aria-checked="true"] .mini-widget-switch,
+.general-setting button[aria-checked="true"] .mini-widget-switch {
   background: var(--fg-secondary);
 }
 
 .mini-widget-setting button[aria-checked="true"] .mini-widget-switch span,
-.ask-exit-setting button[aria-checked="true"] .mini-widget-switch span {
+.ask-exit-setting button[aria-checked="true"] .mini-widget-switch span,
+.general-setting button[aria-checked="true"] .mini-widget-switch span {
   transform: translateX(18px);
 }
 
@@ -10251,6 +10269,44 @@ button.review-session-affordance {
 }
 
 .ask-exit-setting em {
+  color: var(--fg-muted);
+  font-style: normal;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.general-setting button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.general-setting button > span:first-child {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.general-setting strong {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.general-setting em {
   color: var(--fg-muted);
   font-style: normal;
   font-size: 14px;

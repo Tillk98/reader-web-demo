@@ -11807,9 +11807,9 @@ button.review-session-affordance {
 .stats-coin-award > p {
   margin: 0;
   color: #dd2525;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 500;
-  line-height: 24px;
+  line-height: 20px;
 }
 
 .stats-multiplier {

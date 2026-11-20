@@ -4,7 +4,6 @@ import { Check, ChevronDown, ChevronRight, ChevronUp, FlaskConical, Minus, Plus,
 import coin from "../assets/stats/coin.svg";
 import flagPhoto from "../assets/stats/flag.png";
 import flagMark from "../assets/stats/flag-mark.svg";
-import closeIcon from "../assets/stats/close.svg";
 import flame from "../assets/stats/flame.svg";
 import flameBonus from "../assets/stats/flame-3x.svg";
 import flameEmpty from "../assets/stats/flame-empty.svg";
@@ -700,11 +699,6 @@ export default function StatsPanel({ onClose, terms = [], onOpenTerms }) {
             <span>470</span>
             <img src={coin} alt="" width={24} height={24} />
           </span>
-          {phone ? null : (
-            <button type="button" className="stats-icon-button is-close" aria-label="Close stats" onClick={onClose}>
-              <img src={closeIcon} alt="" width={20} height={20} />
-            </button>
-          )}
         </div>
       </div>
 

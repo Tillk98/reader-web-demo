@@ -10863,7 +10863,8 @@ button.review-session-affordance {
   gap: 12px;
   width: 472px;
   max-width: calc(100vw - 24px);
-  height: min(1209px, calc(100dvh - 76px));
+  height: auto;
+  max-height: calc(100dvh - 55px);
   padding: 16px;
   overflow: hidden;
   overscroll-behavior: contain;
@@ -10890,7 +10891,8 @@ button.review-session-affordance {
     right: auto;
     width: 100%;
     max-width: none;
-    height: min(1209px, calc(100dvh - 40px));
+    height: auto;
+    max-height: calc(100dvh - 40px);
     border: 0;
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
@@ -10936,6 +10938,7 @@ button.review-session-affordance {
 .stats-panel-header {
   position: relative;
   z-index: 2;
+  flex-shrink: 0;
 }
 
 .stats-known {
@@ -10988,13 +10991,6 @@ button.review-session-affordance {
   cursor: pointer;
 }
 
-.stats-icon-button.is-close {
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-}
-
-.stats-icon-button.is-close:hover,
 .stats-icon-button.is-row:hover,
 .stats-pill:hover {
   background: var(--bg-elevated);
@@ -11011,7 +11007,7 @@ button.review-session-affordance {
 
 .stats-panel-body {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   flex-direction: column;
   gap: 12px;
   min-height: 0;
@@ -11792,6 +11788,7 @@ button.review-session-affordance {
 }
 
 .stats-all {
+  flex-shrink: 0;
   justify-content: center;
   gap: 8px;
   width: 100%;

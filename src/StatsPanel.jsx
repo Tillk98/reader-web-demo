@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronRight, FlaskConical, Minus, Plus, Wrench, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, ChevronUp, FlaskConical, Minus, Plus, Wrench, X } from "lucide-react";
 import coin from "../assets/stats/coin.svg";
 import flagPhoto from "../assets/stats/flag.png";
 import flagMark from "../assets/stats/flag-mark.svg";
@@ -9,7 +9,6 @@ import flame from "../assets/stats/flame.svg";
 import flameBonus from "../assets/stats/flame-3x.svg";
 import flameEmpty from "../assets/stats/flame-empty.svg";
 import chevronMenu from "../assets/stats/chevron-menu.svg";
-import chevronUp from "../assets/stats/chevron-up.svg";
 import pen from "../assets/stats/pen.svg";
 import chevronRight16 from "../assets/stats/chevron-right-16.svg";
 import chevronRight20 from "../assets/stats/chevron-right-20.svg";
@@ -710,6 +709,8 @@ export default function StatsPanel({ onClose, terms = [], onOpenTerms }) {
       </div>
 
       <div className="stats-panel-body">
+        <BlueTermsCard terms={terms} onOpen={onOpenTerms} />
+
         <section className="stats-progress">
           <div className="stats-progress-block">
             {goal.multiple >= 2 ? (
@@ -736,7 +737,7 @@ export default function StatsPanel({ onClose, terms = [], onOpenTerms }) {
           <div className="stats-streak">
             {streak === "broken" ? (
               <button type="button" className="stats-pill stats-show stats-repair" onClick={() => setRepairOpen(true)}>
-                <Wrench size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
+                <Wrench size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
                 Repair Streak
               </button>
             ) : null}
@@ -752,8 +753,6 @@ export default function StatsPanel({ onClose, terms = [], onOpenTerms }) {
           </div>
         </section>
 
-        <BlueTermsCard terms={terms} onOpen={onOpenTerms} />
-
         <section className="stats-section">
           <div className="stats-activity-header">
             <div className="stats-period">
@@ -765,7 +764,7 @@ export default function StatsPanel({ onClose, terms = [], onOpenTerms }) {
                 onClick={() => setMenuOpen((open) => !open)}
               >
                 {current.title}
-                <img src={chevronMenu} alt="" width={20} height={20} />
+                <ChevronDown size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
               </button>
               {menuOpen ? (
                 <div className="stats-period-menu" role="menu">
@@ -795,7 +794,7 @@ export default function StatsPanel({ onClose, terms = [], onOpenTerms }) {
                 onClick={() => setActivityOpen((open) => !open)}
               >
                 {activityOpen ? "See Less" : "See More"}
-                <img src={chevronUp} alt="" width={20} height={20} />
+                <ChevronUp size={16} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
               </button>
             )}
           </div>

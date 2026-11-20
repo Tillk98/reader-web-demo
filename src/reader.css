@@ -9573,7 +9573,7 @@ button.review-session-affordance {
 .accumulator-card {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   width: 100%;
   padding: 12px;
   border: 0;
@@ -9593,7 +9593,7 @@ button.review-session-affordance {
 
 .accumulator-card-heading,
 .accumulator-card-copy .accumulator-note {
-  padding-right: 46px;
+  padding-right: 38px;
 }
 
 .accumulator-card-chevron {
@@ -9606,7 +9606,7 @@ button.review-session-affordance {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -9666,8 +9666,6 @@ button.review-session-affordance {
 
 .accumulator-chips .is-more {
   background: transparent;
-  padding-right: 0;
-  padding-left: 4px;
   color: var(--fg-secondary);
 }
 
@@ -10862,7 +10860,7 @@ button.review-session-affordance {
   z-index: 25;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   width: 472px;
   max-width: calc(100vw - 24px);
   height: min(1209px, calc(100dvh - 76px));
@@ -11015,7 +11013,7 @@ button.review-session-affordance {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
@@ -11023,6 +11021,14 @@ button.review-session-affordance {
 
 .stats-panel .accumulator-card {
   flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-elevated);
+}
+
+.stats-panel .accumulator-card:hover {
+  border-color: var(--border);
+  background: var(--bg-elevated);
 }
 
 .stats-progress,
@@ -11037,7 +11043,7 @@ button.review-session-affordance {
 .stats-progress {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   padding: 12px 0;
 }
 
@@ -11057,7 +11063,7 @@ button.review-session-affordance {
 .stats-streak {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
 
 .stats-streak > p {
@@ -11110,6 +11116,10 @@ button.review-session-affordance {
 .stats-progress-block,
 .stats-row {
   gap: 8px;
+}
+
+.stats-progress-block {
+  gap: 6px;
 }
 
 .stats-progress-heading > p {
@@ -11483,7 +11493,7 @@ button.review-session-affordance {
   display: flex;
   flex-shrink: 0;
   flex-direction: column;
-  gap: 16px;
+  gap: 6px;
   width: 100%;
 }
 
@@ -11544,6 +11554,30 @@ button.review-session-affordance {
   font-weight: 500;
   line-height: 20px;
   white-space: nowrap;
+}
+
+.stats-activity-header .stats-pill,
+.stats-repair {
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.stats-activity-header .stats-pill:not(.stats-show) svg {
+  transition: transform 200ms ease;
+}
+
+.stats-activity-header .stats-pill:not(.stats-show).is-open svg {
+  transform: rotate(180deg);
+}
+
+.stats-activity-header .stats-show svg {
+  transform: rotate(180deg);
+}
+
+.stats-activity-header .stats-show.is-open svg {
+  transform: none;
 }
 
 .stats-pill:not(.stats-show) img {

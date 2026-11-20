@@ -3207,7 +3207,7 @@ export default function Reader() {
   }
 
   function handlePointerDown(event, paragraphIndex, tokenIndex) {
-    if (phrasePick || wordTakesSidebar()) return;
+    if (phrasePick) return;
     if (event.pointerType === "mouse" && event.button !== 0) return;
     const startX = event.clientX;
     const startY = event.clientY;
@@ -5172,9 +5172,16 @@ export default function Reader() {
                 onSelectPhrase={startPhraseSelect}
                 onFromHere={startFromHere}
                 onTranslate={openTranslate}
-                onClose={() => setActive(null)}
+                onClose={() => {
+                  if (panelTabs ? panelVisible && panelTab === "term" : wordDockedInSidebar()) {
+                    setActive((current) => (current?.size === "medium" ? { ...current, size: "small" } : current));
+                    setShowMini(true);
+                    return;
+                  }
+                  setActive(null);
+                }}
                 onOpenLarge={openLarge}
-                hideChevron={panelTabs ? panelVisible : wordDockedInSidebar()}
+                hideChevron={panelTabs ? panelVisible : wordTakesSidebar()}
                 fullStatusBar={fullStatusBar}
               />
             ) : null}

@@ -218,13 +218,11 @@ function TagRow({ onSelectPhrase, onFromHere, quickStatus = false, onStatus }) {
           </button>
         </>
       ) : null}
-      <button type="button" className="widget-action" onClick={onSelectPhrase}>
+      <button type="button" className="widget-action is-icon" aria-label="Phrase" onClick={onSelectPhrase}>
         <TextCursorInput size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
-        <span>Phrase</span>
       </button>
-      <button type="button" className="widget-action" onClick={onFromHere}>
+      <button type="button" className="widget-action is-icon" aria-label="From here" onClick={onFromHere}>
         <Play size={16} strokeWidth={1.33} absoluteStrokeWidth aria-hidden="true" />
-        <span>From here</span>
       </button>
       <span className="widget-medium-tags-divider" aria-hidden="true" />
       <div className="widget-medium-tag-group">

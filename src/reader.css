@@ -10948,9 +10948,9 @@ button.review-session-affordance {
 
 .stats-progress-heading > p {
   margin: 0;
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
   white-space: nowrap;
 }
 
@@ -11065,9 +11065,9 @@ button.review-session-affordance {
 .stats-streak > p {
   margin: 0;
   overflow: hidden;
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -11099,8 +11099,8 @@ button.review-session-affordance {
 .stats-rows {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 12px;
+  gap: 12px;
+  padding: 12px 12px 24px;
 }
 
 .stats-progress-block,
@@ -11129,14 +11129,10 @@ button.review-session-affordance {
   gap: 8px;
   flex-shrink: 0;
   padding: 4px 8px;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 20px;
+  line-height: 18px;
   white-space: nowrap;
-}
-
-.stats-progress-heading .stats-coins {
-  font-weight: 400;
 }
 
 .stats-goal-track,
@@ -11613,9 +11609,9 @@ button.review-session-affordance {
 
 .stats-row-value span {
   color: var(--fg-muted);
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
 }
 
 .stats-edit-popover {
@@ -11848,7 +11844,7 @@ button.review-session-affordance {
 .stats-lesson-stats,
 .stats-lesson-row {
   display: flex;
-  gap: 12px;
+  gap: 6px;
 }
 
 .stats-lesson-stats {
@@ -11868,6 +11864,14 @@ button.review-session-affordance {
 
 .stats-tile.is-split {
   flex-direction: column;
+  gap: 6px;
+  padding: 12px 0;
+}
+
+.stats-tile.is-split .stats-tile-main,
+.stats-tile.is-split .stats-tile-foot {
+  padding-right: 12px;
+  padding-left: 12px;
 }
 
 .stats-tile-main {
@@ -11902,22 +11906,15 @@ button.review-session-affordance {
 }
 
 .stats-tile-copy strong {
-  display: flex;
-  align-items: center;
-  height: 32px;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 500;
-  line-height: 24px;
-}
-
-.stats-tile.is-split .stats-tile-copy strong {
-  height: auto;
+  line-height: 20px;
 }
 
 .stats-glyph {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
 }
 
@@ -11928,22 +11925,23 @@ button.review-session-affordance {
 }
 
 .stats-glyph .is-bubble {
-  top: 6px;
-  left: 6px;
+  top: 4.5px;
+  left: 4.5px;
 }
 
 .stats-glyph .is-mark {
-  top: 12px;
-  left: 13px;
+  top: 9px;
+  left: 9.75px;
 }
 
 .stats-glyph .is-listen {
-  top: 9px;
-  left: 8.5px;
+  top: 6.75px;
+  left: 6.375px;
 }
 
 .stats-tile-rule {
   height: 1px;
+  margin-left: 16px;
   background: #e3e5e7;
 }
 

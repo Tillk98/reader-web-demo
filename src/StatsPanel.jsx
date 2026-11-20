@@ -514,22 +514,22 @@ function LessonStats() {
   return (
     <div className="stats-lesson-stats">
       <div className="stats-lesson-row">
-        <LessonTile label="LingQs Created" value="70" icon={<img src={statLingqs} alt="" width={32} height={32} />} />
+        <LessonTile label="LingQs Created" value="70" icon={<img src={statLingqs} alt="" width={24} height={24} />} />
         <LessonTile
           label="Known Words"
           value="1000"
           icon={(
             <span className="stats-glyph">
-              <img src={statKnownRing} alt="" width={32} height={32} />
-              <img className="is-bubble" src={statKnownBubble} alt="" width={20} height={19} />
-              <img className="is-mark" src={statKnownMark} alt="" width={6} height={7} />
+              <img src={statKnownRing} alt="" width={24} height={24} />
+              <img className="is-bubble" src={statKnownBubble} alt="" width={15} height={14} />
+              <img className="is-mark" src={statKnownMark} alt="" width={5} height={5} />
             </span>
           )}
         />
       </div>
       <div className="stats-lesson-row">
-        <LessonTile label="Study Time" value="30m 48s" icon={<img src={statTime} alt="" width={32} height={32} />} />
-        <LessonTile label="Reading Speed" value="33.8wmp" icon={<img src={statSpeed} alt="" width={32} height={32} />} />
+        <LessonTile label="Study Time" value="30m 48s" icon={<img src={statTime} alt="" width={24} height={24} />} />
+        <LessonTile label="Reading Speed" value="33.8wmp" icon={<img src={statSpeed} alt="" width={24} height={24} />} />
       </div>
       <div className="stats-lesson-row">
         <LessonTile
@@ -538,12 +538,12 @@ function LessonStats() {
           footer="1.0x"
           icon={(
             <span className="stats-glyph">
-              <img src={statListenRing} alt="" width={32} height={32} />
-              <img className="is-listen" src={statListenMark} alt="" width={15} height={14} />
+              <img src={statListenRing} alt="" width={24} height={24} />
+              <img className="is-listen" src={statListenMark} alt="" width={11} height={10} />
             </span>
           )}
         />
-        <LessonTile label="Read" value="200w" footer="1.0x" icon={<img src={statWords} alt="" width={32} height={32} />} />
+        <LessonTile label="Read" value="200w" footer="1.0x" icon={<img src={statWords} alt="" width={24} height={24} />} />
       </div>
     </div>
   );

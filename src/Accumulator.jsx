@@ -290,7 +290,7 @@ export function ProgressPopover({
         <SplitButton status={status} options={MOVE_STATUSES} onCommit={onApply} onSelect={onSelect} menuUp={narrow} action={action} autoFocus />
         <button type="button" className="accumulator-secondary" onClick={onContinue}>
           {action === "finish" ? "Leave Blue and Finish" : action === "exit" ? "Leave Blue and Exit" : "Leave Blue"}
-          <ArrowRight size={16} strokeWidth={1.5} absoluteStrokeWidth />
+          {action === "finish" || action === "exit" ? <ArrowRight size={16} strokeWidth={1.5} absoluteStrokeWidth /> : null}
         </button>
         {action === "exit" ? (
           <button
@@ -500,7 +500,7 @@ export function BlueTermsModal({
                 aria-hidden={edited ? undefined : true}
               >
                 {action === "finish" ? "Leave Remaining Blue and Finish" : action === "exit" ? "Leave Remaining Blue and Exit" : "Leave Remaining Blue"}
-                <ArrowRight size={16} strokeWidth={1.5} absoluteStrokeWidth />
+                {action === "finish" || action === "exit" ? <ArrowRight size={16} strokeWidth={1.5} absoluteStrokeWidth /> : null}
               </button>
             </div>
           </div>

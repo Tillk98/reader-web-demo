@@ -142,6 +142,7 @@ img {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 2px;
 }
 
 .lesson-titles h1 {

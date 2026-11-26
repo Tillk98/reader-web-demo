@@ -124,7 +124,7 @@ img {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 
@@ -145,23 +145,255 @@ img {
 }
 
 .lesson-titles h1 {
+  min-width: 0;
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 20px;
+  line-height: 18px;
   letter-spacing: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.lesson-course-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lesson-course-divider {
+  width: 1px;
+  height: 12px;
+  flex-shrink: 0;
+  background: #f1f3f4;
+}
+
+.lesson-course-row > p {
+  flex: 0 1 auto;
+}
+
+.lesson-course-name.is-full {
+  flex-shrink: 0;
+}
+
+.lesson-course-divider.is-hidden,
+.lesson-fact.is-hidden {
+  display: none;
+}
+
+.lesson-inline-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.lesson-inline-stats:not(:has(.lesson-fact:not(.is-hidden))) {
+  display: none;
+}
+
+.lesson-more {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.lesson-more-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.lesson-more-button:hover,
+.lesson-more.is-open .lesson-more-button {
+  color: var(--fg-default);
+}
+
+.lesson-more-button svg {
+  transition: transform 150ms ease;
+}
+
+.lesson-more.is-open .lesson-more-button svg {
+  transform: rotate(180deg);
+}
+
+.lesson-fact {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+.lesson-fact-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 999px;
+}
+
+.lesson-fact-dot.is-new {
+  background: var(--fg-secondary);
+}
+
+.lesson-fact-dot.is-lingq {
+  background: var(--lingq-fill);
+}
+
+.lesson-fact-dot.is-known {
+  background: #d0d5d8;
+}
+
+.lesson-more-card {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 360px;
+  padding: 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--bg-page);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.lesson-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lesson-detail-level,
+.lesson-detail-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.lesson-level-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  gap: 1.17px;
+}
+
+.lesson-level-bars span {
+  width: 2.33px;
+  border-radius: 0.58px;
+  background: #d1d6d9;
+}
+
+.lesson-level-bars span:nth-child(1) { height: 4.67px; }
+.lesson-level-bars span:nth-child(2) { height: 7px; }
+.lesson-level-bars span:nth-child(3) { height: 9.33px; }
+
+.lesson-level-bars span.is-on {
+  background: var(--fg-muted);
+}
+
+.lesson-detail-rule {
+  width: 1px;
+  height: 12px;
+  flex-shrink: 0;
+  background: #f1f3f4;
+}
+
+.lesson-detail-divider {
+  height: 1px;
+  background: #f1f3f4;
+}
+
+.lesson-detail-time img {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.lesson-detail-stats {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
+
+.lesson-detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: max-content;
+}
+
+.lesson-detail-bar {
+  height: 8px;
+  border-radius: 999px;
+}
+
+.lesson-detail-bar.is-new {
+  background: var(--fg-secondary);
+}
+
+.lesson-detail-bar.is-lingq {
+  background: var(--lingq-fill);
+}
+
+.lesson-detail-bar.is-known {
+  background: #d0d5d8;
+}
+
+.lesson-detail-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lesson-detail-copy > span {
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.lesson-detail-copy b {
+  color: var(--fg-default);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.lesson-detail-copy b span {
+  margin-left: 4px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
 .lesson-titles p {
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 400;
-  line-height: 18px;
+  line-height: 16px;
   letter-spacing: 0;
   color: var(--fg-muted);
   white-space: nowrap;

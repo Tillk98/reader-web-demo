@@ -109,6 +109,7 @@ import reviewIcon from "../assets/review_icon_light.png";
 import reviewIconOnDark from "../assets/review-icon-on-dark.png";
 import lingqIcon from "../assets/LingQ-Icon.png";
 import thumbnail from "../assets/lesson-thumbnail.jpg";
+import headphonesIcon from "../assets/headphones.svg";
 
 const LESSON_TITLE = "Mehrere Sprachen auf einmal lernen?! Wie lange jeden Tag lernen?";
 const LESSON_COURSE = "YouTube auf Deutsch";
@@ -231,6 +232,203 @@ const MODES = [
   { id: "sentence", label: "Sentence Mode" },
   { id: "scroll", label: "Scroll Mode" },
 ];
+
+function lessonCounts(lesson) {
+  const seen = new Set();
+  const counts = { blue: 0, lingqs: 0, known: 0 };
+  lesson.forEach((paragraph) => {
+    paragraph.forEach((token) => {
+      if (token.type !== "word") return;
+      const key = token.value.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      if (token.kind === "new") counts.blue += 1;
+      else if (token.kind === "lingq") counts.lingqs += 1;
+      else if (token.kind === "known") counts.known += 1;
+    });
+  });
+  return counts;
+}
+
+function LessonDetailStats({ blue, lingqs, known }) {
+  const total = blue + lingqs + known;
+  const parts = [
+    { key: "new", label: "New words", count: blue, percent: total ? Math.round((blue / total) * 100) : 0 },
+    { key: "lingq", label: "LingQs", count: lingqs },
+    { key: "known", label: "Known words", count: known },
+  ];
+  return (
+    <div className="lesson-detail-stats">
+      {parts.map((part) => (
+        <div key={part.key} className="lesson-detail-stat" style={{ flex: `${Math.max(part.count, 1)} 1 0` }}>
+          <span className={`lesson-detail-bar is-${part.key}`} aria-hidden="true" />
+          <span className="lesson-detail-copy">
+            <span>{part.label}</span>
+            <b>
+              {part.count.toLocaleString()}
+              {part.percent != null ? <span>({part.percent}%)</span> : null}
+            </b>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LessonCourseLine({ blue, lingqs, known }) {
+  const rowRef = useRef(null);
+  const [visible, setVisible] = useState(2);
+  const [shrinkCourse, setShrinkCourse] = useState(false);
+
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    if (!row) return undefined;
+
+    function measure() {
+      const course = row.querySelector(".lesson-course-name");
+      const divider = row.querySelector(".lesson-course-divider");
+      const newer = row.querySelector('[data-stat="new"]');
+      const lingq = row.querySelector('[data-stat="lingqs"]');
+      if (!course || !divider || !newer || !lingq) return;
+
+      const overflow = () => row.scrollWidth > row.clientWidth + 1;
+      course.classList.add("is-full");
+      newer.classList.remove("is-hidden");
+      lingq.classList.remove("is-hidden");
+
+      let next = 2;
+      if (overflow()) {
+        next = 1;
+        lingq.classList.add("is-hidden");
+      }
+      if (overflow()) {
+        next = 0;
+        newer.classList.add("is-hidden");
+      }
+      const shrink = overflow();
+      course.classList.toggle("is-full", !shrink);
+
+      setVisible((value) => (value === next ? value : next));
+      setShrinkCourse((value) => (value === shrink ? value : shrink));
+    }
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [blue, lingqs]);
+
+  return (
+    <div className="lesson-course-row" ref={rowRef}>
+      <p className={`lesson-course-name${shrinkCourse ? "" : " is-full"}`}>{LESSON_COURSE}</p>
+      <span className="lesson-course-divider" aria-hidden="true" />
+      <span className="lesson-inline-stats">
+        <span className={`lesson-fact${visible > 0 ? "" : " is-hidden"}`} data-stat="new">
+          <span className="lesson-fact-dot is-new" aria-hidden="true" />
+          <span>{blue.toLocaleString()}</span>
+        </span>
+        <span className={`lesson-fact${visible > 1 ? "" : " is-hidden"}`} data-stat="lingqs">
+          <span className="lesson-fact-dot is-lingq" aria-hidden="true" />
+          <span>{lingqs.toLocaleString()}</span>
+        </span>
+      </span>
+      <LessonFacts blue={blue} lingqs={lingqs} known={known} />
+    </div>
+  );
+}
+
+function LessonFacts({ blue, lingqs, known }) {
+  const rootRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [touch, setTouch] = useState(false);
+  const [place, setPlace] = useState(null);
+
+  useEffect(() => {
+    const media = window.matchMedia("(hover: none), (max-width: 767px)");
+    const apply = () => setTouch(media.matches);
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !touch) return undefined;
+    function onPointerDown(event) {
+      if (rootRef.current?.contains(event.target)) return;
+      setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open, touch]);
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const anchor = rootRef.current;
+    if (!anchor) return undefined;
+
+    function placeCard() {
+      const box = anchor.getBoundingClientRect();
+      const margin = 12;
+      const width = Math.min(360, window.innerWidth - margin * 2);
+      const fits = box.left >= margin && box.left + width <= window.innerWidth - margin;
+      const left = fits ? box.left : Math.max(margin, (window.innerWidth - width) / 2);
+      setPlace({ left, top: box.bottom + 6, width });
+    }
+
+    placeCard();
+    window.addEventListener("resize", placeCard);
+    const header = anchor.closest(".reader-header");
+    const observer = header ? new ResizeObserver(placeCard) : null;
+    observer?.observe(header);
+    return () => {
+      window.removeEventListener("resize", placeCard);
+      observer?.disconnect();
+    };
+  }, [open]);
+
+  return (
+    <div
+      className={`lesson-more${open ? " is-open" : ""}`}
+      ref={rootRef}
+      onMouseEnter={() => { if (!touch) setOpen(true); }}
+      onMouseLeave={() => { if (!touch) setOpen(false); }}
+    >
+        <button
+          type="button"
+          className="lesson-more-button"
+          aria-label="Lesson details"
+          aria-expanded={open}
+          onClick={() => { if (touch) setOpen((value) => !value); }}
+        >
+          <ChevronDown size={14} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
+        </button>
+      {open && place ? (
+        <div
+          className="lesson-more-card"
+          style={{ position: "fixed", left: place.left, top: place.top, width: place.width }}
+        >
+          <div className="lesson-detail-meta">
+            <span className="lesson-detail-level">
+              <span className="lesson-level-bars" aria-hidden="true">
+                <span className="is-on" />
+                <span />
+                <span />
+              </span>
+              Beg 1
+            </span>
+            <span className="lesson-detail-rule" aria-hidden="true" />
+            <span className="lesson-detail-time">
+              <img src={headphonesIcon} alt="" width={14} height={14} />
+              {formatAudioTime(AUDIO_DURATION)}
+            </span>
+          </div>
+          <span className="lesson-detail-divider" aria-hidden="true" />
+          <LessonDetailStats blue={blue} lingqs={lingqs} known={known} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function modeIcon(id, size = 24) {
   if (id === "sentence") return <img src={sentenceModeIcon} alt="" width={size} height={size} />;
@@ -3059,6 +3257,11 @@ export default function Reader() {
 
   function highlightSentenceTerm(paragraphIndex, tokenIndex) {
     if (mode !== "sentence" || paragraphIndex !== sentenceIndex) return;
+    const pending = active?.phrase && !active.phrase.savedId && !active.phrase.invalid && phraseCovers(active.phrase, paragraphIndex, tokenIndex);
+    if (pending) {
+      setTermPulse({ key: "phrase-pending", id: Date.now() });
+      return;
+    }
     const phrase = savedPhrases.find((item) => phraseCovers(item, paragraphIndex, tokenIndex));
     if (phrase) {
       if (phrase.kind !== "lingq" || phrase.level < 1 || phrase.level > 3) return;
@@ -3455,6 +3658,23 @@ export default function Reader() {
 
   function changeTermStatus(paragraphIndex, tokenIndex, status, phraseId) {
     const appearance = STATUS_APPEARANCE[status];
+    if (phraseId === "pending") {
+      const phrase = active?.phrase;
+      if (!phrase || phrase.savedId || phrase.invalid) {
+        setTermMenu(null);
+        return;
+      }
+      const saved = commitPhrase(phrase, status);
+      if (saved) {
+        setActive((current) => (
+          current?.phrase && !current.phrase.savedId
+            ? { ...current, phrase: { ...saved, savedId: saved.id, invalid: false, suggestions: phrase.suggestions || [] } }
+            : current
+        ));
+      }
+      setTermMenu(null);
+      return;
+    }
     if (phraseId) {
       const phrase = savedPhrases.find((item) => item.id === phraseId);
       if (!phrase) return;
@@ -3491,18 +3711,29 @@ export default function Reader() {
         setTermMenu(null);
         return;
       }
+      const promoting = token.kind === "new";
       const previous = {
         status: token.status,
         kind: token.kind,
         level: token.level ?? null,
         meaning: token.meaning,
+        meanings: token.meanings,
       };
       releaseTerm(token.value.toLowerCase());
       setLesson((current) => current.map((paragraph, pIndex) => {
         if (pIndex !== paragraphIndex) return paragraph;
         return paragraph.map((item, tIndex) => {
           if (tIndex !== tokenIndex || item.type !== "word") return item;
-          return { ...item, status, ...appearance };
+          if (!promoting) return { ...item, status, ...appearance };
+          const top = meaningsFor(item.value)[0] || "";
+          const meaning = item.meaning || top;
+          return {
+            ...item,
+            status,
+            ...appearance,
+            meaning,
+            meanings: item.meanings?.length ? item.meanings : (meaning ? [meaning] : []),
+          };
         });
       }));
       showSnackbar(status, () => restoreToken(paragraphIndex, tokenIndex, previous));
@@ -3555,8 +3786,10 @@ export default function Reader() {
 
   function openTerm(paragraphIndex, tokenIndex, phrase) {
     setTermMenu(null);
-    if (phrase) openSaved(phrase, paragraphIndex, tokenIndex, "large");
-    else setActive({ paragraphIndex, tokenIndex, size: "large", mode: "meaning", statusMenu: false });
+    if (phrase?.id) openSaved(phrase, paragraphIndex, tokenIndex, "large");
+    else if (phrase) {
+      setActive({ paragraphIndex, tokenIndex, size: "large", mode: "meaning", statusMenu: false, phrase });
+    } else setActive({ paragraphIndex, tokenIndex, size: "large", mode: "meaning", statusMenu: false });
     if (wordTakesSidebar()) {
       givePanelToWord();
       setShowMini(false);
@@ -4716,7 +4949,7 @@ export default function Reader() {
             />
             <div className="lesson-titles">
               <h1>{LESSON_TITLE}</h1>
-              <p>{LESSON_COURSE}</p>
+              <LessonCourseLine {...lessonCounts(lesson)} />
             </div>
           </div>
 
@@ -4970,11 +5203,15 @@ export default function Reader() {
                 {showDictionary ? <div className="sentence-terms" ref={termsRef}>
                   {lesson[sentenceIndex].flatMap((token, tokenIndex) => {
                     if (token.type !== "word") return [];
-                    const phrase = savedPhrases.find((item) => phraseCovers(item, sentenceIndex, tokenIndex));
+                    const pending = active?.phrase && !active.phrase.savedId && phraseCovers(active.phrase, sentenceIndex, tokenIndex)
+                      ? active.phrase
+                      : null;
+                    const phrase = pending || savedPhrases.find((item) => phraseCovers(item, sentenceIndex, tokenIndex));
                     if (phrase) {
                       if (phrase.start.tokenIndex !== tokenIndex) return [];
-                      if (phrase.kind !== "lingq" || phrase.level < 1 || phrase.level > 3) return [];
-                      const menuKey = `phrase-${phrase.id}`;
+                      const bluePhrase = !phrase.id && !phrase.savedId;
+                      if (phrase.invalid || (!bluePhrase && (phrase.kind !== "lingq" || phrase.level < 1 || phrase.level > 3))) return [];
+                      const menuKey = bluePhrase ? "phrase-pending" : `phrase-${phrase.id}`;
                       return [(
                         <div
                           className="term-card"
@@ -4992,24 +5229,24 @@ export default function Reader() {
                         >
                           <span data-term-status={menuKey} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
                             <StatusButton
-                              status={phrase.status}
+                              status={bluePhrase ? "Blue" : phrase.status}
                               state="focus"
                               onClick={() => setTermMenu((current) => (current?.key === menuKey ? null : {
                                 key: menuKey,
                                 paragraphIndex: sentenceIndex,
                                 tokenIndex,
-                                phraseId: phrase.id,
+                                phraseId: bluePhrase ? "pending" : phrase.id,
                               }))}
                             />
                           </span>
                           <span className="term-card-text">
                             <span className="term-card-term">{phrase.text}</span>
-                            <span className="term-card-meaning">{phrase.meaning}</span>
+                            <span className="term-card-meaning">{phrase.meaning || phrase.suggestions?.[0]}</span>
                           </span>
                         </div>
                       )];
                     }
-                    if (token.kind !== "lingq" || token.level < 1 || token.level > 3) return [];
+                    if (token.kind !== "new" && (token.kind !== "lingq" || token.level < 1 || token.level > 3)) return [];
                     const menuKey = `word-${sentenceIndex}-${tokenIndex}`;
                     return [(
                       <div
@@ -5027,9 +5264,9 @@ export default function Reader() {
                         }}
                       >
                         <span data-term-status={menuKey} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-                          <StatusButton
-                            status={token.status}
-                            state="focus"
+                            <StatusButton
+                              status={token.kind === "new" ? "Blue" : token.status}
+                              state="focus"
                             onClick={() => setTermMenu((current) => (current?.key === menuKey ? null : {
                               key: menuKey,
                               paragraphIndex: sentenceIndex,
@@ -5051,9 +5288,12 @@ export default function Reader() {
                 {showDictionary && termMenu ? (
                   <TermStatusMenu
                     anchorKey={termMenu.key}
-                    status={termMenu.phraseId
-                      ? (savedPhrases.find((item) => item.id === termMenu.phraseId)?.status || "New")
-                      : (lesson[termMenu.paragraphIndex][termMenu.tokenIndex].status)}
+                    status={(() => {
+                      if (termMenu.phraseId === "pending") return "Blue";
+                      if (termMenu.phraseId) return savedPhrases.find((item) => item.id === termMenu.phraseId)?.status || "New";
+                      const listed = lesson[termMenu.paragraphIndex][termMenu.tokenIndex];
+                      return listed.kind === "new" ? "Blue" : listed.status;
+                    })()}
                     onStatus={(status) => changeTermStatus(termMenu.paragraphIndex, termMenu.tokenIndex, status, termMenu.phraseId)}
                     onClose={() => setTermMenu(null)}
                   />

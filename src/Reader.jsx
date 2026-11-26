@@ -275,7 +275,7 @@ function LessonDetailStats({ blue, lingqs, known }) {
   );
 }
 
-function LessonCourseLine({ blue, lingqs, known }) {
+function LessonCourseLine({ blue, lingqs, known, open, chevronRef }) {
   const rowRef = useRef(null);
   const [visible, setVisible] = useState(2);
   const [shrinkCourse, setShrinkCourse] = useState(false);
@@ -332,13 +332,18 @@ function LessonCourseLine({ blue, lingqs, known }) {
           <span>{lingqs.toLocaleString()}</span>
         </span>
       </span>
-      <LessonFacts blue={blue} lingqs={lingqs} known={known} />
+      <span className={`lesson-more${open ? " is-open" : ""}`}>
+        <span className="lesson-more-button" ref={chevronRef}>
+          <ChevronDown size={14} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
+        </span>
+      </span>
     </div>
   );
 }
 
-function LessonFacts({ blue, lingqs, known }) {
+function LessonSection({ blue, lingqs, known }) {
   const rootRef = useRef(null);
+  const chevronRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [touch, setTouch] = useState(false);
   const [place, setPlace] = useState(null);
@@ -372,7 +377,7 @@ function LessonFacts({ blue, lingqs, known }) {
       const width = Math.min(360, window.innerWidth - margin * 2);
       const fits = box.left >= margin && box.left + width <= window.innerWidth - margin;
       const left = fits ? box.left : Math.max(margin, (window.innerWidth - width) / 2);
-      setPlace({ left, top: box.bottom + 6, width });
+      setPlace({ left, top: box.bottom + 4, width });
     }
 
     placeCard();
@@ -388,20 +393,33 @@ function LessonFacts({ blue, lingqs, known }) {
 
   return (
     <div
-      className={`lesson-more${open ? " is-open" : ""}`}
+      className={`lesson-section${open ? " is-open" : ""}`}
       ref={rootRef}
       onMouseEnter={() => { if (!touch) setOpen(true); }}
       onMouseLeave={() => { if (!touch) setOpen(false); }}
     >
-        <button
-          type="button"
-          className="lesson-more-button"
-          aria-label="Lesson details"
-          aria-expanded={open}
-          onClick={() => { if (touch) setOpen((value) => !value); }}
-        >
-          <ChevronDown size={14} strokeWidth={1.5} absoluteStrokeWidth aria-hidden="true" />
-        </button>
+      <button
+        type="button"
+        className="lesson-section-hit"
+        aria-label="Lesson details"
+        aria-expanded={open}
+        onClick={(event) => {
+          if (event.target.closest(".lesson-more-card")) return;
+          if (touch) setOpen((value) => !value);
+          else setOpen(true);
+        }}
+      />
+      <img
+        className="lesson-thumb"
+        src={thumbnail}
+        alt=""
+        width={40}
+        height={40}
+      />
+      <div className="lesson-titles">
+        <h1>{LESSON_TITLE}</h1>
+        <LessonCourseLine blue={blue} lingqs={lingqs} known={known} open={open} chevronRef={chevronRef} />
+      </div>
       {open && place ? (
         <div
           className="lesson-more-card"
@@ -4940,17 +4958,7 @@ export default function Reader() {
 
         <div className="header-main">
           <div className="lesson-heading">
-            <img
-              className="lesson-thumb"
-              src={thumbnail}
-              alt=""
-              width={40}
-              height={40}
-            />
-            <div className="lesson-titles">
-              <h1>{LESSON_TITLE}</h1>
-              <LessonCourseLine {...lessonCounts(lesson)} />
-            </div>
+            <LessonSection {...lessonCounts(lesson)} />
           </div>
 
           <div className="status-pills">

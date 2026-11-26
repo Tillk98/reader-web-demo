@@ -136,6 +136,46 @@ img {
   flex-shrink: 0;
 }
 
+.lesson-section {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  width: fit-content;
+  max-width: 100%;
+  margin: -4px 0;
+  padding: 4px 12px 4px 4px;
+}
+
+.lesson-section-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lesson-section-hit:hover {
+    background: #f8f9fa;
+  }
+}
+
+.lesson-section > :not(.lesson-section-hit) {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.lesson-section > .lesson-more-card {
+  pointer-events: auto;
+  z-index: 30;
+}
+
 .lesson-titles {
   min-width: 0;
   max-width: 600px;
@@ -212,7 +252,7 @@ img {
   cursor: pointer;
 }
 
-.lesson-more-button:hover,
+.lesson-section.is-open .lesson-more-button,
 .lesson-more.is-open .lesson-more-button {
   color: var(--fg-default);
 }
@@ -221,6 +261,7 @@ img {
   transition: transform 150ms ease;
 }
 
+.lesson-section.is-open .lesson-more-button svg,
 .lesson-more.is-open .lesson-more-button svg {
   transform: rotate(180deg);
 }

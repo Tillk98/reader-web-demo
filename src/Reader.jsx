@@ -374,9 +374,8 @@ function LessonSection({ blue, lingqs, known }) {
     function placeCard() {
       const box = anchor.getBoundingClientRect();
       const margin = 12;
-      const width = Math.min(360, window.innerWidth - margin * 2);
-      const fits = box.left >= margin && box.left + width <= window.innerWidth - margin;
-      const left = fits ? box.left : Math.max(margin, (window.innerWidth - width) / 2);
+      const left = Math.max(margin, box.left);
+      const width = Math.min(360, window.innerWidth - left - margin);
       setPlace({ left, top: box.bottom + 4, width });
     }
 
